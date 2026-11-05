@@ -11,20 +11,16 @@
 // user's Supabase session: getToken asks the app's server action for one,
 // bound to this node, instance and the ws-ticket scope.
 
-export type WsTicketScope = "metrics" | "novnc" | "obsws";
+export type WsTicketScope = "metrics" | "obsws" | "selkies";
 
 export type GetNodeToken = () => Promise<string>;
 
-// vnc_password is only ever present for scope=novnc (see obs-instance-manager's
-// POST /:id/ws-ticket) -- the noVNC/RFB handshake happens directly between this
-// client and x11vnc inside the container (the API's WS proxy is a blind byte
-// relay), so the browser needs the password out-of-band to authenticate it.
 async function getWsTicket(
   apiUrl: string,
   ticketPath: string,
   scope: WsTicketScope,
   getToken: GetNodeToken,
-): Promise<{ ticket: string; vncPassword?: string }> {
+): Promise<string> {
   const token = await getToken();
 
   const res = await fetch(`${apiUrl.replace(/\/$/, "")}${ticketPath}`, {
@@ -38,8 +34,14 @@ async function getWsTicket(
     throw new Error(body.error ?? `Failed to get WebSocket ticket (${res.status})`);
   }
 
-  const { ticket, vnc_password } = (await res.json()) as { ticket: string; vnc_password?: string };
-  return { ticket, vncPassword: vnc_password };
+  const { ticket } = (await res.json()) as { ticket: string };
+  return ticket;
+}
+
+function nodeUrl(apiUrl: string, path: string): URL {
+  const url = new URL(apiUrl);
+  url.pathname = `${url.pathname.replace(/\/$/, "")}${path}`;
+  return url;
 }
 
 // apiUrl must come from a trusted server-side lookup (never the query string):
@@ -49,27 +51,25 @@ export async function mintWsUrl(
   apiUrl: string,
   opts: { ticketPath: string; wsPath: string; scope: WsTicketScope; getToken: GetNodeToken },
 ): Promise<string> {
-  const { ticket } = await getWsTicket(apiUrl, opts.ticketPath, opts.scope, opts.getToken);
-  const url = new URL(apiUrl);
-  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
-  url.pathname = `${url.pathname.replace(/\/$/, "")}${opts.wsPath}`;
+  const ticket = await getWsTicket(apiUrl, opts.ticketPath, opts.scope, opts.getToken);
+  const url = nodeUrl(apiUrl, opts.wsPath);
   url.searchParams.set("ticket", ticket);
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
   return url.toString();
 }
 
-// Same as mintWsUrl, but for scope=novnc specifically: also returns the VNC
-// password the caller must hand to noVNC's RFB client (as `credentials.password`)
-// to complete the RFB auth handshake with x11vnc. See CloudOBSViewer.
-export async function mintNoVncConnection(
+// URL of an instance's Selkies viewer, served by obs-instance-manager's proxy
+// on the node; the window just navigates there. The ticket goes in the
+// fragment (#token=), which browsers never send to a server: the Selkies
+// client reads it and presents it on its own API calls and WebSockets, where
+// the node checks it (and instance ownership) on every connect. viewerPath
+// must end in "/selkies/". Same trusted-apiUrl rule as above.
+export async function mintSelkiesViewerUrl(
   apiUrl: string,
-  opts: { ticketPath: string; wsPath: string; getToken: GetNodeToken },
-): Promise<{ url: string; password: string }> {
-  const { ticket, vncPassword } = await getWsTicket(apiUrl, opts.ticketPath, "novnc", opts.getToken);
-  if (!vncPassword) throw new Error("Server didn't return a VNC password for this instance.");
-
-  const url = new URL(apiUrl);
-  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
-  url.pathname = `${url.pathname.replace(/\/$/, "")}${opts.wsPath}`;
-  url.searchParams.set("ticket", ticket);
-  return { url: url.toString(), password: vncPassword };
+  opts: { ticketPath: string; viewerPath: string; getToken: GetNodeToken },
+): Promise<string> {
+  const ticket = await getWsTicket(apiUrl, opts.ticketPath, "selkies", opts.getToken);
+  const url = nodeUrl(apiUrl, opts.viewerPath);
+  url.hash = new URLSearchParams({ token: ticket }).toString();
+  return url.toString();
 }

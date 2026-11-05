@@ -19,7 +19,7 @@ import { deriveObsFlowState } from "@/components/irl/cloud-obs/obs-flow-state";
 import { ObsStatusBadge } from "@/components/irl/cloud-obs/obs-status-badge";
 import { CloudObsSetupScreen } from "@/components/irl/cloud-obs/cloud-obs-setup-screen";
 import { ObsContainerControl, ObsStreamControl } from "@/components/irl/cloud-obs/obs-container-control";
-import { ObsVncPreview } from "@/components/irl/obs-vnc-preview";
+import { ObsDesktopPreview } from "@/components/irl/obs-desktop-preview";
 import { ObsBootProgress } from "@/components/shared/obs/obs-boot-progress";
 import { ObsOfflineState } from "@/components/shared/obs/obs-offline-state";
 import { ObsLifecycleBanner } from "@/components/shared/obs/obs-lifecycle-banner";
@@ -235,8 +235,8 @@ export function CloudObsContent({
 
       {/* Top section */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-        {/* VNC preview */}
-        <ObsVncPreview
+        {/* OBS desktop launcher */}
+        <ObsDesktopPreview
           instanceId={instanceId}
           status={obs.status === "open" ? "connected" : inLaunchFlow ? "booting" : "offline"}
           onOpen={openViewer}

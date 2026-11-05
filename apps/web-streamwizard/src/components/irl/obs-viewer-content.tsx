@@ -2,9 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { CloudOBSViewer } from "@repo/obs-web";
+import { CloudOBSViewer, mintSelkiesViewerUrl } from "@repo/obs-web";
 import { getInstanceNodeApiUrlAction } from "@/actions/obs/nodes";
-import { mintNoVncConnection } from "@repo/obs-web";
 import { nodeToken } from "@/lib/obs/node-token";
 
 export function ObsViewerContent() {
@@ -12,8 +11,9 @@ export function ObsViewerContent() {
   const instanceId = searchParams.get("instanceId");
   const name = searchParams.get("name");
 
-  // apiUrl comes from a trusted server-side lookup; the WS URL (with a fresh
-  // single-use ticket) is minted per connection attempt inside CloudOBSViewer.
+  // apiUrl comes from a trusted server-side lookup; the viewer URL (with a
+  // fresh single-use ticket) is minted by CloudOBSViewer, which then moves
+  // this window to the node's Selkies viewer.
   const [apiUrl, setApiUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,11 +32,11 @@ export function ObsViewerContent() {
     });
   }, [instanceId]);
 
-  const getConnection = useCallback(() => {
+  const getViewerUrl = useCallback(() => {
     if (!apiUrl || !instanceId) return Promise.reject(new Error("Instance not ready."));
-    return mintNoVncConnection(apiUrl, {
+    return mintSelkiesViewerUrl(apiUrl, {
       ticketPath: `/instances/${instanceId}/ws-ticket`,
-      wsPath: `/instances/${instanceId}/novnc`,
+      viewerPath: `/instances/${instanceId}/selkies/`,
       getToken: () => nodeToken(instanceId, "ws-ticket"),
     });
   }, [apiUrl, instanceId]);
@@ -57,7 +57,7 @@ export function ObsViewerContent() {
             </button>
           </div>
         ) : apiUrl && instanceId ? (
-          <CloudOBSViewer getConnection={getConnection} />
+          <CloudOBSViewer getViewerUrl={getViewerUrl} />
         ) : (
           <p className="p-4 text-sm text-white/60">Resolving instance…</p>
         )}

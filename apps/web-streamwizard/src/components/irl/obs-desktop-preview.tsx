@@ -4,15 +4,15 @@ import { Loader2, Monitor } from "lucide-react";
 import { Badge } from "@repo/ui";
 import { cn } from "@repo/ui";
 
-export type VncPreviewStatus = "offline" | "booting" | "connected";
+export type DesktopPreviewStatus = "offline" | "booting" | "connected";
 
-interface ObsVncPreviewProps {
+interface ObsDesktopPreviewProps {
   instanceId: string | null;
-  status: VncPreviewStatus;
+  status: DesktopPreviewStatus;
   onOpen: () => void;
 }
 
-export function ObsVncPreview({ instanceId, status, onOpen }: ObsVncPreviewProps) {
+export function ObsDesktopPreview({ instanceId, status, onOpen }: ObsDesktopPreviewProps) {
   // Only the live connection can be opened — a viewer launched mid-boot just
   // shows a window that can't connect, so the tile stays non-interactive until
   // OBS is actually reachable.

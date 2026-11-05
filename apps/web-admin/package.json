@@ -13,7 +13,6 @@
   },
   "dependencies": {
     "@dagrejs/dagre": "^3.0.0",
-    "@novnc/novnc": "^1.7.0",
     "@repo/alerting": "workspace:*",
     "@repo/backups": "workspace:*",
     "@repo/cms": "workspace:*",

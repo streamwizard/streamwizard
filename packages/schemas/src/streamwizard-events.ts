@@ -42,7 +42,7 @@ export const ObsInstanceLifecyclePayloadSchema = z.object({
  * The Cloud OBS container's program scene changed. Observed, not commanded: the
  * obs-instance-manager holds a node-side obs-websocket connection per running
  * instance and forwards CurrentProgramSceneChanged, so this fires for switches
- * made by the auto-switcher, the browser panel, the streamer in OBS over VNC,
+ * made by the auto-switcher, the browser panel, the streamer in the OBS desktop viewer,
  * or a hotkey alike -- and keeps firing with the streamer's own machine off.
  * Also emitted once per (re)connect with the then-current scene, since
  * ws-server has no replay for a browser source that loads mid-stream. Same

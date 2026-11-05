@@ -95,7 +95,7 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
       supabaseUrl,
       supabaseWs,
       wsServerUrl,
-      // Cloud OBS nodes (noVNC viewer, obs-websocket controls, and the
+      // Cloud OBS nodes (viewer ticket minting, obs-websocket controls, and the
       // obs-instance-manager metrics/REST endpoints) are provisioned
       // dynamically, so they're addressed as *.streamwizard.org subdomains
       // rather than fixed hosts. Single-label names only — Cloudflare

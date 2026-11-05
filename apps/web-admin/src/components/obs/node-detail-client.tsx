@@ -80,7 +80,7 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
 
 interface NodeInstanceListProps {
   nodeId: string;
-  /** Without an API URL nothing on the node can be reached, so VNC is off. */
+  /** Without an API URL nothing on the node can be reached, so the desktop is off. */
   hasApiUrl: boolean;
   instances: ObsNodeInstanceOwner[];
   /** Live container metrics by instance id; empty while the stream is down. */
@@ -88,12 +88,12 @@ interface NodeInstanceListProps {
   pendingInstanceId: string | null;
   onToggle: (instance: ObsNodeInstanceOwner, action: "start" | "stop") => void;
   onRemove: (instance: ObsNodeInstanceOwner) => void;
-  onVnc: (instance: ObsNodeInstanceOwner) => void;
+  onOpenDesktop: (instance: ObsNodeInstanceOwner) => void;
 }
 
 /** Instances on one node. Start and Stop stay in view on every row; the rest
  *  sits behind the "more" button. */
-export function NodeInstanceList({ nodeId, hasApiUrl, instances, metrics, pendingInstanceId, onToggle, onRemove, onVnc }: NodeInstanceListProps) {
+export function NodeInstanceList({ nodeId, hasApiUrl, instances, metrics, pendingInstanceId, onToggle, onRemove, onOpenDesktop }: NodeInstanceListProps) {
   const columns: DataColumn<ObsNodeInstanceOwner>[] = [
     {
       key: "owner",
@@ -174,9 +174,9 @@ export function NodeInstanceList({ nodeId, hasApiUrl, instances, metrics, pendin
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {/* VNC needs a desktop: it is left out of the menu below 768px. */}
-                <DropdownMenuItem className="hidden md:flex" disabled={!isRunning || !hasApiUrl} onSelect={() => onVnc(instance)}>
-                  {!hasApiUrl ? "Open VNC (no API URL set)" : isRunning ? "Open VNC" : "Open VNC (start it first)"}
+                {/* The OBS desktop needs a desktop screen: it is left out of the menu below 768px. */}
+                <DropdownMenuItem className="hidden md:flex" disabled={!isRunning || !hasApiUrl} onSelect={() => onOpenDesktop(instance)}>
+                  {!hasApiUrl ? "Open OBS desktop (no API URL set)" : isRunning ? "Open OBS desktop" : "Open OBS desktop (start it first)"}
                 </DropdownMenuItem>
                 <DropdownMenuItem variant="destructive" className="min-h-11 md:min-h-8" onSelect={() => onRemove(instance)}>
                   Remove
@@ -258,16 +258,17 @@ export function NodeDetailClient({ node }: { node: ObsNode }) {
     }
   };
 
-  // Opens the admin VNC viewer page in its own window rather than embedding
-  // it inline -- noVNC wants the full viewport.
-  const openVnc = (instance: ObsNodeInstanceOwner) => {
+  // Opens the admin OBS desktop viewer in its own window rather than
+  // embedding it inline: the viewer wants the full viewport, and it runs on
+  // the node's own hostname.
+  const openDesktop = (instance: ObsNodeInstanceOwner) => {
     if (!node.api_url) return;
     const params = new URLSearchParams({
       nodeId: node.id,
       instanceId: instance.id,
       name: instance.container_name,
     });
-    window.open(`/vnc?${params.toString()}`, `vnc-${instance.id}`, "width=1280,height=800");
+    window.open(`/obs-desktop?${params.toString()}`, `obs-desktop-${instance.id}`, "width=1280,height=800");
   };
 
   const { text, variant } = statusLabel(status);
@@ -306,7 +307,7 @@ export function NodeDetailClient({ node }: { node: ObsNode }) {
               pendingInstanceId={pendingInstanceId}
               onToggle={handleToggleInstance}
               onRemove={askRemoveInstance}
-              onVnc={openVnc}
+              onOpenDesktop={openDesktop}
             />
           )}
         </CardContent>
