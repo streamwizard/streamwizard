@@ -24,6 +24,7 @@ import type { ObsNode, ObsNodeInstanceOwner } from "@repo/supabase/queries/obs-n
 import { createInstanceAction, listNodeInstancesAction, toggleInstanceAdminAction } from "@/actions/nodes/obs";
 import { useNodeMetricsStream, type ConnectionStatus, type ContainerMetrics } from "@/hooks/use-node-metrics-stream";
 import { HostMetricsCharts } from "@/components/obs/metrics-charts";
+import { openViewerWindow } from "@repo/obs-web";
 import { RemoveInstanceDialog } from "@/components/obs/remove-instance-dialog";
 import { DataList, type DataColumn } from "@/components/shared/data-list";
 import { PageHeader } from "@/components/shared/page/page-header";
@@ -259,8 +260,9 @@ export function NodeDetailClient({ node }: { node: ObsNode }) {
   };
 
   // Opens the admin OBS desktop viewer in its own window rather than
-  // embedding it inline: the viewer wants the full viewport, and it runs on
-  // the node's own hostname.
+  // embedding it inline: the viewer wants the full viewport. That window
+  // frames the node's viewer page (the Selkies client stays on the node's
+  // origin) and keeps no handle to this page (openViewerWindow).
   const openDesktop = (instance: ObsNodeInstanceOwner) => {
     if (!node.api_url) return;
     const params = new URLSearchParams({
@@ -268,7 +270,7 @@ export function NodeDetailClient({ node }: { node: ObsNode }) {
       instanceId: instance.id,
       name: instance.container_name,
     });
-    window.open(`/obs-desktop?${params.toString()}`, `obs-desktop-${instance.id}`, "width=1280,height=800");
+    openViewerWindow(`/obs-desktop?${params.toString()}`, `obs-desktop-${instance.id}`);
   };
 
   const { text, variant } = statusLabel(status);

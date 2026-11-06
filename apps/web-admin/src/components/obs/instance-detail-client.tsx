@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui";
 import type { ObsNode, ObsNodeInstanceDetail } from "@repo/supabase/queries/obs-nodes/nodes";
 import { useNodeMetricsStream, type ConnectionStatus } from "@/hooks/use-node-metrics-stream";
+import { openViewerWindow } from "@repo/obs-web";
 import { toggleInstanceAdminAction } from "@/actions/nodes/obs";
 import { formatMb } from "@/lib/format";
 import { ContainerMetricsCharts } from "@/components/obs/metrics-charts";
@@ -80,7 +81,7 @@ export function InstanceActions({ nodeId, apiUrl, instance }: InstanceActionsPro
       instanceId: instance.id,
       name: instance.container_name,
     });
-    window.open(`/obs-desktop?${params.toString()}`, `obs-desktop-${instance.id}`, "width=1280,height=800");
+    openViewerWindow(`/obs-desktop?${params.toString()}`, `obs-desktop-${instance.id}`);
   };
 
   return (

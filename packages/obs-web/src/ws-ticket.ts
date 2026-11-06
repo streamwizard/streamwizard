@@ -58,18 +58,24 @@ export async function mintWsUrl(
   return url.toString();
 }
 
-// URL of an instance's Selkies viewer, served by obs-instance-manager's proxy
-// on the node; the window just navigates there. The ticket goes in the
-// fragment (#token=), which browsers never send to a server: the Selkies
-// client reads it and presents it on its own API calls and WebSockets, where
-// the node checks it (and instance ownership) on every connect. viewerPath
-// must end in "/selkies/". Same trusted-apiUrl rule as above.
+// An instance's Selkies viewer page, served by obs-instance-manager's proxy
+// on the node, without a ticket: what CloudOBSViewer frames and probes for
+// readiness. viewerPath must end in "/selkies/". Same trusted-apiUrl rule as
+// above: this URL decides which origin the viewer page trusts.
+export function selkiesViewerRoot(apiUrl: string, viewerPath: string): string {
+  return nodeUrl(apiUrl, viewerPath).toString();
+}
+
+// The viewer page with a fresh ticket in the fragment (#token=), which
+// browsers never send to a server: the Selkies client reads it and presents
+// it on its own API calls and WebSockets, where the node checks it (and
+// instance ownership) on every connect.
 export async function mintSelkiesViewerUrl(
   apiUrl: string,
   opts: { ticketPath: string; viewerPath: string; getToken: GetNodeToken },
 ): Promise<string> {
   const ticket = await getWsTicket(apiUrl, opts.ticketPath, "selkies", opts.getToken);
-  const url = nodeUrl(apiUrl, opts.viewerPath);
+  const url = new URL(selkiesViewerRoot(apiUrl, opts.viewerPath));
   url.hash = new URLSearchParams({ token: ticket }).toString();
   return url.toString();
 }
