@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { AlertCircle, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@repo/ui";
-import { ClipboardPanel } from "./clipboard-panel";
 import { useViewerFrame } from "./use-viewer-frame";
 import { ViewerHeader } from "./viewer-header";
 
@@ -31,7 +30,6 @@ export function CloudOBSViewer({
   getViewerUrl: () => Promise<string>;
 }) {
   const viewer = useViewerFrame({ viewerRoot, getViewerUrl });
-  const [clipboardOpen, setClipboardOpen] = useState(false);
   const { phase } = viewer;
 
   return (
@@ -44,10 +42,8 @@ export function CloudOBSViewer({
         video={viewer.video}
         muted={viewer.muted}
         volume={viewer.volume}
-        clipboardOpen={clipboardOpen}
         onToggleMute={viewer.toggleMute}
         onVolume={viewer.changeVolume}
-        onToggleClipboard={() => setClipboardOpen((open) => !open)}
         onFullscreen={viewer.enterFullscreen}
         onReconnect={viewer.reconnect}
       />
@@ -64,12 +60,6 @@ export function CloudOBSViewer({
             referrerPolicy="no-referrer"
             className="block h-full w-full border-0"
           />
-        )}
-
-        {clipboardOpen && viewer.relay === "paired" && (
-          <div className="absolute top-3 right-3 z-10">
-            <ClipboardPanel fromObs={viewer.clipboard} onSend={viewer.sendClipboard} />
-          </div>
         )}
 
         {(phase.kind === "starting" || (phase.kind === "reconnecting" && !viewer.frame)) && (

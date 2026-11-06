@@ -19,12 +19,6 @@ export type ViewerPhase =
 /** "pending" until the relay answers; "absent" for a node without one (older OIM). */
 export type RelayState = "pending" | "paired" | "absent";
 
-export interface ClipboardFromObs {
-  text: string;
-  truncated: boolean;
-  secret: boolean;
-}
-
 // How long a loaded frame may stay silent before we treat the node as one
 // without a relay: frame only, no controls.
 const PAIR_TIMEOUT_MS = 5_000;
@@ -54,7 +48,6 @@ export function useViewerFrame({ viewerRoot, getViewerUrl }: { viewerRoot: strin
   const [frame, setFrame] = useState<{ key: number; src: string } | null>(null);
   const [relay, setRelay] = useState<RelayState>("pending");
   const [video, setVideo] = useState(false);
-  const [clipboard, setClipboard] = useState<ClipboardFromObs | null>(null);
   const [muted, setMuted] = useState(false);
   const [volume, setVolume] = useState(1);
 
@@ -161,10 +154,6 @@ export function useViewerFrame({ viewerRoot, getViewerUrl }: { viewerRoot: strin
         case "pipelineStatusUpdate":
           if (message.video !== undefined) setVideo(message.video);
           break;
-        case "clipboardContentUpdate":
-          // The empty reply to Selkies' connect-time clipboard fetch says nothing.
-          if (message.text || message.secret) setClipboard(message);
-          break;
         case "viewer-expired": {
           const decision = guardRef.current.next();
           if (decision.action === "stop") {
@@ -219,8 +208,6 @@ export function useViewerFrame({ viewerRoot, getViewerUrl }: { viewerRoot: strin
     [send],
   );
 
-  const sendClipboard = useCallback((text: string) => send({ type: "clipboardUpdateFromUI", text }), [send]);
-
   const enterFullscreen = useCallback(() => {
     frameRef.current?.requestFullscreen().catch(() => {});
   }, []);
@@ -232,12 +219,10 @@ export function useViewerFrame({ viewerRoot, getViewerUrl }: { viewerRoot: strin
     onFrameLoad,
     relay,
     video,
-    clipboard,
     muted,
     volume,
     toggleMute,
     changeVolume,
-    sendClipboard,
     enterFullscreen,
     reconnect,
   };

@@ -6,11 +6,11 @@ Everything is exported from the package root (`@repo/obs-web`). The package read
 
 ## OBS desktop viewer (`src/viewer/`)
 
-`CloudOBSViewer` shows an instance's Selkies viewer in a cross-origin `<iframe>` on the node's own origin and draws our header and controls around it. The Selkies client never runs on an app's origin.
+`CloudOBSViewer` shows an instance's Selkies viewer in a cross-origin `<iframe>` on the node's own origin and draws our header and controls around it. The Selkies client never runs on an app's origin. Clipboard sync is Selkies' own (Ctrl+C and Ctrl+V inside the frame, in Chromium, Firefox and Safari); the frame gets `clipboard-read` and `clipboard-write` through its `allow` attribute.
 
 1. Probes `HEAD <viewerRoot>` until the node answers 200 (`readiness.ts`; no ticket is spent while OBS starts).
 2. Mints a ticket (`getViewerUrl`, built on `mintSelkiesViewerUrl`) and frames `<viewerRoot>#token=<ticket>`.
-3. Pairs with the relay that obs-instance-manager serves in the page (`relay-protocol.ts`, Zod-parsed, node origin and frame window checked). Mute, volume and clipboard text go through it.
+3. Pairs with the relay that obs-instance-manager serves in the page (`relay-protocol.ts`, Zod-parsed, node origin and frame window checked). Mute and volume go through it.
 4. When the relay reports `viewer-expired`, mints a new ticket and mounts a new frame, spaced and capped by `reconnect-guard.ts`.
 
 Against a node without the relay, the viewer shows the frame with Full screen and Reconnect only. The protocol is documented in obs-instance-manager's `docs/PANEL_INTEGRATION.md`.

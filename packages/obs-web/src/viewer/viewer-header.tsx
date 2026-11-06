@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Clipboard, Maximize, RefreshCw, Volume2, VolumeX } from "lucide-react";
+import { Maximize, RefreshCw, Volume2, VolumeX } from "lucide-react";
 import { Button, cn, Slider } from "@repo/ui";
 import type { RelayState, ViewerPhase } from "./use-viewer-frame";
 
@@ -35,10 +35,8 @@ export function ViewerHeader({
   video,
   muted,
   volume,
-  clipboardOpen,
   onToggleMute,
   onVolume,
-  onToggleClipboard,
   onFullscreen,
   onReconnect,
 }: {
@@ -49,10 +47,8 @@ export function ViewerHeader({
   video: boolean;
   muted: boolean;
   volume: number;
-  clipboardOpen: boolean;
   onToggleMute: () => void;
   onVolume: (value: number) => void;
-  onToggleClipboard: () => void;
   onFullscreen: () => void;
   onReconnect: () => void;
 }) {
@@ -90,17 +86,6 @@ export function ViewerHeader({
               onValueChange={([value]) => onVolume((value ?? 0) / 100)}
               aria-label="Volume"
             />
-            <Button
-              size="icon"
-              variant="ghost"
-              className={cn(ICON_BUTTON, clipboardOpen && "bg-white/10 text-white")}
-              onClick={onToggleClipboard}
-              aria-label="Clipboard"
-              aria-pressed={clipboardOpen}
-              title="Clipboard"
-            >
-              <Clipboard className="size-4" />
-            </Button>
           </>
         )}
         <Button

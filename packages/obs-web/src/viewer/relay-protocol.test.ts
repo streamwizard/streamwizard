@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { CLIPBOARD_TEXT_LIMIT, parseRelayMessage } from "./relay-protocol";
+import { parseRelayMessage } from "./relay-protocol";
 
 const NODE = "https://node-1.streamwizard.org";
 const frame = { name: "frame" };
@@ -32,12 +32,6 @@ describe("message schemas", () => {
   test("parses each relay message", () => {
     expect(from({ type: "sw-ready", version: 1 })).toEqual({ type: "sw-ready", version: 1 });
     expect(from({ type: "pipelineStatusUpdate", video: true })).toEqual({ type: "pipelineStatusUpdate", video: true });
-    expect(from({ type: "clipboardContentUpdate", text: "hi", truncated: false, secret: false })).toEqual({
-      type: "clipboardContentUpdate",
-      text: "hi",
-      truncated: false,
-      secret: false,
-    });
     expect(from({ type: "clientRoleUpdate", role: "controller" })).toEqual({ type: "clientRoleUpdate", role: "controller" });
   });
 
@@ -48,7 +42,7 @@ describe("message schemas", () => {
     });
   });
 
-  test("refuses unknown types, wrong field types and oversized text", () => {
+  test("refuses unknown types (clipboard included) and wrong field types", () => {
     for (const bad of [
       null,
       "viewer-expired",
@@ -56,9 +50,7 @@ describe("message schemas", () => {
       { type: "sw-ready" },
       { type: "sw-ready", version: "1" },
       { type: "pipelineStatusUpdate", video: "yes" },
-      { type: "clipboardContentUpdate", text: 1, truncated: false, secret: false },
-      { type: "clipboardContentUpdate", text: "hi" },
-      { type: "clipboardContentUpdate", text: "x".repeat(CLIPBOARD_TEXT_LIMIT + 1), truncated: true, secret: false },
+      { type: "clipboardContentUpdate", text: "hi", truncated: false, secret: false },
       { type: "clientRoleUpdate", role: "" },
       { type: "clientRoleUpdate", role: "x".repeat(33) },
     ]) {

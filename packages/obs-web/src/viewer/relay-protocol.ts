@@ -4,10 +4,8 @@ import { z } from "zod";
 // obs-instance-manager serves next to the Selkies client on the node (OIM
 // services/proxy/viewer-relay/relay.ts and docs/PANEL_INTEGRATION.md). The
 // relay pairs on `sw-hello`, passes a short allowlist on to Selkies, and
-// reports status and expiry back.
-
-// Same cap as the relay and Selkies' own clipboard preview.
-export const CLIPBOARD_TEXT_LIMIT = 256 * 1024;
+// reports status and expiry back. Clipboard sync is Selkies' own (Ctrl+C and
+// Ctrl+V inside the frame), so no clipboard text crosses here.
 
 const relayMessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("sw-ready"), version: z.number().int().min(1).max(1000) }),
@@ -16,12 +14,6 @@ const relayMessageSchema = z.discriminatedUnion("type", [
     type: z.literal("pipelineStatusUpdate"),
     video: z.boolean().optional(),
     audio: z.boolean().optional(),
-  }),
-  z.object({
-    type: z.literal("clipboardContentUpdate"),
-    text: z.string().max(CLIPBOARD_TEXT_LIMIT),
-    truncated: z.boolean(),
-    secret: z.boolean(),
   }),
   z.object({ type: z.literal("clientRoleUpdate"), role: z.string().min(1).max(32) }),
 ]);
@@ -32,8 +24,7 @@ export type RelayMessage = z.infer<typeof relayMessageSchema>;
 export type ViewerCommand =
   | { type: "sw-hello" }
   | { type: "setMute"; value: boolean }
-  | { type: "setVolume"; value: number }
-  | { type: "clipboardUpdateFromUI"; text: string };
+  | { type: "setVolume"; value: number };
 
 interface MessageEventLike {
   data: unknown;
