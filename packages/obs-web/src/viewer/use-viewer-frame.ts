@@ -48,6 +48,7 @@ export function useViewerFrame({ viewerRoot, getViewerUrl }: { viewerRoot: strin
   const [frame, setFrame] = useState<{ key: number; src: string } | null>(null);
   const [relay, setRelay] = useState<RelayState>("pending");
   const [video, setVideo] = useState(false);
+  const [audioBlocked, setAudioBlocked] = useState(false);
   const [muted, setMuted] = useState(false);
   const [volume, setVolume] = useState(1);
 
@@ -114,6 +115,7 @@ export function useViewerFrame({ viewerRoot, getViewerUrl }: { viewerRoot: strin
 
       markRelay("pending");
       setVideo(false);
+      setAudioBlocked(false);
       // A new key mounts a new <iframe>: a new ticket needs a fresh page load
       // (Selkies reads the token for its socket once per page).
       setFrame((prev) => ({ key: (prev?.key ?? 0) + 1, src: url }));
@@ -153,6 +155,9 @@ export function useViewerFrame({ viewerRoot, getViewerUrl }: { viewerRoot: strin
           break;
         case "pipelineStatusUpdate":
           if (message.video !== undefined) setVideo(message.video);
+          break;
+        case "audio-state":
+          setAudioBlocked(message.blocked);
           break;
         case "viewer-expired": {
           const decision = guardRef.current.next();
@@ -219,6 +224,7 @@ export function useViewerFrame({ viewerRoot, getViewerUrl }: { viewerRoot: strin
     onFrameLoad,
     relay,
     video,
+    audioBlocked,
     muted,
     volume,
     toggleMute,

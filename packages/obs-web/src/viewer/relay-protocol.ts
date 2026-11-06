@@ -10,6 +10,9 @@ import { z } from "zod";
 const relayMessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("sw-ready"), version: z.number().int().min(1).max(1000) }),
   z.object({ type: z.literal("viewer-expired") }),
+  // true while the browser's autoplay rule holds the sound back. Only a click
+  // inside the frame lifts it; a click on our page doesn't reach the frame.
+  z.object({ type: z.literal("audio-state"), blocked: z.boolean() }),
   z.object({
     type: z.literal("pipelineStatusUpdate"),
     video: z.boolean().optional(),

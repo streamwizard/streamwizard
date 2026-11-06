@@ -33,6 +33,7 @@ export function ViewerHeader({
   phase,
   relay,
   video,
+  audioBlocked,
   muted,
   volume,
   onToggleMute,
@@ -45,6 +46,7 @@ export function ViewerHeader({
   phase: ViewerPhase;
   relay: RelayState;
   video: boolean;
+  audioBlocked: boolean;
   muted: boolean;
   volume: number;
   onToggleMute: () => void;
@@ -63,6 +65,13 @@ export function ViewerHeader({
         <span className={cn("size-1.5 rounded-full", DOT[status.tone])} />
         {status.label}
       </span>
+
+      {controls && audioBlocked && (
+        <span className="flex min-w-0 items-center gap-1.5 rounded-md bg-amber-400/10 px-2 py-1 text-xs text-amber-200">
+          <VolumeX className="size-3.5 shrink-0" />
+          <span className="truncate">Your browser paused the sound. Click inside OBS to turn it on.</span>
+        </span>
+      )}
 
       <div className="ml-auto flex items-center gap-1">
         {controls && (

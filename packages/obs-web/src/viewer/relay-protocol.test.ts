@@ -33,6 +33,7 @@ describe("message schemas", () => {
     expect(from({ type: "sw-ready", version: 1 })).toEqual({ type: "sw-ready", version: 1 });
     expect(from({ type: "pipelineStatusUpdate", video: true })).toEqual({ type: "pipelineStatusUpdate", video: true });
     expect(from({ type: "clientRoleUpdate", role: "controller" })).toEqual({ type: "clientRoleUpdate", role: "controller" });
+    expect(from({ type: "audio-state", blocked: true })).toEqual({ type: "audio-state", blocked: true });
   });
 
   test("strips unknown keys", () => {
@@ -50,6 +51,8 @@ describe("message schemas", () => {
       { type: "sw-ready" },
       { type: "sw-ready", version: "1" },
       { type: "pipelineStatusUpdate", video: "yes" },
+      { type: "audio-state", blocked: "yes" },
+      { type: "audio-state" },
       { type: "clipboardContentUpdate", text: "hi", truncated: false, secret: false },
       { type: "clientRoleUpdate", role: "" },
       { type: "clientRoleUpdate", role: "x".repeat(33) },

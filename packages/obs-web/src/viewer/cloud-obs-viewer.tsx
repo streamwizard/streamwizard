@@ -40,6 +40,7 @@ export function CloudOBSViewer({
         phase={phase}
         relay={viewer.relay}
         video={viewer.video}
+        audioBlocked={viewer.audioBlocked}
         muted={viewer.muted}
         volume={viewer.volume}
         onToggleMute={viewer.toggleMute}

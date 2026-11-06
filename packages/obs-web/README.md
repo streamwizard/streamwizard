@@ -10,7 +10,7 @@ Everything is exported from the package root (`@repo/obs-web`). The package read
 
 1. Probes `HEAD <viewerRoot>` until the node answers 200 (`readiness.ts`; no ticket is spent while OBS starts).
 2. Mints a ticket (`getViewerUrl`, built on `mintSelkiesViewerUrl`) and frames `<viewerRoot>#token=<ticket>`.
-3. Pairs with the relay that obs-instance-manager serves in the page (`relay-protocol.ts`, Zod-parsed, node origin and frame window checked). Mute and volume go through it.
+3. Pairs with the relay that obs-instance-manager serves in the page (`relay-protocol.ts`, Zod-parsed, node origin and frame window checked). Mute and volume go through it. When the relay reports the browser's autoplay rule holding the sound back, the header says to click inside OBS (a click on our page doesn't reach the frame, so there is no button for it).
 4. When the relay reports `viewer-expired`, mints a new ticket and mounts a new frame, spaced and capped by `reconnect-guard.ts`.
 
 Against a node without the relay, the viewer shows the frame with Full screen and Reconnect only. The protocol is documented in obs-instance-manager's `docs/PANEL_INTEGRATION.md`.
