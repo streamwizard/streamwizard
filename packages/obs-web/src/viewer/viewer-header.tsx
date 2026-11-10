@@ -30,6 +30,7 @@ const ICON_BUTTON = "size-8 text-white/70 hover:bg-white/10 hover:text-white";
 export function ViewerHeader({
   name,
   logo,
+  actions,
   phase,
   relay,
   video,
@@ -45,6 +46,8 @@ export function ViewerHeader({
 }: {
   name: string;
   logo?: ReactNode;
+  /** The app's own buttons, shown before the viewer controls. */
+  actions?: ReactNode;
   phase: ViewerPhase;
   relay: RelayState;
   video: boolean;
@@ -78,6 +81,7 @@ export function ViewerHeader({
       )}
 
       <div className="ml-auto flex items-center gap-1">
+        {actions}
         {controls && (
           <>
             <Button

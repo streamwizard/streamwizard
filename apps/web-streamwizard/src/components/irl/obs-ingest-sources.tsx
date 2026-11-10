@@ -1,28 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
 import { Check, Loader2, Plus, Radio } from "lucide-react";
-import {
-  Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  Input,
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@repo/ui";
+import { Button } from "@repo/ui";
 import { listOutputKeys } from "@/actions/irl/ingest-output-keys";
 import type { IngestOutputKey } from "@repo/supabase/queries/ingest/ingest";
 import type { Scene } from "@repo/obs-web";
-import { obsPullUrl } from "@/lib/obs/obs-irl";
+import { AddIngestSourceDialog } from "./add-ingest-source-dialog";
 import { IngestLiveStats } from "./ingest-live-stats";
 
 interface ObsIngestSourcesProps {
@@ -42,9 +26,6 @@ export function ObsIngestSources({
 }: ObsIngestSourcesProps) {
   const [keys, setKeys] = useState<IngestOutputKey[] | null>(null);
   const [activeKey, setActiveKey] = useState<IngestOutputKey | null>(null);
-  const [dialogScene, setDialogScene] = useState<string>("");
-  const [sourceName, setSourceName] = useState<string>("");
-  const [submitting, setSubmitting] = useState(false);
   // Per-key, sticky confirmation of where it landed, since the toast alone
   // faded before the destination registered.
   const [addedTo, setAddedTo] = useState<Record<string, string>>({});
@@ -52,30 +33,6 @@ export function ObsIngestSources({
   useEffect(() => {
     listOutputKeys().then(({ data }) => setKeys(data ?? []));
   }, []);
-
-  const openDialogFor = (key: IngestOutputKey) => {
-    setActiveKey(key);
-    setDialogScene(currentScene ?? scenes[0]?.sceneName ?? "");
-    setSourceName(`Ingest - ${key.label}`);
-  };
-
-  const handleConfirm = async () => {
-    const trimmedName = sourceName.trim();
-    if (!activeKey || !dialogScene || !trimmedName) return;
-    setSubmitting(true);
-    try {
-      await onAddToScene(dialogScene, trimmedName, obsPullUrl(obsPullHost, activeKey.output_key));
-      setAddedTo((prev) => ({ ...prev, [activeKey.id]: dialogScene }));
-      toast.success(`Added "${trimmedName}" to ${dialogScene}`);
-      setActiveKey(null);
-    } catch (err) {
-      toast.error("Couldn't add that source", {
-        description: err instanceof Error ? err.message : "Try again?",
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -120,7 +77,7 @@ export function ObsIngestSources({
                       size="sm"
                       variant="outline"
                       disabled={!canInteract}
-                      onClick={() => openDialogFor(key)}
+                      onClick={() => setActiveKey(key)}
                       className="shrink-0"
                     >
                       <Plus className="h-3.5 w-3.5 mr-1.5" />
@@ -134,52 +91,15 @@ export function ObsIngestSources({
         )}
       </div>
 
-      <Dialog open={activeKey !== null} onOpenChange={(open) => !open && setActiveKey(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add &ldquo;{activeKey?.label}&rdquo; to a scene</DialogTitle>
-            <DialogDescription>
-              Your incoming signal from the ingest server. Name it, pick a scene.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="ingest-source-name">Source name</Label>
-              <Input
-                id="ingest-source-name"
-                value={sourceName}
-                onChange={(e) => setSourceName(e.target.value)}
-                placeholder="e.g. Backup cam"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Scene</Label>
-              <Select value={dialogScene} onValueChange={setDialogScene}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Choose a scene" />
-                </SelectTrigger>
-                <SelectContent>
-                  {scenes.map((s) => (
-                    <SelectItem key={s.sceneName} value={s.sceneName}>{s.sceneName}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setActiveKey(null)} disabled={submitting}>
-              Cancel
-            </Button>
-            <Button onClick={handleConfirm} disabled={!dialogScene || !sourceName.trim() || submitting}>
-              {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
-              Add to scene
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AddIngestSourceDialog
+        ingestKey={activeKey}
+        scenes={scenes}
+        currentScene={currentScene}
+        obsPullHost={obsPullHost}
+        onAddToScene={onAddToScene}
+        onClose={() => setActiveKey(null)}
+        onAdded={(key, sceneName) => setAddedTo((prev) => ({ ...prev, [key.id]: sceneName }))}
+      />
     </div>
   );
 }

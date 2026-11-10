@@ -9,6 +9,18 @@ export async function getOverlayScenes(client: DBClient, userId: string) {
   return client.from("overlay_scenes").select("*").eq("user_id", userId).order("updated_at", { ascending: false });
 }
 
+/** What adding an overlay to OBS as a browser source needs. */
+export const OVERLAY_SCENE_OBS_SOURCE_COLUMNS = "id, name, slug, width, height, is_active";
+
+export async function getOverlayScenesForObsSource(client: DBClient, userId: string) {
+  return client
+    .from("overlay_scenes")
+    .select(OVERLAY_SCENE_OBS_SOURCE_COLUMNS)
+    .eq("user_id", userId)
+    .order("updated_at", { ascending: false })
+    .limit(200);
+}
+
 export async function getOverlayScene(client: DBClient, id: string, userId: string) {
   const { data: scene, error: sceneError } = await client
     .from("overlay_scenes")

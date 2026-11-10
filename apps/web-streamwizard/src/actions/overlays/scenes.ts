@@ -17,6 +17,7 @@ import {
   getOverlayScene as getSceneWithItems,
   getOverlaySceneRow,
   getOverlayScenes as getSceneRows,
+  getOverlayScenesForObsSource,
   insertOverlayItems,
   insertOverlayItemsReturningIds,
   updateOverlayScene as updateSceneRow,
@@ -38,6 +39,18 @@ export async function getOverlayScenes() {
   if (!ctx) return { data: null, error: "Unauthorized" };
 
   const { data, error } = await getSceneRows(ctx.supabase, ctx.user.id);
+  if (error) {
+    return { data: null, error: toActionError(error, OVERLAYS_ERROR_SCOPE, "Couldn't load your overlays. Try again?") };
+  }
+  return { data, error: null };
+}
+
+/** The user's overlays, for adding one to cloud OBS as a browser source. */
+export async function listOverlaysForObsSource() {
+  const ctx = await tryAuthContext();
+  if (!ctx) return { data: null, error: "Unauthorized" };
+
+  const { data, error } = await getOverlayScenesForObsSource(ctx.supabase, ctx.user.id);
   if (error) {
     return { data: null, error: toActionError(error, OVERLAYS_ERROR_SCOPE, "Couldn't load your overlays. Try again?") };
   }
