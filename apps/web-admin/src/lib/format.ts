@@ -32,3 +32,9 @@ export function formatBytes(bytes: number | null | undefined): string {
   }
   return `${value >= 100 || unit === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[unit]}`;
 }
+
+/** A bitrate in kbps, as Mbps from 1000 up. */
+export function formatKbps(kbps: number | null | undefined, placeholder = "–"): string {
+  if (kbps == null) return placeholder;
+  return kbps >= 1000 ? `${(kbps / 1000).toFixed(1)} Mbps` : `${Math.round(kbps)} kbps`;
+}

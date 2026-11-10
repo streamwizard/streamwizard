@@ -3,6 +3,8 @@ import { getNodeAction, getInstanceAction } from "@/actions/nodes/obs";
 import { getAutoSwitcherConfigForUser } from "@/actions/nodes/auto-switcher";
 import { InstanceActions, InstanceDetailClient } from "@/components/obs/instance-detail-client";
 import { InstanceSwitcherTab } from "@/components/obs/instance-switcher-tab";
+import { InstanceStreamQualityLive } from "@/components/obs/instance-stream-quality-live";
+import { getStreamQualitySeries } from "@/lib/nodes/stream-quality-series";
 import { NodeMetricChart, type NodeMetricPoint } from "@/components/shared/charts/node-metric-chart";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/components/ui/tabs";
 import {
@@ -45,11 +47,13 @@ export default async function InstanceDetailPage({
   if (!node || !instance || instance.node_id !== nodeId) notFound();
 
   const apiPath = `/api/metrics/obs-instance/${instance.id}`;
+  const qualityPath = `${apiPath}?set=output`;
   const empty: ObsInstanceMetricPoint[] = [];
   const emptySignal: IngestSignalMetricPoint[] = [];
-  const [switcherConfig, cpuHist, ramHist, vramHist, rxHist, txHist, skewHist, skewRawHist, pesHist, samplesHist] =
+  const [switcherConfig, quality, cpuHist, ramHist, vramHist, rxHist, txHist, skewHist, skewRawHist, pesHist, samplesHist] =
     await Promise.all([
       getAutoSwitcherConfigForUser(instance.user_id),
+      getStreamQualitySeries(instance.id, "24h", "1h"),
       queryObsInstanceCpu(instance.id, "24h", "1h").catch(() => empty),
       queryObsInstanceRam(instance.id, "24h", "1h").catch(() => empty),
       queryObsInstanceVram(instance.id, "24h", "1h").catch(() => empty),
@@ -76,11 +80,12 @@ export default async function InstanceDetailPage({
       </PageHeader>
 
       <Tabs defaultValue="overview">
-        {/* Four tabs are wider than a phone: the row scrolls sideways inside itself. */}
+        {/* Five tabs are wider than a phone: the row scrolls sideways inside itself. */}
         <div className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] md:mx-0 md:px-0 [&::-webkit-scrollbar]:hidden">
           <TabsList className="h-11! md:h-9!">
             <TabsTrigger value="overview" className="px-3">Overview</TabsTrigger>
             <TabsTrigger value="metrics" className="px-3">Metrics history</TabsTrigger>
+            <TabsTrigger value="quality" className="px-3">Stream quality</TabsTrigger>
             <TabsTrigger value="avsync" className="px-3">A/V sync</TabsTrigger>
             <TabsTrigger value="switcher" className="px-3">Auto switcher</TabsTrigger>
           </TabsList>
@@ -97,6 +102,21 @@ export default async function InstanceDetailPage({
             <NodeMetricChart title="VRAM used (MB)" initialData={toNodePoints(vramHist)} apiPath={apiPath} dataKey="instanceVram" />
             <NodeMetricChart title="Bandwidth in" initialData={toNodePoints(rxHist)} apiPath={apiPath} dataKey="instanceRx" format="bytesPerSec" />
             <NodeMetricChart title="Bandwidth out" initialData={toNodePoints(txHist)} apiPath={apiPath} dataKey="instanceTx" format="bytesPerSec" />
+          </ChartGrid>
+        </TabsContent>
+
+        <TabsContent value="quality" className="mt-4 space-y-4">
+          <p className="text-sm text-muted-foreground">
+            What OBS reports about its own stream output, through the StreamWizard stats plugin. Dropped frames point at
+            the network, skipped frames at the encoder, and render lag at the scenes.
+          </p>
+          <InstanceStreamQualityLive instanceId={instance.id} />
+          <ChartGrid>
+            <NodeMetricChart title="Bitrate" initialData={quality.outputBitrate} apiPath={qualityPath} dataKey="outputBitrate" format="kbps" seriesOrder={["Average", "Lowest"]} />
+            <NodeMetricChart title="Congestion" initialData={quality.outputCongestion} apiPath={qualityPath} dataKey="outputCongestion" format="share" seriesOrder={["Average", "Peak"]} />
+            <NodeMetricChart title="Frames lost" initialData={quality.outputFramesLost} apiPath={qualityPath} dataKey="outputFramesLost" seriesOrder={["Network", "Encoder", "Render"]} />
+            <NodeMetricChart title="Reconnects" initialData={quality.outputReconnects} apiPath={qualityPath} dataKey="outputReconnects" />
+            <NodeMetricChart title="Render FPS" initialData={quality.outputRenderFps} apiPath={qualityPath} dataKey="outputRenderFps" format="decimal" seriesOrder={["Rendered", "Target"]} />
           </ChartGrid>
         </TabsContent>
 
