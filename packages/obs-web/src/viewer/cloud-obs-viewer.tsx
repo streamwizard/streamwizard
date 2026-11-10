@@ -21,15 +21,25 @@ import { ViewerHeader } from "./viewer-header";
 export function CloudOBSViewer({
   name,
   logo,
+  actions,
+  onReconnect,
   viewerRoot,
   getViewerUrl,
 }: {
   name: string;
   logo?: ReactNode;
+  /** The app's own buttons for the header, e.g. adding a source to OBS. */
+  actions?: ReactNode;
+  /** Runs with the header's Reconnect too, e.g. to retry the app's own OBS socket. */
+  onReconnect?: () => void;
   viewerRoot: string;
   getViewerUrl: () => Promise<string>;
 }) {
   const viewer = useViewerFrame({ viewerRoot, getViewerUrl });
+  const reconnect = () => {
+    viewer.reconnect();
+    onReconnect?.();
+  };
   const { phase } = viewer;
 
   return (
@@ -37,6 +47,7 @@ export function CloudOBSViewer({
       <ViewerHeader
         name={name}
         logo={logo}
+        actions={actions}
         phase={phase}
         relay={viewer.relay}
         video={viewer.video}
@@ -48,7 +59,7 @@ export function CloudOBSViewer({
         onVolume={viewer.changeVolume}
         onToggleActualSize={viewer.toggleActualSize}
         onFullscreen={viewer.enterFullscreen}
-        onReconnect={viewer.reconnect}
+        onReconnect={reconnect}
       />
 
       <div className="relative min-h-0 flex-1">
@@ -97,7 +108,7 @@ export function CloudOBSViewer({
                 size="sm"
                 variant="outline"
                 className="border-white/10 bg-white/5 text-white hover:bg-white/10"
-                onClick={viewer.reconnect}
+                onClick={reconnect}
               >
                 <RefreshCw className="size-3.5" />
                 Reconnect

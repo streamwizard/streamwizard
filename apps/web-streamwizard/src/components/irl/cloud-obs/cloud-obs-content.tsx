@@ -36,6 +36,8 @@ import type { AutoSwitcherConfigRow } from "@repo/supabase/queries/irl/auto-swit
 import { AutoSwitcherTab } from "@/components/irl/auto-switcher/auto-switcher-tab";
 import { listOutputKeys } from "@/actions/irl/ingest-output-keys";
 import { ALERTS_SCENE_NAME, IRL_SCENE_NAME, IRL_SOURCE_NAME, obsPullUrl } from "@/lib/obs/obs-irl";
+import { useIngestSourceGuard } from "@/hooks/obs/use-ingest-source-guard";
+import { IngestSourceProblemDialog } from "@/components/irl/ingest-source-problem-dialog";
 
 interface CloudObsContentProps {
   canInteract: boolean;
@@ -190,12 +192,23 @@ export function CloudObsContent({
           });
         }
       }
-    })();
+    })().catch(() => {
+      // OBS didn't answer in time (still loading, or the socket dropped).
+      // Expected, not an error: this runs again on the next scene update.
+    });
 
     return () => {
       cancelled = true;
     };
   }, [obs.status, obs.scenes.length, obs.sceneItems, ingestKeys, obsPullHost, showSetupStepper]);
+
+  // Warns when an ingest source is removed from a scene (the viewer window
+  // runs its own copy). Off during setup: the auto-wire above puts it back.
+  const ingestGuard = useIngestSourceGuard({
+    obs,
+    obsPullHost,
+    enabled: !showSetupStepper && canInteract,
+  });
 
   if (showSetupStepper) {
     return (
@@ -225,6 +238,13 @@ export function CloudObsContent({
     <div className="w-full space-y-6">
       {!canInteract && <FeatureDisabledBanner />}
       {needsTwitchScopes && <TwitchScopeBanner feature="cloud_obs" next="/dashboard/irl/obs" />}
+
+      <IngestSourceProblemDialog
+        state={ingestGuard.state}
+        problem={ingestGuard.problem}
+        onPutBack={() => void ingestGuard.putBack()}
+        onLeave={ingestGuard.leave}
+      />
 
       {/* High-signal banner for a crash (stream just dropped) or a delete. */}
       <ObsLifecycleBanner

@@ -35,3 +35,15 @@ export const OBS_PULL_LATENCY_MS = env.NEXT_PUBLIC_OBS_PULL_LATENCY_MS ?? DEFAUL
 export function obsPullUrl(host: string, outputKey: string) {
   return `srt://${host}:9000?streamid=${outputKey}&latency=${OBS_PULL_LATENCY_MS}`;
 }
+
+/** The output key a Media Source's input pulls from our ingest server at
+ * `host` (as built by obsPullUrl), or null when it pulls from anywhere else. */
+export function ingestPullStreamId(url: string, host: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "srt:" || parsed.hostname !== host) return null;
+    return parsed.searchParams.get("streamid") || null;
+  } catch {
+    return null;
+  }
+}
