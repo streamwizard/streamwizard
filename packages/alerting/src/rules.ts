@@ -6,6 +6,7 @@ import { databaseRules } from "./rules/database";
 import { ingestRules } from "./rules/ingest";
 import { obsNodeRules } from "./rules/obs-nodes";
 import { probeRules } from "./rules/probes";
+import { streamQualityRules } from "./rules/stream-quality";
 import { proxmoxRules } from "./rules/proxmox";
 import { websocketRules } from "./rules/websocket";
 
@@ -29,6 +30,7 @@ export {
 export function buildRules(overrides: RuleOverrides = {}): AlertRule[] {
   return [
     ...obsNodeRules(overrides),
+    ...streamQualityRules(overrides),
     ...ingestRules(overrides),
     ...apiRules(overrides),
     ...websocketRules(overrides),
@@ -45,6 +47,7 @@ export function buildRules(overrides: RuleOverrides = {}): AlertRule[] {
 const RULE_GROUPS: Record<string, string> = {
   gpu: "OBS / GPU nodes",
   obs: "OBS / GPU nodes",
+  stream: "Stream quality",
   ingest: "Ingest nodes",
   api: "HTTP / API",
   eventsub: "EventSub",

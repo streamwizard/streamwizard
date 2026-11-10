@@ -61,6 +61,20 @@ export const EVENTSUB_HEARTBEAT_STALE_MIN = 3;
 export const EVENTSUB_SHARDS_DEGRADED_PCT = 25;
 /** Below this many shards, eventsub.disconnected already says it all. */
 export const EVENTSUB_SHARDS_DEGRADED_MIN_SHARDS = 2;
+// Stream output (stream.* rules), from the obs_output stats OBS reports.
+/** Share of frames the network output dropped within the lookback. */
+export const STREAM_DROPPED_WARN_PCT = 1;
+export const STREAM_DROPPED_CRIT_PCT = 5;
+/** OBS's congestion estimate, as a percent, averaged over the lookback. */
+export const STREAM_CONGESTION_WARN_PCT = 30;
+export const STREAM_CONGESTION_CRIT_PCT = 60;
+/** "Sustained": the dropped-frames and congestion rules read this much history. */
+export const STREAM_LOOKBACK_MIN = 2;
+/** Below this many frames in the lookback a drop rate means little (a stream
+ * that just started or stopped); about 30s at 30 fps. */
+export const STREAM_MIN_FRAMES = 900;
+export const STREAM_RECONNECT_LOOP_COUNT = 3;
+export const STREAM_RECONNECT_LOOP_WINDOW_MIN = 10;
 export const INGEST_STALL_MIN_SESSION_AGE_MS = 2 * 60 * 1000;
 // Proxmox backups: the defaults live in @repo/backups so the /backups page
 // and these rules share one source.
