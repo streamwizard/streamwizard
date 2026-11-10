@@ -23,6 +23,7 @@ export * from "./queries/ws-queries";
 export * from "./queries/http-queries";
 export * from "./queries/system-queries";
 export * from "./queries/obs-queries";
+export * from "./queries/obs-output-queries";
 export * from "./queries/alert-queries";
 export * from "./queries/eventsub-queries";
 export * from "./queries/supabase-platform-queries";

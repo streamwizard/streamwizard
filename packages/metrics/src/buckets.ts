@@ -65,6 +65,7 @@ export const MEASUREMENT_BUCKETS = {
   obs_node: [BUCKETS.obsNodes],
   obs_instance: [BUCKETS.obsNodes],
   obs_instance_event: [BUCKETS.obsNodes],
+  obs_output: [BUCKETS.obsNodes],
   prometheus: [BUCKETS.supabasePlatform],
   backup_datastore: [BUCKETS.vmBackups],
   backup_vm: [BUCKETS.vmBackups],
