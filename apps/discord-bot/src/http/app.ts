@@ -1,7 +1,8 @@
 import { Hono } from "hono";
 import type { Client } from "discord.js";
+import type { ServiceAuth } from "@repo/service-token";
 import { reportError } from "@repo/sentry";
-import { bearerSecret } from "./middleware/bearer-secret";
+import { serviceTokenAuth } from "./middleware/service-auth";
 import { resolveGuild } from "./middleware/guild";
 import { announcementRoutes } from "./routes/announcements";
 import { builtMessageRoutes } from "./routes/built-messages";
@@ -18,13 +19,21 @@ import type { AppEnv } from "./types";
 // actions that need the gateway client (ticket panel, test welcome, publishing
 // built messages, creating channels).
 //
-// Everything except /health sits under /internal/guilds/:guildId, behind the
-// bearer secret and the guild lookup. A new feature gets its own file in
-// routes/ and one line here.
+// Everything except /health sits under /internal/guilds/:guildId, behind a
+// service token (scope `discord-guilds`, only web-admin may sign one) and the
+// guild lookup. A new feature gets its own file in routes/ and one line here.
 //
-// Without a secret only /health is served: the container healthcheck needs it
-// whether or not the dashboard API is configured.
-export function createInternalApp(client: Client, secret: string | undefined) {
+// Without service keys (or the old secret) only /health is served: the
+// container healthcheck needs it whether or not the dashboard API is
+// configured.
+export interface InternalAuthConfig {
+  /** Verifies service tokens addressed to discord-bot (DISCORD_BOT_SERVICE_JWKS). */
+  auth: ServiceAuth;
+  /** DISCORD_BOT_INTERNAL_SECRET, accepted until web-admin has moved over (SW-494). */
+  legacySecret?: string;
+}
+
+export function createInternalApp(client: Client, { auth, legacySecret }: InternalAuthConfig) {
   const app = new Hono<AppEnv>();
 
   // Liveness: answers as long as the process runs. `ready` is the gateway
@@ -32,10 +41,10 @@ export function createInternalApp(client: Client, secret: string | undefined) {
   // healthcheck fail, or Swarm would restart the bot in a loop.
   app.get("/health", (c) => c.json({ ok: true, ready: client.isReady() }));
 
-  if (!secret) return app;
+  if (!auth.configured("discord-guilds") && !legacySecret) return app;
 
   const guilds = new Hono<AppEnv>();
-  guilds.use("*", bearerSecret(secret));
+  guilds.use("*", serviceTokenAuth({ scope: "discord-guilds", auth, legacySecret }));
   guilds.use("/:guildId/*", resolveGuild(client));
 
   guilds.route("/:guildId", cacheRoutes);

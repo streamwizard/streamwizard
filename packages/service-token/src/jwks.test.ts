@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { calculateJwkThumbprint, exportJWK, generateKeyPair } from "jose";
 import { createServiceTokenVerifier } from "./index";
-import { serviceJwksJsonSchema, serviceJwksSchema } from "./jwks";
+import { serviceJwksJson, serviceJwksJsonSchema, serviceJwksSchema } from "./jwks";
 
 async function publicKey(svc = "rest-api") {
   const { publicKey } = await generateKeyPair("EdDSA", { crv: "Ed25519", extractable: true });
@@ -16,7 +16,7 @@ describe("serviceJwksSchema", () => {
     expect(parsed.success).toBe(true);
     expect(parsed.data?.keys[0] as unknown).toEqual(key);
     // The parsed set is what the verifier takes.
-    expect(() => createServiceTokenVerifier(parsed.data!)).not.toThrow();
+    expect(() => createServiceTokenVerifier(parsed.data!, "ws-server")).not.toThrow();
   });
 
   test("private key material is refused", async () => {
@@ -44,5 +44,8 @@ describe("serviceJwksSchema", () => {
     const parsed = serviceJwksJsonSchema.safeParse("{not json");
     expect(parsed.success).toBe(false);
     expect(parsed.error?.issues[0]?.message).toBe("WS_SERVICE_JWKS is not valid JSON");
+    expect(serviceJwksJson("REST_API_SERVICE_JWKS").safeParse("nope").error?.issues[0]?.message).toBe(
+      "REST_API_SERVICE_JWKS is not valid JSON",
+    );
   });
 });

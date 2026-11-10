@@ -1,10 +1,11 @@
 import type { BackupOverviewResponse, BackupVmDetailResponse } from "@repo/backups";
 import { env } from "@/lib/env";
+import { canCallInternal, internalAuthHeader } from "@/lib/internal-auth-header";
 
 /**
- * Server-side reads of rest-api's /internal/backups. The bearer secret stays
- * on the server; browsers only ever talk to our own /api/backups routes.
- * Never throws: the page renders `error` instead.
+ * Server-side reads of rest-api's /internal/backups, with a service token
+ * (scope `backups`) signed per request. Browsers only ever talk to our own
+ * /api/backups routes. Never throws: the page renders `error` instead.
  */
 
 export type BackupFetch<T> = { data: T; error: null } | { data: null; error: string };
@@ -12,12 +13,13 @@ export type BackupFetch<T> = { data: T; error: null } | { data: null; error: str
 export const BACKUPS_NOT_CONFIGURED = "Backup monitoring is not configured for this environment.";
 
 export async function callBackupsApi<T>(path: string, init: { method?: "GET" | "POST" } = {}): Promise<BackupFetch<T>> {
-  if (!env.REST_API_INTERNAL_SECRET) return { data: null, error: BACKUPS_NOT_CONFIGURED };
+  if (!canCallInternal(env.REST_API_INTERNAL_SECRET)) return { data: null, error: BACKUPS_NOT_CONFIGURED };
 
   try {
+    const authorization = (await internalAuthHeader("backups", env.REST_API_INTERNAL_SECRET))!;
     const res = await fetch(`${env.STREAMWIZARD_API_URL.replace(/\/+$/, "")}/internal/backups${path}`, {
       method: init.method ?? "GET",
-      headers: { authorization: `Bearer ${env.REST_API_INTERNAL_SECRET}` },
+      headers: { authorization },
       cache: "no-store",
       signal: AbortSignal.timeout(8_000),
     });

@@ -24,7 +24,7 @@ beforeAll(async () => {
   const kid = "test-web-admin";
   signingJwk = JSON.stringify({ ...(await crypto.subtle.exportKey("jwk", pair.privateKey)), kid, alg: "EdDSA", svc: "web-admin" });
   const pub = await crypto.subtle.exportKey("jwk", pair.publicKey);
-  verify = createServiceTokenVerifier({ keys: [{ ...pub, kid, alg: "EdDSA", svc: "web-admin" } as ServiceJwk] });
+  verify = createServiceTokenVerifier({ keys: [{ ...pub, kid, alg: "EdDSA", svc: "web-admin" } as ServiceJwk] }, "ws-server");
 });
 
 afterAll(() => {

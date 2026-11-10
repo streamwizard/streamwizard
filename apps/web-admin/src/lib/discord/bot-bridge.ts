@@ -1,5 +1,6 @@
 import { reportError } from "@repo/sentry";
 import { env } from "@/lib/env";
+import { canCallInternal, internalAuthHeader } from "@/lib/internal-auth-header";
 
 // Server-only. Calls the Discord bot's internal Hono server. Settings are
 // already in the DB when these run, so a failure never undoes a save — the
@@ -16,8 +17,17 @@ export async function callBot<T = { ok: true }>(
   body: unknown = {},
   { timeoutMs = 5_000 }: { timeoutMs?: number } = {},
 ): Promise<BotCallResult<T>> {
-  if (!env.DISCORD_BOT_INTERNAL_URL || !env.DISCORD_BOT_INTERNAL_SECRET) {
+  if (!env.DISCORD_BOT_INTERNAL_URL || !canCallInternal(env.DISCORD_BOT_INTERNAL_SECRET)) {
     return { ok: false, reason: "unconfigured", error: "The bot's internal API isn't configured" };
+  }
+
+  let authorization: string;
+  try {
+    // A service token (scope discord-guilds), signed fresh for this call.
+    authorization = (await internalAuthHeader("discord-guilds", env.DISCORD_BOT_INTERNAL_SECRET))!;
+  } catch (error) {
+    reportError(error, "discord.bot-call.sign", { path });
+    return { ok: false, reason: "unconfigured", error: "Couldn't authorize the call to the bot" };
   }
 
   let res: Response;
@@ -25,7 +35,7 @@ export async function callBot<T = { ok: true }>(
     res = await fetch(new URL(`/internal/guilds/${guildId}${path}`, env.DISCORD_BOT_INTERNAL_URL), {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${env.DISCORD_BOT_INTERNAL_SECRET}`,
+        Authorization: authorization,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),

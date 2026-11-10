@@ -36,7 +36,7 @@ beforeAll(async () => {
   process.env.WS_SERVICE_SIGNING_JWK = JSON.stringify({ ...(await crypto.subtle.exportKey("jwk", pair.privateKey)), kid, alg: "EdDSA", svc: "web-admin" });
   resetSigningKey();
   const pub = await crypto.subtle.exportKey("jwk", pair.publicKey);
-  verify = createServiceTokenVerifier({ keys: [{ ...pub, kid, alg: "EdDSA", svc: "web-admin" } as ServiceJwk] });
+  verify = createServiceTokenVerifier({ keys: [{ ...pub, kid, alg: "EdDSA", svc: "web-admin" } as ServiceJwk] }, "ws-server");
   globalThis.WebSocket = FakeSocket as unknown as typeof WebSocket;
 });
 

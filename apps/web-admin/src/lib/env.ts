@@ -47,12 +47,15 @@ export const env = createEnv({
     DISCORD_BOT_TOKEN: z.string().min(1).optional(),
     // Discord dashboard (/discord). The pages show a "not configured" card
     // until the guild id and bot token are set. CLIENT_ID lists deployed
-    // slash commands; the INTERNAL pair reaches the bot's Hono server for
-    // cache refreshes and actions — without it saves still land in the DB and
+    // slash commands; DISCORD_BOT_INTERNAL_URL reaches the bot's Hono server
+    // for cache refreshes and actions, with service tokens signed by
+    // WS_SERVICE_SIGNING_JWK — without them saves still land in the DB and
     // the bot's cache TTLs pick them up.
     DISCORD_GUILD_ID: snowflakeSchema.optional(),
     DISCORD_CLIENT_ID: snowflakeSchema.optional(),
     DISCORD_BOT_INTERNAL_URL: z.string().url().optional(),
+    // Old bearer secret for the bot. While set it is sent instead of a token;
+    // delete it to switch to tokens, then it goes away (SW-494).
     DISCORD_BOT_INTERNAL_SECRET: z.string().min(16).optional(),
     // Banner uploads in the Discord message builder go to the shared CDN
     // bucket under discord-banners/. Without all four plus NEXT_PUBLIC_CDN_URL
@@ -84,13 +87,14 @@ export const env = createEnv({
     // tokens (actions/ws/monitor-token.ts); the browser dials NEXT_PUBLIC_WS_SERVER_URL,
     // which next.config.ts derives from this.
     WS_SERVER_URL: z.string().min(1).optional(),
-    // Ed25519 private JWK this app signs its ws-server tokens with
+    // Ed25519 private JWK this app signs its service tokens with, for
+    // ws-server, rest-api /internal/* and the discord-bot API
     // (@repo/service-token reads it). Secret. Optional: without it those calls
     // are skipped as unconfigured; a malformed one stops boot.
     WS_SERVICE_SIGNING_JWK: z.string().min(1).refine(isServiceSigningJwk, SERVICE_SIGNING_JWK_ERROR).optional(),
-    // Bearer secret for rest-api's /internal/backups (the /backups page).
-    // Must match rest-api's REST_API_INTERNAL_SECRET; without it the page
-    // shows a "not configured" card.
+    // Old bearer secret for rest-api's /internal/backups (the /backups page).
+    // While set it is sent instead of a service token; delete it to switch to
+    // tokens, then it goes away (SW-494).
     REST_API_INTERNAL_SECRET: z.string().min(32).optional(),
     // JSON array of Proxmox hosts, same value as rest-api's (Doppler). /vms
     // reads guest IPs, agent state and disk use from these on demand; without

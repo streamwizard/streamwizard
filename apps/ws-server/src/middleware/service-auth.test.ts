@@ -1,13 +1,16 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { calculateJwkThumbprint, exportJWK, generateKeyPair } from "jose";
-import { resetSigningKey, signServiceToken, type ServiceJwk, type ServiceName, type ServiceScope } from "@repo/service-token";
+import {
+  createServiceAuth as createAuth,
+  resetSigningKey,
+  signServiceToken,
+  type ServiceJwk,
+  type ServiceName,
+  type ServiceScope,
+} from "@repo/service-token";
 
-process.env.NODE_ENV = "development";
-process.env.SUPABASE_URL ??= "http://127.0.0.1:54321";
-process.env.SUPABASE_SECRET_KEY ??= "test-secret";
-process.env.TOKEN_ENCRYPTION_KEY ??= "test-key";
-
-const { createServiceAuth } = await import("./service-auth");
+// ws-server's checks, as wired in ./service-auth (audience ws-server).
+const createServiceAuth = (config: { jwks?: { keys: ServiceJwk[] } }) => createAuth({ audience: "ws-server", ...config });
 
 const signing = new Map<ServiceName, string>();
 const keys: ServiceJwk[] = [];

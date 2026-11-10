@@ -1,34 +1,42 @@
 import { randomUUID } from "node:crypto";
-import { decodeProtectedHeader, errors, importJWK, jwtVerify, SignJWT, type JWK } from "jose";
+import { decodeProtectedHeader, errors, importJWK, jwtVerify, SignJWT } from "jose";
 
-// Short-lived tokens our own services use to call ws-server.
+// Short-lived tokens our own services use to call each other.
 //
-// ws-server used to trust one shared secret (and, for bot sockets, the
-// Supabase service-role key). Every holder could do everything: push any
-// event to any user, close anyone's sockets, read the firehose. Now each
-// service has its own Ed25519 key and signs a 60-second token for the one
-// thing it is about to do. ws-server holds only the public keys, knows which
-// service each key belongs to, and checks the action against SERVICE_POLICY.
-// A leaked key is limited to that service's actions; ws-server holds no
-// secret at all.
+// Each service has its own Ed25519 key and signs a 60-second token for the one
+// thing it is about to do. The token is addressed to the one service that
+// handles that action (its audience, from SCOPE_AUDIENCE). The receiving
+// service holds only public keys, knows which service each key belongs to,
+// and checks the action against SERVICE_POLICY. A leaked key is limited to
+// that service's actions, and no receiver holds a secret at all.
 
 export const SERVICE_TOKEN_ISSUER = "streamwizard-service-token";
-export const SERVICE_TOKEN_AUDIENCE = "ws-server";
 export const SERVICE_TOKEN_TTL_SECONDS = 60;
 
-import { isServiceName, serviceMay, type ServiceName, type ServiceScope } from "./policy";
+import {
+  isServiceName,
+  SCOPE_AUDIENCE,
+  serviceMay,
+  type ServiceAudience,
+  type ServiceName,
+  type ServiceScope,
+} from "./policy";
 import { parseServiceSigningJwk, SERVICE_SIGNING_JWK_ERROR, type ServiceJwk } from "./signing-jwk";
 
 export {
   SERVICE_SCOPES,
   SERVICE_POLICY,
   SERVICE_NAMES,
+  SERVICE_AUDIENCES,
+  SCOPE_AUDIENCE,
   isServiceName,
   serviceMay,
   type ServiceScope,
   type ServiceName,
+  type ServiceAudience,
 } from "./policy";
 export { type ServiceJwk } from "./signing-jwk";
+export { createServiceAuth, type ServiceAuth, type ServiceAuthConfig, type ServiceAuthResult } from "./service-auth";
 
 /** Extra claims a token can carry, e.g. `node` on an ingest-node token. */
 export type ServiceTokenClaims = Record<string, string>;
@@ -87,7 +95,7 @@ export async function signServiceToken(scope: ServiceScope, claims: ServiceToken
   return new SignJWT({ ...claims, scope })
     .setProtectedHeader({ alg: "EdDSA", kid, typ: "JWT" })
     .setIssuer(SERVICE_TOKEN_ISSUER)
-    .setAudience(SERVICE_TOKEN_AUDIENCE)
+    .setAudience(SCOPE_AUDIENCE[scope])
     .setSubject(service)
     .setIssuedAt()
     .setExpirationTime(`${SERVICE_TOKEN_TTL_SECONDS}s`)
@@ -96,8 +104,8 @@ export async function signServiceToken(scope: ServiceScope, claims: ServiceToken
 }
 
 /**
- * The Authorization header for one ws-server call: a fresh service token when
- * this service has WS_SERVICE_SIGNING_JWK, else null (ws-server calls are off
+ * The Authorization header for one service call: a fresh service token when
+ * this service has WS_SERVICE_SIGNING_JWK, else null (those calls are off
  * here).
  */
 export async function serviceAuthHeader(scope: ServiceScope): Promise<string | null> {
@@ -105,7 +113,7 @@ export async function serviceAuthHeader(scope: ServiceScope): Promise<string | n
   return null;
 }
 
-// ── Verifying (ws-server) ───────────────────────────────────────────────────
+// ── Verifying (the receiving services) ──────────────────────────────────────
 
 const CLOCK_TOLERANCE_SECONDS = 5;
 
@@ -123,21 +131,24 @@ export interface VerifiedServiceToken {
 export type ServiceTokenVerifier = (token: string, scope: ServiceScope) => Promise<VerifiedServiceToken>;
 
 /**
- * Builds a verifier from WS_SERVICE_JWKS ({ keys: ServiceJwk[] }). It returns
- * the calling service and the token's extra claims, or throws when the token
- * is invalid, the key is not bound to the service in `sub`, the token was
- * signed for another action, the service may not do this action, or a claim
- * the action needs is missing.
+ * Builds the verifier for one receiving service (`audience`) from its public
+ * key set ({ keys: ServiceJwk[] }, e.g. WS_SERVICE_JWKS). It returns the
+ * calling service and the token's extra claims, or throws when the token is
+ * invalid or addressed to another service, the key is not bound to the
+ * service in `sub`, the token was signed for another action, the service may
+ * not do this action, or a claim the action needs is missing.
  */
-export function createServiceTokenVerifier(jwks: { keys: ServiceJwk[] }): ServiceTokenVerifier {
+export function createServiceTokenVerifier(jwks: { keys: ServiceJwk[] }, audience: ServiceAudience): ServiceTokenVerifier {
   const byKid = new Map<string, { jwk: ServiceJwk; key: Promise<CryptoKey | Uint8Array> }>();
   for (const jwk of jwks.keys) {
-    if (!jwk.kid || !isServiceName(jwk.svc)) throw new Error("every WS_SERVICE_JWKS key needs a kid and a known svc");
-    if (jwk.d) throw new Error("WS_SERVICE_JWKS must hold public keys only");
+    if (!jwk.kid || !isServiceName(jwk.svc)) throw new Error("every service JWKS key needs a kid and a known svc");
+    if (jwk.d) throw new Error("a service JWKS must hold public keys only");
     byKid.set(jwk.kid, { jwk, key: importJWK(jwk, "EdDSA") });
   }
 
   return async (token, scope) => {
+    // A route asking for another service's action is a wiring bug, not a bad token.
+    if (SCOPE_AUDIENCE[scope] !== audience) throw new Error(`${audience} does not handle ${scope}`);
     const { kid, alg } = decodeProtectedHeader(token);
     if (alg !== "EdDSA") throw new errors.JOSEAlgNotAllowed("only EdDSA service tokens are accepted");
     const entry = kid ? byKid.get(kid) : undefined;
@@ -145,7 +156,7 @@ export function createServiceTokenVerifier(jwks: { keys: ServiceJwk[] }): Servic
 
     const { payload } = await jwtVerify(token, await entry.key, {
       issuer: SERVICE_TOKEN_ISSUER,
-      audience: SERVICE_TOKEN_AUDIENCE,
+      audience,
       algorithms: ["EdDSA"],
       maxTokenAge: `${SERVICE_TOKEN_TTL_SECONDS}s`,
       clockTolerance: CLOCK_TOLERANCE_SECONDS,

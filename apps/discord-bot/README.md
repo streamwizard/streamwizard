@@ -93,15 +93,19 @@ Picked up automatically on next start — no registration needed in `index.ts`.
 
 ## Internal API (web-admin dashboard)
 
-web-admin's `/discord` pages write settings straight to Supabase, then call the bot so changes land without a restart. The bot starts a small Hono server (`src/http/`) when `DISCORD_BOT_INTERNAL_SECRET` is set; without it the server stays off and saves still apply once the in-memory caches expire (permissions 5 min, activity 60 s).
+web-admin's `/discord` pages write settings straight to Supabase, then call the bot so changes land without a restart. The bot always serves `GET /health` (`src/http/`) and mounts the dashboard API when `DISCORD_BOT_SERVICE_JWKS` is set; without it saves still apply once the in-memory caches expire (permissions 5 min, activity 60 s).
+
+web-admin signs a 60-second service token (`@repo/service-token`, scope `discord-guilds`, audience `discord-bot`) for every call. The bot holds only web-admin's public key, so a token web-admin signs for ws-server or rest-api is refused here, and the other way round.
 
 | Env var | Where | Notes |
 |---|---|---|
-| `DISCORD_BOT_INTERNAL_SECRET` | bot + web-admin | 16+ chars, same value on both sides. |
+| `DISCORD_BOT_SERVICE_JWKS` | bot | Public keys of the callers (web-admin) as a JWKS, from `packages/service-token/scripts/generate-keys.ts`. Not secret. |
+| `WS_SERVICE_SIGNING_JWK` | web-admin | web-admin's signing key, the same one it uses for ws-server. Secret. |
+| `DISCORD_BOT_INTERNAL_SECRET` | bot + web-admin | Old shared secret, still accepted while web-admin moves to tokens (web-admin sends it instead of a token while it's set). Removed in the next release. |
 | `DISCORD_BOT_INTERNAL_PORT` | bot | Defaults to `3010`. |
 | `DISCORD_BOT_INTERNAL_URL` | web-admin | e.g. `http://discord-bot:3010` on the internal Docker network. |
 
-Don't publish the port on a public domain. Every route except `GET /health` needs `Authorization: Bearer <secret>`, and all live under `/internal/guilds/:guildId` (the bot must be in that guild):
+Don't publish the port on a public domain. Every route except `GET /health` needs `Authorization: Bearer <service token>`, and all live under `/internal/guilds/:guildId` (the bot must be in that guild):
 
 | Route | Does |
 |---|---|

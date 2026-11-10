@@ -3,20 +3,24 @@ import { join } from "node:path";
 import { calculateJwkThumbprint, exportJWK, generateKeyPair } from "jose";
 import { SERVICE_NAMES } from "../src/index";
 
-// Generates one Ed25519 key pair per service that calls ws-server, for ONE
-// environment:
+// Generates one Ed25519 key pair per service that signs service tokens, for
+// ONE environment:
 //
 //   bun packages/service-token/scripts/generate-keys.ts <out-dir>
 //
 // Writes, and prints none of:
 //   <service>.signing.jwk -> WS_SERVICE_SIGNING_JWK in that service's config (secret)
-//   public.jwks           -> WS_SERVICE_JWKS in ws-server's config (not secret)
+//   public.jwks           -> WS_SERVICE_JWKS in ws-server's config, and
+//                            REST_API_SERVICE_JWKS / DISCORD_BOT_SERVICE_JWKS
+//                            in rest-api's and discord-bot's (not secret; the
+//                            receivers only need the keys of their callers)
 //
 // Upload straight from the files, e.g.
 //   doppler secrets set WS_SERVICE_SIGNING_JWK -p <project> -c <config> < rest-api.signing.jwk
 // then delete the out dir. To rotate one service, generate a new pair for it,
-// add its public key to WS_SERVICE_JWKS next to the old one, deploy
-// ws-server, switch the service's signing key, then drop the old public key.
+// add its public key to every receiver's JWKS next to the old one, deploy
+// the receivers, switch the service's signing key, then drop the old public
+// key.
 
 const outDir = process.argv[2];
 if (!outDir) {

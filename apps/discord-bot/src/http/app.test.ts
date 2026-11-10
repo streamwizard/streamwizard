@@ -13,31 +13,38 @@ Object.assign(process.env, {
   NEXT_PUBLIC_BASE_URL: "http://localhost:3000",
 });
 const { createInternalApp } = await import("./app");
+const { createServiceAuth } = await import("@repo/service-token");
+
+// Service tokens are covered in middleware/service-auth.test.ts; here the API
+// runs either unconfigured or behind the old secret alone.
+const noKeys = createServiceAuth({ audience: "discord-bot" });
+const unconfigured = { auth: noKeys };
+const withSecret = (legacySecret: string) => ({ auth: noKeys, legacySecret });
 
 const client = (ready: boolean) => ({ isReady: () => ready }) as unknown as Client;
 
 describe("internal app /health", () => {
-  test("answers 200 without a secret configured", async () => {
-    const res = await createInternalApp(client(true), undefined).request("/health");
+  test("answers 200 with no auth configured", async () => {
+    const res = await createInternalApp(client(true), unconfigured).request("/health");
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true, ready: true });
   });
 
   test("stays 200 while the gateway is not ready", async () => {
-    const res = await createInternalApp(client(false), "s".repeat(16)).request("/health");
+    const res = await createInternalApp(client(false), withSecret("s".repeat(16))).request("/health");
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true, ready: false });
   });
 });
 
 describe("internal app dashboard API", () => {
-  test("is not mounted without a secret", async () => {
-    const res = await createInternalApp(client(true), undefined).request("/internal/guilds/1/cache");
+  test("is not mounted without service keys or a secret", async () => {
+    const res = await createInternalApp(client(true), unconfigured).request("/internal/guilds/1/cache");
     expect(res.status).toBe(404);
   });
 
-  test("rejects a request without the bearer secret", async () => {
-    const res = await createInternalApp(client(true), "s".repeat(16)).request("/internal/guilds/1/cache");
+  test("rejects a request without credentials", async () => {
+    const res = await createInternalApp(client(true), withSecret("s".repeat(16))).request("/internal/guilds/1/cache");
     expect(res.status).toBe(401);
   });
 });
@@ -56,7 +63,7 @@ describe("ticket routes", () => {
   };
   const readyClient = { isReady: () => true, guilds: { cache: { get: () => guild } } } as unknown as Client;
   const post = (path: string, body: unknown) =>
-    createInternalApp(readyClient, SECRET).request(`/internal/guilds/${guild.id}${path}`, {
+    createInternalApp(readyClient, withSecret(SECRET)).request(`/internal/guilds/${guild.id}${path}`, {
       method: "POST",
       headers: { authorization: `Bearer ${SECRET}`, "content-type": "application/json" },
       body: JSON.stringify(body),

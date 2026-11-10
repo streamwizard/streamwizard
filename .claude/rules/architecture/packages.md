@@ -37,7 +37,7 @@ Part of the StreamWizard rulebook; Claude Code loads it automatically when worki
 | `@repo/sentry` | Sentry options and integrations. Bun services wire it in `src/sentry.ts`; Next apps in `sentry.server.config.ts`, `sentry.edge.config.ts` and `src/instrumentation*.ts`. |
 | `@repo/posthog`, `@repo/metrics` | Product analytics; metrics. |
 | `@repo/logger` | Stream-event logger only (`streamEventsLogger`), not a general logger. |
-| `@repo/service-token`, `@repo/node-token` | Per-service Ed25519 tokens and `Authorization: Bearer` parsing (`/bearer`); OBS/ingest node tokens. |
+| `@repo/service-token`, `@repo/node-token` | Per-service Ed25519 tokens for calls into ws-server, rest-api `/internal/*` and the discord-bot API (signing, `createServiceAuth` for the receiving side, JWKS env schemas in `/jwks`) and `Authorization: Bearer` parsing (`/bearer`); OBS/ingest node tokens. |
 | `@repo/ttl-cache` | The in-process TTL cache (`TtlCache`) and `MissLimiter`. Every cache, cooldown and fixed-window counter (see [caching.md](caching.md)). |
 | `@repo/user-state` | Per-user widget state service. |
 | `@repo/ws-client` | Server-to-server ws-server clients: HTTP calls into its internal endpoints (broadcast, socket revoke, ingest sessions), signed with `@repo/service-token`, and `ServiceSocket` (`/service-socket`) for reconnecting service sockets. Not a browser WebSocket client. |
