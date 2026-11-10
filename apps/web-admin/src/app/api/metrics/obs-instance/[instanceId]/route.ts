@@ -8,6 +8,8 @@ import {
   queryIngestAvSkewRaw,
   queryIngestAudioPesInterval,
   queryIngestAvSkewSamples,
+  queryObsOutputLatest,
+  assertValidFluxDuration,
 } from "@repo/metrics";
 import type { ObsInstanceMetricPoint, IngestSignalMetricPoint } from "@repo/metrics";
 import { NextResponse } from "next/server";
@@ -15,6 +17,7 @@ import { getInstanceByIdWithOwner } from "@repo/supabase/queries/obs-nodes/insta
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { assertAdmin } from "@/lib/auth/assert-admin";
 import { settled } from "@/lib/settled";
+import { getStreamQualitySeries } from "@/lib/nodes/stream-quality-series";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +48,27 @@ export async function GET(request: Request, { params }: { params: Promise<{ inst
   const { searchParams } = new URL(request.url);
   const fluxRange = searchParams.get("range") ?? "24h";
   const window = searchParams.get("window") ?? "1h";
+  const set = searchParams.get("set");
+
+  // The query builders validate these too, but they'd throw inside settled()
+  // and blank every panel instead of answering the request.
+  try {
+    assertValidFluxDuration(fluxRange, "range");
+    assertValidFluxDuration(window, "window");
+  } catch {
+    return NextResponse.json({ error: "Invalid range or window" }, { status: 400 });
+  }
+
+  // The "Stream quality" tab: obs_output charts (?set=output) and the newest
+  // point for the live tiles (?set=live). Separate sets, so each tab only pays
+  // for its own queries.
+  if (set === "output") {
+    return NextResponse.json(await getStreamQualitySeries(instanceId, fluxRange, window));
+  }
+  if (set === "live") {
+    const [latest] = await Promise.allSettled([queryObsOutputLatest(instanceId)]);
+    return NextResponse.json({ latest: settled(latest, null, "obs output latest") });
+  }
 
   // A/V sync is tagged by the streamer, not by the container, so the owner has
   // to be resolved before those series can be queried.
