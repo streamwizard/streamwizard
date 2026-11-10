@@ -43,8 +43,10 @@ export function CloudOBSViewer({
         audioBlocked={viewer.audioBlocked}
         muted={viewer.muted}
         volume={viewer.volume}
+        actualSize={viewer.actualSize}
         onToggleMute={viewer.toggleMute}
         onVolume={viewer.changeVolume}
+        onToggleActualSize={viewer.toggleActualSize}
         onFullscreen={viewer.enterFullscreen}
         onReconnect={viewer.reconnect}
       />

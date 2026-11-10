@@ -27,7 +27,8 @@ export type RelayMessage = z.infer<typeof relayMessageSchema>;
 export type ViewerCommand =
   | { type: "sw-hello" }
   | { type: "setMute"; value: boolean }
-  | { type: "setVolume"; value: number };
+  | { type: "setVolume"; value: number }
+  | { type: "setScaleLocally"; value: boolean };
 
 interface MessageEventLike {
   data: unknown;

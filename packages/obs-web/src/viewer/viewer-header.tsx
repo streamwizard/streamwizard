@@ -36,8 +36,10 @@ export function ViewerHeader({
   audioBlocked,
   muted,
   volume,
+  actualSize,
   onToggleMute,
   onVolume,
+  onToggleActualSize,
   onFullscreen,
   onReconnect,
 }: {
@@ -49,8 +51,10 @@ export function ViewerHeader({
   audioBlocked: boolean;
   muted: boolean;
   volume: number;
+  actualSize: boolean;
   onToggleMute: () => void;
   onVolume: (value: number) => void;
+  onToggleActualSize: () => void;
   onFullscreen: () => void;
   onReconnect: () => void;
 }) {
@@ -95,6 +99,19 @@ export function ViewerHeader({
               onValueChange={([value]) => onVolume((value ?? 0) / 100)}
               aria-label="Volume"
             />
+            <Button
+              size="sm"
+              variant="ghost"
+              className={cn(
+                "h-8 px-2 text-xs text-white/70 hover:bg-white/10 hover:text-white",
+                actualSize && "bg-white/10 text-white",
+              )}
+              onClick={onToggleActualSize}
+              aria-pressed={actualSize}
+              title={actualSize ? "Fit OBS to the window" : "Show OBS at its real size, sharpest on big screens"}
+            >
+              Actual size
+            </Button>
           </>
         )}
         <Button

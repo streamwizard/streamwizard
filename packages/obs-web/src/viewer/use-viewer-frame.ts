@@ -51,6 +51,11 @@ export function useViewerFrame({ viewerRoot, getViewerUrl }: { viewerRoot: strin
   const [audioBlocked, setAudioBlocked] = useState(false);
   const [muted, setMuted] = useState(false);
   const [volume, setVolume] = useState(1);
+  // "Actual size" lasts for this window only; every viewer opens fitted. Saved
+  // between sessions it left later viewers pinned at full size, which reads as
+  // "doesn't scale" in a small window. Selkies remembers its own scaling per
+  // node, so ours is sent on every pairing to override it.
+  const [actualSize, setActualSize] = useState(false);
 
   const frameRef = useRef<HTMLIFrameElement>(null);
   const runRef = useRef<AbortController | null>(null);
@@ -59,6 +64,7 @@ export function useViewerFrame({ viewerRoot, getViewerUrl }: { viewerRoot: strin
   const guardRef = useRef(createReconnectGuard());
   const relayRef = useRef<RelayState>("pending");
   const audioRef = useRef({ muted: false, volume: 1 });
+  const actualSizeRef = useRef(false);
 
   const post = useCallback(
     (command: ViewerCommand) => frameRef.current?.contentWindow?.postMessage(command, nodeOrigin),
@@ -151,6 +157,7 @@ export function useViewerFrame({ viewerRoot, getViewerUrl }: { viewerRoot: strin
           // A new frame starts unmuted at full volume; keep the user's choice.
           if (audioRef.current.muted) post({ type: "setMute", value: true });
           if (audioRef.current.volume !== 1) post({ type: "setVolume", value: audioRef.current.volume });
+          post({ type: "setScaleLocally", value: !actualSizeRef.current });
           setPhase((p) => (p.kind === "connecting" ? { kind: "connected" } : p));
           break;
         case "pipelineStatusUpdate":
@@ -213,6 +220,13 @@ export function useViewerFrame({ viewerRoot, getViewerUrl }: { viewerRoot: strin
     [send],
   );
 
+  const toggleActualSize = useCallback(() => {
+    const next = !actualSizeRef.current;
+    actualSizeRef.current = next;
+    setActualSize(next);
+    send({ type: "setScaleLocally", value: !next });
+  }, [send]);
+
   const enterFullscreen = useCallback(() => {
     frameRef.current?.requestFullscreen().catch(() => {});
   }, []);
@@ -227,7 +241,9 @@ export function useViewerFrame({ viewerRoot, getViewerUrl }: { viewerRoot: strin
     audioBlocked,
     muted,
     volume,
+    actualSize,
     toggleMute,
+    toggleActualSize,
     changeVolume,
     enterFullscreen,
     reconnect,
