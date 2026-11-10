@@ -16,8 +16,9 @@ export default function DiscordLayout({ children }: { children: React.ReactNode 
         </p>
         <p>
           For instant cache refreshes and the panel and test buttons, also set{" "}
-          <code className="font-mono text-xs">DISCORD_BOT_INTERNAL_URL</code> and{" "}
-          <code className="font-mono text-xs">DISCORD_BOT_INTERNAL_SECRET</code>.
+          <code className="font-mono text-xs">DISCORD_BOT_INTERNAL_URL</code> and this app&apos;s{" "}
+          <code className="font-mono text-xs">WS_SERVICE_SIGNING_JWK</code>, and add its public key to the bot&apos;s{" "}
+          <code className="font-mono text-xs">DISCORD_BOT_SERVICE_JWKS</code>.
         </p>
       </CardContent>
     </Card>

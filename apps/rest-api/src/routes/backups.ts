@@ -1,3 +1,4 @@
+import { createServiceAuth } from "@repo/service-token";
 import { supabase } from "@repo/supabase";
 import { insertBackupEvent, listBackupEvents } from "@repo/supabase/queries/platform/backups";
 import { Hono } from "hono";
@@ -23,9 +24,17 @@ export const proxmoxWebhook = createProxmoxWebhookRoute({
   },
 });
 
-/** /internal/backups — bearer secret, called by web-admin's server only. */
+/** /internal/backups — service token (scope `backups`), called by web-admin's server only. */
 export const internalBackups = new Hono();
-internalBackups.use("*", internalAuth(backupConfig ? env.REST_API_INTERNAL_SECRET : undefined));
+internalBackups.use("*", async (c, next) => (backupConfig ? next() : c.json({ error: "Not found" }, 404)));
+internalBackups.use(
+  "*",
+  internalAuth({
+    scope: "backups",
+    auth: createServiceAuth({ audience: "rest-api", jwks: env.REST_API_SERVICE_JWKS }),
+    legacySecret: env.REST_API_INTERNAL_SECRET,
+  }),
+);
 internalBackups.route(
   "/",
   createBackupsInternalRoute({

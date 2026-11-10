@@ -14,6 +14,7 @@ The API gateway. Twitch EventSub webhooks, clip sync, and analytics endpoints �
 - `POST /webhooks/twitch/eventsub` — entry point for all Twitch events.
 - `POST /api/clips/sync` — manually trigger a clip sync.
 - `GET /api/clips/sync-status` — current sync status.
+- `/internal/backups` — backup state for web-admin's `/backups` page. Server-to-server only: web-admin signs a 60-second service token (`@repo/service-token`, scope `backups`, audience `rest-api`) per request, checked against the public keys in `REST_API_SERVICE_JWKS`. Without that (or, until the follow-up release, the old `REST_API_INTERNAL_SECRET`) the routes answer 404.
 
 EventSub notifications go through `src/modules/eventsub/registry.ts`, which dispatches to typed handlers in `src/modules/eventsub/handlers/`. All database access goes through `@repo/supabase/queries/*`; every Helix call goes through `@repo/twitch-api`.
 

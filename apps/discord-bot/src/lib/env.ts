@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { serviceJwksJson } from "@repo/service-token/jwks";
 
 const schema = z.object({
   NODE_ENV: z.enum(["development", "staging", "production"]).default("development"),
@@ -18,9 +19,15 @@ const schema = z.object({
   DISCORD_GUILD_ID: z.string().min(1).optional(),
 
   // Internal HTTP server for web-admin (cache refresh, panel re-post, test
-  // welcome). Without the secret the server only answers /health, for the
-  // container healthcheck; never expose the port publicly — web-admin reaches
-  // it over the internal network.
+  // welcome). web-admin calls it with 60-second service tokens
+  // (@repo/service-token, audience discord-bot); this is the public key set
+  // they're checked against. Not secret. Without it (and without the old
+  // secret below) the server only answers /health, for the container
+  // healthcheck; never expose the port publicly — web-admin reaches it over
+  // the internal network.
+  DISCORD_BOT_SERVICE_JWKS: serviceJwksJson("DISCORD_BOT_SERVICE_JWKS").optional(),
+  // Old bearer secret, still accepted next to service tokens until web-admin
+  // has moved over (SW-494), then removed.
   DISCORD_BOT_INTERNAL_SECRET: z.string().min(16).optional(),
   DISCORD_BOT_INTERNAL_PORT: z.coerce.number().int().positive().default(3010),
 

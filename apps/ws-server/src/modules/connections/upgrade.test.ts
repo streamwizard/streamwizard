@@ -1,6 +1,14 @@
 import { beforeAll, beforeEach, describe, expect, mock, setSystemTime, test } from "bun:test";
 import { calculateJwkThumbprint, exportJWK, generateKeyPair } from "jose";
-import { resetSigningKey, signServiceToken, type ServiceJwk, type ServiceName, type ServiceScope } from "@repo/service-token";
+import {
+  createServiceAuth,
+  resetSigningKey,
+  signServiceToken,
+  type ServiceAuth,
+  type ServiceJwk,
+  type ServiceName,
+  type ServiceScope,
+} from "@repo/service-token";
 
 process.env.NODE_ENV = "development";
 process.env.SUPABASE_URL ??= "http://127.0.0.1:54321";
@@ -31,8 +39,8 @@ mock.module("@repo/supabase/queries/overlays/overlays", () => ({
 // environment without WS_SERVICE_JWKS. Bun shares module mocks across files,
 // so the real exports stay in place.
 const realServiceAuth = await import("@/middleware/service-auth");
-type ServiceAuth = ReturnType<typeof realServiceAuth.createServiceAuth>;
-let serviceAuth: ServiceAuth = realServiceAuth.createServiceAuth({});
+const wsAuth = (jwks?: { keys: ServiceJwk[] }) => createServiceAuth({ audience: "ws-server", jwks });
+let serviceAuth: ServiceAuth = wsAuth();
 mock.module("@/middleware/service-auth", () => ({
   ...realServiceAuth,
   serviceAuthConfigured: (scope: ServiceScope) => serviceAuth.configured(scope),
@@ -107,7 +115,7 @@ describe("monitor upgrades", () => {
   });
 
   beforeEach(() => {
-    serviceAuth = realServiceAuth.createServiceAuth({ jwks: { keys } });
+    serviceAuth = wsAuth({ keys });
   });
 
   async function token(svc: ServiceName, scope: ServiceScope) {
@@ -158,7 +166,7 @@ describe("monitor upgrades", () => {
   });
 
   test("without service keys the monitor is not configured", async () => {
-    serviceAuth = realServiceAuth.createServiceAuth({});
+    serviceAuth = wsAuth();
     expect((await upgrade("monitor", await token("web-admin", "monitor"), "monitor-off"))?.status).toBe(404);
     expect(upgraded).toBeNull();
   });

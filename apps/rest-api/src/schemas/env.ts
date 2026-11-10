@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { serviceJwksJson } from "@repo/service-token/jwks";
 import { isServiceSigningJwk, SERVICE_SIGNING_JWK_ERROR } from "@repo/service-token/signing-jwk";
 import { parseNodeTokenJwks } from "@/lib/node-token-jwks";
 
@@ -115,8 +116,12 @@ export const envSchema = z.object({
   // (stored as a notification secret on each host). Unset = receiver off.
   BACKUP_WEBHOOK_SECRET: z.string().min(32).optional(),
 
-  // Bearer secret for /internal/* (server-to-server from web-admin). Unset =
-  // those routes answer 404.
+  // Public keys of the services that may call /internal/* (web-admin) as a
+  // JWKS (@repo/service-token, audience rest-api). Not secret. With neither
+  // this nor REST_API_INTERNAL_SECRET those routes answer 404.
+  REST_API_SERVICE_JWKS: serviceJwksJson("REST_API_SERVICE_JWKS").optional(),
+  // Old bearer secret for /internal/*. Still accepted next to service tokens
+  // until web-admin has moved over (SW-494), then removed.
   REST_API_INTERNAL_SECRET: z.string().min(32).optional(),
 
   // Blog and guides (jobs/cms-scheduler.ts). CMS_SITE_URL is

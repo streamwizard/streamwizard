@@ -9,6 +9,7 @@ paths:
   - "apps/web-admin/src/lib/auth/assert-admin.ts"
   - "apps/web-admin/src/lib/auth/admin-context.ts"
   - "apps/web-admin/src/actions/nodes/*.ts"
+  - "apps/web-admin/src/lib/internal-auth-header.ts"
   - "apps/web-overlay/src/lib/widget-api.ts"
   - "apps/web-overlay/src/lib/overlay-item-auth.ts"
   - "apps/rest-api/src/middleware/**"
@@ -39,7 +40,7 @@ Every caller proves who it is with its own credential, scoped to what it may do.
 | web-streamwizard server action → rest-api `/api/clips/*` | the signed-in user's Supabase JWT, forwarded by the server | `supabaseMiddleware()` / `supabaseAuth()` |
 | OBS browser source → ws-server (`subscriber`) | the scene's `subscriber_token` (resettable), or a dashboard JWT | `modules/connections/upgrade.ts`; a key reset closes live sockets (`modules/revoke`) |
 | OBS browser source → web-overlay `/api/*` | the scene's `subscriber_token` in `Authorization: Bearer` | `lib/widget-api.ts` + `getOverlaySceneBySubscriberToken` |
-| Our services → ws-server (`bot`, `consumer`, `/internal/*`) | 60-second Ed25519 service token, one scope per token | `@repo/service-token`; ws-server holds only public keys (`WS_SERVICE_JWKS`) and checks `SERVICE_POLICY` |
+| Our services → ws-server (`bot`, `consumer`, `/internal/*`) | 60-second Ed25519 service token, one scope per token, audience `ws-server` | `@repo/service-token` (`createServiceAuth`); ws-server holds only public keys (`WS_SERVICE_JWKS`) and checks `SERVICE_POLICY` |
 | Node install script → rest-api `/api/{obs,ingest}-nodes/claim` | one-time claim token (32 random bytes, only its SHA-256 stored, expires) | `modules/*/claim.ts`, atomic `consume*ClaimToken` |
 | Ingest / OBS node → rest-api | per-node API key from the one-time claim; only its SHA-256 hash is stored | `middleware/node-key-auth.ts` (shared), wrapped by `middleware/ingest-node-auth.ts` and `middleware/obs-node-auth.ts` |
 | Ingest node → ws-server (`ingest-node`) | 60-second service token rest-api signs before each dial, node id in the token | ws-server upgrade |
@@ -48,11 +49,13 @@ Every caller proves who it is with its own credential, scoped to what it may do.
 | obs-auto-switcher → OBS node | per-node `obs_command` key, stored encrypted | the node's `/obs` route |
 | Twitch → rest-api webhook | HMAC signature, timestamp freshness, message-id dedupe | `middleware/twitch-eventsub.ts` |
 | Proxmox VE / PBS → rest-api `/webhooks/proxmox` | `x-proxmox-webhook-token` header = `BACKUP_WEBHOOK_SECRET` | `routes/proxmox-webhook.ts`, `secretsMatch` |
-| web-admin → rest-api `/internal/*` | bearer secret | `middleware/internal-auth.ts` |
+| web-admin → rest-api `/internal/*` | 60-second service token, scope `backups`, audience `rest-api` (the old `REST_API_INTERNAL_SECRET` is still accepted until SW-494's follow-up removes it) | `middleware/internal-auth.ts`, public keys in `REST_API_SERVICE_JWKS` |
 | web-admin, rest-api cms-scheduler → web-streamwizard `/api/revalidate` | bearer `CMS_REVALIDATE_SECRET` | `lib/cms/cms-revalidate.ts` |
-| Our apps → discord-bot HTTP | bearer secret | `src/http/middleware/bearer-secret.ts` |
+| web-admin → discord-bot HTTP | 60-second service token, scope `discord-guilds`, audience `discord-bot` (the old `DISCORD_BOT_INTERNAL_SECRET` is still accepted until SW-494's follow-up removes it) | `src/http/middleware/service-auth.ts`, public keys in `DISCORD_BOT_SERVICE_JWKS` |
 
 Every web-streamwizard server action except `login()` / `logout()` starts with `tryAuthContext()`.
+
+**New calls between our services use service tokens, not a shared secret.** Add the scope to `SERVICE_SCOPES`, the service that handles it to `SCOPE_AUDIENCE` (the token's audience comes from there, so a token for one service is refused by every other), grant it to the caller in `SERVICE_POLICY`, and check it on the receiving side with `createServiceAuth({ audience, jwks })`. The receiver holds only public keys; without its JWKS the routes answer 404. Shared secrets are left only where the caller isn't one of our services (Proxmox webhooks) and for `CMS_REVALIDATE_SECRET`.
 
 ## Ingest nodes
 

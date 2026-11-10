@@ -246,7 +246,7 @@ describe("POST /me/ws-token", () => {
     expect(res.headers.get("cache-control")).toBe("no-store");
     const body = (await res.json()) as { token: string; ws_server_url: string };
     expect(body.ws_server_url).toBe("wss://ws.example.com");
-    const verify = service.createServiceTokenVerifier({ keys: [publicKey as never] });
+    const verify = service.createServiceTokenVerifier({ keys: [publicKey as never] }, "ws-server");
     expect(await verify(body.token, "ingest-node")).toEqual({ service: "rest-api", claims: { node: NODE_A } });
   });
 

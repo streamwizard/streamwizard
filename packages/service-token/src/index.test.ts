@@ -1,15 +1,19 @@
 import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
-import { calculateJwkThumbprint, exportJWK, generateKeyPair, SignJWT } from "jose";
+import { calculateJwkThumbprint, decodeJwt, exportJWK, generateKeyPair, SignJWT } from "jose";
 import {
   createServiceTokenVerifier,
   looksLikeJwt,
   resetSigningKey,
-  SERVICE_TOKEN_AUDIENCE,
+  SCOPE_AUDIENCE,
+  SERVICE_AUDIENCES,
+  SERVICE_SCOPES,
   SERVICE_TOKEN_ISSUER,
   serviceAuthHeader,
   signServiceToken,
+  type ServiceAudience,
   type ServiceJwk,
   type ServiceName,
+  type ServiceScope,
   type ServiceTokenVerifier,
 } from "./index";
 
@@ -39,7 +43,7 @@ function useKey(pair: Pair | null) {
 beforeAll(async () => {
   restApi = await makePair("rest-api");
   overlay = await makePair("web-overlay");
-  verify = createServiceTokenVerifier({ keys: [restApi.publicJwk, overlay.publicJwk] });
+  verify = createServiceTokenVerifier({ keys: [restApi.publicJwk, overlay.publicJwk] }, "ws-server");
 });
 
 beforeEach(() => useKey(restApi));
@@ -65,7 +69,7 @@ describe("sign and verify", () => {
     const forged = await new SignJWT({ scope: "broadcast" })
       .setProtectedHeader({ alg: "EdDSA", kid: overlay.publicJwk.kid })
       .setIssuer(SERVICE_TOKEN_ISSUER)
-      .setAudience(SERVICE_TOKEN_AUDIENCE)
+      .setAudience("ws-server")
       .setSubject("rest-api")
       .setIssuedAt()
       .setExpirationTime("60s")
@@ -84,7 +88,7 @@ describe("sign and verify", () => {
     const old = await new SignJWT({ scope: "broadcast" })
       .setProtectedHeader({ alg: "EdDSA", kid: restApi.publicJwk.kid })
       .setIssuer(SERVICE_TOKEN_ISSUER)
-      .setAudience(SERVICE_TOKEN_AUDIENCE)
+      .setAudience("ws-server")
       .setSubject("rest-api")
       .setIssuedAt(Math.floor(Date.now() / 1000) - 120)
       .setExpirationTime(Math.floor(Date.now() / 1000) + 600)
@@ -95,7 +99,7 @@ describe("sign and verify", () => {
 
   test("the verifier refuses a private key in its key set", () => {
     const priv = JSON.parse(restApi.signing) as ServiceJwk;
-    expect(() => createServiceTokenVerifier({ keys: [priv] })).toThrow("public keys only");
+    expect(() => createServiceTokenVerifier({ keys: [priv] }, "ws-server")).toThrow("public keys only");
   });
 });
 
@@ -114,7 +118,7 @@ describe("ingest-node tokens", () => {
     const bare = await new SignJWT({ scope: "ingest-node" })
       .setProtectedHeader({ alg: "EdDSA", kid: restApi.publicJwk.kid })
       .setIssuer(SERVICE_TOKEN_ISSUER)
-      .setAudience(SERVICE_TOKEN_AUDIENCE)
+      .setAudience("ws-server")
       .setSubject("rest-api")
       .setIssuedAt()
       .setExpirationTime("60s")
@@ -137,6 +141,73 @@ describe("ingest-node tokens", () => {
   test("extra claims can't replace the token's own", async () => {
     await expect(signServiceToken("broadcast", { sub: "web-admin" })).rejects.toThrow("reserved");
     await expect(signServiceToken("broadcast", { scope: "bot" })).rejects.toThrow("reserved");
+  });
+});
+
+describe("audiences", () => {
+  let admin: Pair;
+  const verifiers = {} as Record<ServiceAudience, ServiceTokenVerifier>;
+
+  beforeAll(async () => {
+    admin = await makePair("web-admin");
+    for (const audience of SERVICE_AUDIENCES) verifiers[audience] = createServiceTokenVerifier({ keys: [admin.publicJwk] }, audience);
+  });
+
+  beforeEach(() => useKey(admin));
+
+  test("every scope belongs to exactly one service", () => {
+    expect(Object.keys(SCOPE_AUDIENCE).sort()).toEqual([...SERVICE_SCOPES].sort());
+  });
+
+  test("a token is addressed to the service that handles its scope", async () => {
+    const token = await signServiceToken("backups");
+    expect(decodeJwt(token).aud).toBe("rest-api");
+    expect(decodeJwt(await signServiceToken("discord-guilds")).aud).toBe("discord-bot");
+    expect(decodeJwt(await signServiceToken("monitor")).aud).toBe("ws-server");
+  });
+
+  test("web-admin's tokens verify at their own service", async () => {
+    expect(await verifiers["rest-api"](await signServiceToken("backups"), "backups")).toEqual({ service: "web-admin", claims: {} });
+    expect(await verifiers["discord-bot"](await signServiceToken("discord-guilds"), "discord-guilds")).toEqual({
+      service: "web-admin",
+      claims: {},
+    });
+  });
+
+  test("a token for one service is refused by every other", async () => {
+    // Same key, same scope name in the claim: only the audience differs.
+    async function forScope(scope: ServiceScope, audience: ServiceAudience) {
+      return new SignJWT({ scope })
+        .setProtectedHeader({ alg: "EdDSA", kid: admin.publicJwk.kid })
+        .setIssuer(SERVICE_TOKEN_ISSUER)
+        .setAudience(audience)
+        .setSubject("web-admin")
+        .setIssuedAt()
+        .setExpirationTime("60s")
+        .setJti("j")
+        .sign(admin.privateKey);
+    }
+    await expect(verifiers["rest-api"](await forScope("backups", "ws-server"), "backups")).rejects.toThrow();
+    await expect(verifiers["rest-api"](await forScope("backups", "discord-bot"), "backups")).rejects.toThrow();
+    await expect(verifiers["discord-bot"](await forScope("discord-guilds", "rest-api"), "discord-guilds")).rejects.toThrow();
+    await expect(verifiers["ws-server"](await forScope("monitor", "rest-api"), "monitor")).rejects.toThrow();
+  });
+
+  test("a service can't be asked to check another service's action", async () => {
+    const token = await signServiceToken("backups");
+    await expect(verifiers["discord-bot"](token, "backups")).rejects.toThrow("discord-bot does not handle backups");
+    await expect(verifiers["ws-server"](await signServiceToken("monitor"), "monitor")).resolves.toBeTruthy();
+    await expect(verifiers["rest-api"](await signServiceToken("discord-guilds"), "backups")).rejects.toThrow();
+  });
+
+  test("only web-admin may call rest-api /internal/* and the discord-bot API", async () => {
+    useKey(restApi);
+    const restVerify = createServiceTokenVerifier({ keys: [restApi.publicJwk] }, "rest-api");
+    await expect(restVerify(await signServiceToken("backups"), "backups")).rejects.toThrow("rest-api may not backups");
+    const botVerify = createServiceTokenVerifier({ keys: [restApi.publicJwk] }, "discord-bot");
+    await expect(botVerify(await signServiceToken("discord-guilds"), "discord-guilds")).rejects.toThrow(
+      "rest-api may not discord-guilds",
+    );
   });
 });
 

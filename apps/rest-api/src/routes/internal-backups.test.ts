@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import type { BackupPollData } from "@repo/backups";
 import type { BackupEventRow } from "@repo/supabase/queries/platform/backups";
 import { Hono } from "hono";
+import { createServiceAuth } from "@repo/service-token";
 import { internalAuth } from "@/middleware/internal-auth";
 import { createBackupsInternalRoute } from "@/routes/internal-backups";
 
@@ -10,6 +11,9 @@ const nowSec = NOW.getTime() / 1000;
 const recent = new Date(NOW.getTime() - 60_000).toISOString();
 const health = { okAt: recent, attemptAt: recent, error: null, failingSince: null };
 const SECRET = "i".repeat(40);
+// Token checks are covered in middleware/internal-auth.test.ts; these routes
+// run behind the old secret alone.
+const noKeys = createServiceAuth({ audience: "rest-api" });
 
 const poll: BackupPollData = {
   version: 1,
@@ -49,7 +53,7 @@ const row = (id: string, occurredAt: string): BackupEventRow => ({
 
 function app(forced: boolean | null = true) {
   const a = new Hono();
-  a.use("*", internalAuth(SECRET));
+  a.use("*", internalAuth({ scope: "backups", auth: noKeys, legacySecret: SECRET }));
   a.route(
     "/",
     createBackupsInternalRoute({
@@ -66,11 +70,11 @@ function app(forced: boolean | null = true) {
 const auth = { authorization: `Bearer ${SECRET}` };
 
 describe("internal backup routes", () => {
-  it("require the bearer secret", async () => {
+  it("require auth", async () => {
     expect((await app().request("/")).status).toBe(401);
     expect((await app().request("/", { headers: { authorization: "Bearer nope" } })).status).toBe(401);
     const off = new Hono();
-    off.use("*", internalAuth(undefined));
+    off.use("*", internalAuth({ scope: "backups", auth: noKeys }));
     off.get("/", (c) => c.text("x"));
     expect((await off.request("/", { headers: auth })).status).toBe(404);
   });
