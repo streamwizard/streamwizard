@@ -84,8 +84,11 @@ export function buildCsp(nonce: string): string {
     // blocks it. blob: only permits workers from blobs the page itself made,
     // and the script inside one still has to come from 'self'.
     "worker-src 'self' blob:",
-    // The editor's side-by-side preview frames the draft on the public site.
-    ...(siteOrigin() ? [`frame-src 'self' ${siteOrigin()}`] : []),
+    // The editor's side-by-side preview frames the draft on the public site,
+    // and /obs-desktop frames a Cloud OBS node's Selkies viewer page, so the
+    // viewer's scripts run on the node's origin, never this one. Same
+    // single-label wildcard as connect-src above.
+    ["frame-src 'self'", siteOrigin(), "https://*.streamwizard.org"].filter(Boolean).join(" "),
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

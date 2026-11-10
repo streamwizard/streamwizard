@@ -2,20 +2,21 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { CloudOBSViewer, mintSelkiesViewerUrl } from "@repo/obs-web";
+import { CloudOBSViewer, CloudOBSViewerPlaceholder, mintSelkiesViewerUrl, selkiesViewerRoot } from "@repo/obs-web";
 import { getInstanceNodeApiUrlAction } from "@/actions/nodes/obs";
 import { adminNodeToken } from "@/lib/nodes/node-token";
 
 // Admin's Selkies viewer lives at /admin/instances/:id/selkies/ on the node's
 // API (vs. the end-user /instances/:id/selkies/), gated by the admin's own role
 // instead of instance ownership. A fresh single-use ws-ticket rides on the
-// entry URL; the ticket-mint POST carries a 60-second admin node token, never
+// framed URL; the ticket-mint POST carries a 60-second admin node token, never
 // the admin's session (see lib/nodes/node-token.ts).
 //
-// apiUrl must come from a trusted lookup, never the query string -- the URL
-// gets a ticket appended and this window navigates to it. It is resolved from the
-// instance (getInstanceNodeApiUrlAction), the same row that sets the node
-// token's aud, so the token only ever goes to the node that hosts it.
+// apiUrl must come from a trusted lookup, never the query string: it decides
+// which node origin the viewer frames and trusts, and the ticket goes there.
+// It is resolved from the instance (getInstanceNodeApiUrlAction), the same row
+// that sets the node token's aud, so the token only ever goes to the node that
+// hosts it.
 export function AdminObsDesktopView() {
   const searchParams = useSearchParams();
   const nodeId = searchParams.get("nodeId");
@@ -49,25 +50,15 @@ export function AdminObsDesktopView() {
     });
   }, [apiUrl, instanceId]);
 
-  return (
-    <div className="flex h-screen w-screen flex-col bg-black">
-      <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
-        <span className="font-mono text-sm text-white">{name ?? instanceId}</span>
-      </div>
-      <div className="flex-1">
-        {error ? (
-          <div className="flex h-full flex-col items-center justify-center gap-3">
-            <p className="text-sm text-red-400">{error}</p>
-            <button className="text-xs text-white/40 underline underline-offset-2" onClick={() => window.close()}>
-              Close window
-            </button>
-          </div>
-        ) : apiUrl && instanceId ? (
-          <CloudOBSViewer getViewerUrl={getViewerUrl} />
-        ) : (
-          <p className="p-4 text-sm text-white/60">Resolving node…</p>
-        )}
-      </div>
-    </div>
-  );
+  if (apiUrl && instanceId && !error) {
+    return (
+      <CloudOBSViewer
+        name={name ?? instanceId}
+        viewerRoot={selkiesViewerRoot(apiUrl, `/admin/instances/${instanceId}/selkies/`)}
+        getViewerUrl={getViewerUrl}
+      />
+    );
+  }
+
+  return <CloudOBSViewerPlaceholder error={error} pending="Resolving node…" />;
 }

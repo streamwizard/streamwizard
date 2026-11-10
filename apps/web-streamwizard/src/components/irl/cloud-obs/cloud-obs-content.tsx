@@ -31,6 +31,7 @@ import { FeatureDisabledBanner } from "@/components/shared/feature-disabled-bann
 import { TwitchScopeBanner } from "@/components/shared/twitch/twitch-scope-banner";
 import type { ProductAccess } from "@/lib/require-product-access";
 import type { IngestStreamKey } from "@repo/supabase/queries/ingest/ingest";
+import { openViewerWindow } from "@repo/obs-web";
 import type { AutoSwitcherConfigRow } from "@repo/supabase/queries/irl/auto-switcher";
 import { AutoSwitcherTab } from "@/components/irl/auto-switcher/auto-switcher-tab";
 import { listOutputKeys } from "@/actions/irl/ingest-output-keys";
@@ -102,7 +103,7 @@ export function CloudObsContent({
     if (!instanceId) return;
     setHasOpenedViewer(true);
     const params = new URLSearchParams({ instanceId, name: "Cloud OBS" });
-    window.open(`/obs-viewer?${params.toString()}`, "obs-viewer", "width=1280,height=800");
+    openViewerWindow(`/obs-viewer?${params.toString()}`, "obs-viewer");
   };
 
   const flow = deriveObsFlowState({

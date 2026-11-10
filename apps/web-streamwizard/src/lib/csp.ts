@@ -120,7 +120,10 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
       .join(" "),
     // Twitch embedded player and clips use iframes served from these origins
     // Twitch players, plus YouTube (privacy-enhanced domain) for embeds in blog posts and guides.
-    "frame-src https://player.twitch.tv https://clips.twitch.tv https://www.youtube-nocookie.com",
+    // Cloud OBS nodes: /obs-viewer frames the node's Selkies viewer page, so
+    // the viewer's scripts run on the node's origin, never this one. Same
+    // single-label wildcard as connect-src above.
+    "frame-src https://player.twitch.tv https://clips.twitch.tv https://www.youtube-nocookie.com https://*.streamwizard.org",
     // Explicit manifest-src (rather than relying on the default-src fallback)
     // so we can carve out the Cloudflare Access reauth redirect on staging
     // without loosening default-src for everything else.

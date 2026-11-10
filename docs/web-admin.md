@@ -90,7 +90,7 @@ The sidebar has five groups and 19 items (`src/lib/nav/nav-config.ts`). Sub-page
 | `/content/media` | Images for blog posts, guides and author avatars (`cms_assets`, R2 prefix `cms/`). Upload asks for alt text (or **Decorative**) first; the browser PUTs straight to a presigned R2 URL and the server confirms with a HEAD. Search, edit alt text, copy URL; **Delete** only shows on images nothing uses (same check as `cms_unreferenced_assets`). Alt edits reach live posts on their next Update |
 | `/content/authors`, `/content/authors/[id]` | Public author profiles: name, slug, role, bio, avatar (from Media), social links (https, checked per platform), optional private link to a StreamWizard account. Soft delete (posts keep the credit) and restore |
 | `/content/categories`, `/content/tags` | Topics shared by blog posts and guides. Categories have a description and an order; tags can be merged into another tag. Deleting either takes it off its posts, not the posts away |
-| `/obs-desktop?nodeId&instanceId&name` | Popup that opens an instance's OBS desktop (the node's Selkies viewer; opened from node/instance pages) |
+| `/obs-desktop?nodeId&instanceId&name` | Popup with an instance's OBS desktop: our header and controls around the node's Selkies viewer in an `<iframe>` (`CloudOBSViewer` in `@repo/obs-web`; opened from node/instance pages) |
 
 ## How it talks to obs-instance-manager
 
@@ -108,11 +108,13 @@ WebSocket (ticket in query string, minted immediately before every connect):
 - `/admin/metrics/stream` — host + per-container metrics (Twitch-EventSub-style envelope)
 - `/admin/instances/:id/obsws` — obs-websocket proxy; powers the Auto Switcher tab's scene pickers. Password is the instance's OBS WS password, decrypted server-side (`getInstanceObsWsPasswordAdminAction`).
 
-Browser window (ticket in the URL fragment, `#token=`, never sent to a server):
+Framed page (ticket in the URL fragment, `#token=`, never sent to a server):
 
-- `/admin/instances/:id/selkies/` — the instance's Selkies viewer (OBS desktop with audio and two-way clipboard). The Selkies client presents the ticket on its API calls and WebSockets; the node checks it and the admin role on every connect, allows reconnects for 2 minutes after a disconnect, and adds the viewer's own basic auth upstream, so the browser never holds an OBS password. No cookie.
+- `/admin/instances/:id/selkies/` — the instance's Selkies viewer (OBS desktop with audio and two-way clipboard), shown in an `<iframe>` on `/obs-desktop`, so the Selkies client runs on the node's origin, never the admin's. The popup first probes the page with `HEAD` (no ticket) until OBS is up, then mints a ticket and frames it. The Selkies client presents the ticket on its API calls and WebSockets; the node checks it and the admin role on every connect, allows reconnects for 2 minutes after a disconnect, and adds the viewer's own basic auth upstream, so the browser never holds an OBS password. No cookie.
+- The node's page carries a relay that pairs with `/obs-desktop` over `postMessage` (only for origins in the node's `PANEL_ORIGIN`) and passes mute, volume and Actual size through. Copy and paste is Selkies' own (Ctrl+C / Ctrl+V in the frame). When the viewer session dies (2 minutes offline, or the 12-hour cap) it tells the popup, which mints a new ticket and loads a new frame. Against a node without the relay the popup shows the frame without controls; Reconnect still works. Protocol: OIM's `docs/PANEL_INTEGRATION.md`.
+- `frame-src` in `src/lib/csp.ts` allows `https://*.streamwizard.org` for this.
 
-**CORS**: start/stop/remove and ticket mints are browser-side fetches from the web-admin origin. If the manager enforces an Origin allowlist, the admin origin must be on it.
+**CORS and framing**: start/stop/remove, ticket mints and the viewer's readiness probe are browser-side fetches from the web-admin origin. The node's `PANEL_ORIGIN` must list the admin origin, for CORS and so the viewer relay pairs with it.
 
 ## Auto Switcher editing
 

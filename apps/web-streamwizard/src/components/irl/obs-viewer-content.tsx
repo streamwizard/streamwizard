@@ -2,18 +2,18 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { CloudOBSViewer, mintSelkiesViewerUrl } from "@repo/obs-web";
+import { CloudOBSViewer, CloudOBSViewerPlaceholder, mintSelkiesViewerUrl, selkiesViewerRoot } from "@repo/obs-web";
 import { getInstanceNodeApiUrlAction } from "@/actions/obs/nodes";
+import { StreamWizardLogo } from "@/components/shared/streamwizard-logo";
 import { nodeToken } from "@/lib/obs/node-token";
 
 export function ObsViewerContent() {
   const searchParams = useSearchParams();
   const instanceId = searchParams.get("instanceId");
-  const name = searchParams.get("name");
+  const name = searchParams.get("name") ?? "Cloud OBS";
 
-  // apiUrl comes from a trusted server-side lookup; the viewer URL (with a
-  // fresh single-use ticket) is minted by CloudOBSViewer, which then moves
-  // this window to the node's Selkies viewer.
+  // apiUrl comes from a trusted server-side lookup, never the query string:
+  // it decides which node origin CloudOBSViewer frames and trusts.
   const [apiUrl, setApiUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,27 +41,16 @@ export function ObsViewerContent() {
     });
   }, [apiUrl, instanceId]);
 
-  return (
-    <div className="flex h-screen w-screen flex-col bg-black">
-      {name && (
-        <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
-          <span className="font-mono text-sm text-white">{name}</span>
-        </div>
-      )}
-      <div className="flex-1">
-        {error ? (
-          <div className="flex h-full flex-col items-center justify-center gap-3">
-            <p className="text-sm text-red-400">{error}</p>
-            <button className="text-xs text-white/40 underline underline-offset-2" onClick={() => window.close()}>
-              Close window
-            </button>
-          </div>
-        ) : apiUrl && instanceId ? (
-          <CloudOBSViewer getViewerUrl={getViewerUrl} />
-        ) : (
-          <p className="p-4 text-sm text-white/60">Resolving instance…</p>
-        )}
-      </div>
-    </div>
-  );
+  if (apiUrl && instanceId && !error) {
+    return (
+      <CloudOBSViewer
+        name={name}
+        logo={<StreamWizardLogo width={24} height={24} className="text-white" />}
+        viewerRoot={selkiesViewerRoot(apiUrl, `/instances/${instanceId}/selkies/`)}
+        getViewerUrl={getViewerUrl}
+      />
+    );
+  }
+
+  return <CloudOBSViewerPlaceholder error={error} pending="Resolving instance…" />;
 }

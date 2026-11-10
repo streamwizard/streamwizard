@@ -1,6 +1,7 @@
 {
   "extends": "@repo/typescript-config/react-library.json",
   "compilerOptions": {
+    "types": ["node", "bun"],
     // @repo/ui's own sources import through its "@/*" alias. Type-checking this
     // package pulls those files in, so the alias has to resolve here too.
     "paths": {

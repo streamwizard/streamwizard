@@ -1,8 +1,11 @@
-"use client";
-
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { DesktopOnly } from "@/components/shared/page/desktop-only";
 import { AdminObsDesktopView } from "@/components/obs/admin-obs-desktop-view";
+
+export const metadata: Metadata = {
+  title: "OBS desktop",
+};
 
 export default function AdminObsDesktopPage() {
   return (
