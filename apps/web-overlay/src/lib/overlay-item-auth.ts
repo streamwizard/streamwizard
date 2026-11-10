@@ -1,7 +1,10 @@
+import "server-only";
+
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { getOverlayItemById, getOverlaySceneBySubscriberToken } from "@repo/supabase/queries/overlays";
+import { getOverlayItemById, getOverlaySceneBySubscriberToken } from "@repo/supabase/queries/overlays/overlays";
 import type { Json } from "@repo/supabase";
 import { isPlausibleToken } from "@/lib/widget-api";
+import { isGuid } from "@repo/schemas/ids";
 
 /**
  * Server actions the overlay page calls (clips, custom widgets) run on the
@@ -34,8 +37,7 @@ export async function resolveOverlayItem(
   return { userId: scene.user_id, type: item.type, config: item.config };
 }
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function isUuid(value: unknown): value is string {
-  return typeof value === "string" && UUID.test(value);
+  return typeof value === "string" && isGuid(value);
 }

@@ -1,9 +1,9 @@
-import { loadOverlaySceneByOverlayId } from "@/actions/overlay";
+import { loadOverlaySceneByOverlayId } from "@/lib/overlay-loader";
 import { OverlaySceneCanvas, overlayItemFromDbRow } from "@repo/ui/overlay";
-import { ClipsWidgetContainer } from "@/components/widgets/clips-widget/ClipsWidgetContainer";
-import { CustomWidgetContainer } from "@/components/widgets/custom-widget/CustomWidgetContainer";
-import { GpsOverlayCanvas } from "@/components/gps-overlay-canvas";
-import { OverlayTelemetry } from "@/components/overlay-telemetry";
+import { ClipsWidgetContainer } from "@/components/overlay/widgets/clips-widget-container";
+import { CustomWidgetContainer } from "@/components/overlay/widgets/custom-widget-container";
+import { GpsOverlayCanvas } from "@/components/overlay/gps-overlay-canvas";
+import { OverlayTelemetry } from "@/components/overlay/overlay-telemetry";
 import { notFound } from "next/navigation";
 
 const OVERLAY_WIDGETS = [
@@ -56,8 +56,7 @@ export default async function OverlayByIdPage({
     );
   }
 
-  // GPS overlays collect GPS on-device, feed it directly to IRL widgets, and
-  // publish it over the WS using the scene's own subscriber token.
+  // GPS overlays collect GPS on-device and feed it directly to IRL widgets.
   const renderMode = (result.scene as Record<string, unknown>).render_mode;
   const telemetry = (
     <OverlayTelemetry
@@ -71,11 +70,7 @@ export default async function OverlayByIdPage({
     return (
       <div style={{ minHeight: "100vh", background: "transparent" }}>
         {telemetry}
-        <GpsOverlayCanvas
-          scene={result.scene}
-          items={result.items}
-          token={result.scene.subscriber_token}
-        />
+        <GpsOverlayCanvas scene={result.scene} items={result.items} />
       </div>
     );
   }

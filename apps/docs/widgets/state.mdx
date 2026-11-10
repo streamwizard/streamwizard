@@ -52,8 +52,12 @@ function render() {
   separate state.
 - **The editor never changes your real state**: see
   [testing in the editor](#testing-in-the-editor) below.
+- **Up to 16KB**: `set()` takes a plain object of JSON values, at most 16KB
+  saved, with keys up to 64 characters. A bigger save is rejected and your
+  old state stays.
 - **Don't save on every frame**: batch it. Save after a change settles, not
-  inside an animation loop.
+  inside an animation loop. Each widget API call counts toward a limit of 60
+  a minute per overlay, shared with `userState` and Twitch lookups.
 - Older widgets using `window.StreamWizard.stateUrl` with manual `fetch`
   still work on an overlay; `state.get`/`set` is the same API with the
   plumbing done. In the editor `stateUrl` is `null`, so switch to

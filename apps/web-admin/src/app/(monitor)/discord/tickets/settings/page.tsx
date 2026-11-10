@@ -1,9 +1,9 @@
 import { Ticket, TicketCheck } from "lucide-react";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { countOpenTickets, getTicketSettings } from "@repo/supabase/queries/tickets";
-import { TicketsForm } from "@/components/discord/tickets-form";
-import { StatCard } from "@/components/widgets/stat-card";
-import { StatGrid } from "@/components/widgets/stat-grid";
+import { countOpenTickets, getTicketSettings } from "@repo/supabase/queries/tickets/tickets";
+import { TicketsForm } from "@/components/discord/tickets/settings/tickets-form";
+import { StatCard } from "@/components/shared/stat-card";
+import { StatGrid } from "@/components/shared/stat-grid";
 import { getGuildChannels, getGuildRoles, requireDiscordContext } from "@/lib/discord/api";
 import { toChannelOptions, toRoleOptions } from "@/lib/discord/options";
 

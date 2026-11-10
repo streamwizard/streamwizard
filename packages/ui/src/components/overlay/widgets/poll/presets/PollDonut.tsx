@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  FitBox,
   FitSvgText,
   FitText,
   PollHeader,
@@ -9,6 +10,7 @@ import {
   choiceOpacity,
   choiceValueText,
   hexToRgba,
+  leadersTied,
   textStyle,
   type PollPresetProps,
 } from "./shared";
@@ -35,7 +37,10 @@ export function PollDonut({ view, cfg, pulses }: PollPresetProps) {
   });
 
   const lead = view.leader;
-  const tie = view.resultText === "Tie";
+  // While a tie lasts the middle says so instead of naming the first tied
+  // choice. Once closed, only a poll's "Tie" result counts (a cancelled
+  // prediction keeps its own line).
+  const tie = view.ended ? view.resultText === "Tie" : leadersTied(view);
   // Middle of the ring: the leader's share and name; at the end, the winner,
   // or just "Tie".
   const centreBig = tie ? "Tie" : lead ? lead.percentText : "0%";
@@ -111,56 +116,59 @@ export function PollDonut({ view, cfg, pulses }: PollPresetProps) {
             )}
           </g>
         </svg>
-        <div style={{ flex: "1 1 auto", minWidth: 0, display: "flex", flexDirection: "column", gap: Math.round(cfg.fontSize * 0.35) }}>
-          {view.choices.map((c) => {
-            const value = choiceValueText(c, cfg);
-            return (
-              <div
-                key={c.id}
-                className="sw-goal-motion"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: Math.round(cfg.fontSize * 0.45),
-                  minWidth: 0,
-                  opacity: choiceOpacity(view, c),
-                  transition: `opacity ${SHARE_MS}ms ease`,
-                  fontWeight: c.isWinner ? 700 : undefined,
-                }}
-              >
-                <span
-                  aria-hidden
+        {/* Up to ten prediction outcomes: the legend shrinks to the ring's height instead of spilling. */}
+        <FitBox origin="left top" style={{ flex: "1 1 auto" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: Math.round(cfg.fontSize * 0.35) }}>
+            {view.choices.map((c) => {
+              const value = choiceValueText(c, cfg);
+              return (
+                <div
+                  key={c.id}
+                  className="sw-goal-motion"
                   style={{
-                    position: "relative",
-                    width: dot,
-                    height: dot,
-                    borderRadius: "50%",
-                    background: c.color,
-                    flexShrink: 0,
-                    boxShadow: "0 1px 2px rgba(0,0,0,0.6)",
-                    overflow: "hidden",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: Math.round(cfg.fontSize * 0.45),
+                    minWidth: 0,
+                    opacity: choiceOpacity(view, c),
+                    transition: `opacity ${SHARE_MS}ms ease`,
+                    fontWeight: c.isWinner ? 700 : undefined,
                   }}
                 >
-                  {pulses[c.id] ? (
-                    <span
-                      key={pulses[c.id]}
-                      className="sw-goal-motion sw-goal-pulse"
-                      style={{ position: "absolute", inset: 0, background: "#fff", opacity: 0, animation: "sw-poll-flash 500ms ease-out" }}
-                    />
-                  ) : null}
-                </span>
-                <span style={{ flex: "1 1 auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {c.title}
-                </span>
-                {value && (
-                  <FitText align="right" style={{ flexShrink: 0, maxWidth: "45%" }}>
-                    {value}
-                  </FitText>
-                )}
-              </div>
-            );
-          })}
-        </div>
+                  <span
+                    aria-hidden
+                    style={{
+                      position: "relative",
+                      width: dot,
+                      height: dot,
+                      borderRadius: "50%",
+                      background: c.color,
+                      flexShrink: 0,
+                      boxShadow: "0 1px 2px rgba(0,0,0,0.6)",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {pulses[c.id] ? (
+                      <span
+                        key={pulses[c.id]}
+                        className="sw-goal-motion sw-goal-pulse"
+                        style={{ position: "absolute", inset: 0, background: "#fff", opacity: 0, animation: "sw-poll-flash 500ms ease-out" }}
+                      />
+                    ) : null}
+                  </span>
+                  <span style={{ flex: "1 1 auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {c.title}
+                  </span>
+                  {value && (
+                    <FitText align="right" style={{ flexShrink: 0, maxWidth: "45%" }}>
+                      {value}
+                    </FitText>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </FitBox>
       </div>
     </div>
   );

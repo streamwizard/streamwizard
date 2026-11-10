@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@repo/supabase/next/server";
-import { getTwitchUserId } from "@repo/supabase/queries/user";
+import { getTwitchUserIdByUserIdMaybe } from "@repo/supabase/queries/users/user";
 import { reportError } from "@repo/sentry";
 import {
   isThirdPartyProvider,
@@ -102,7 +102,7 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const broadcasterId = await getTwitchUserId(supabase);
+  const broadcasterId = await getTwitchUserIdByUserIdMaybe(supabase, user.id);
   if (!broadcasterId) {
     return NextResponse.json({ error: "No Twitch integration" }, { status: 403 });
   }

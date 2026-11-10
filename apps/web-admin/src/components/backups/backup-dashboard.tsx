@@ -7,17 +7,17 @@ import { toast } from "sonner";
 import { Archive, Clock, DatabaseBackup, HardDrive, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
 import type { BackupJobView, BackupOverviewResponse, BackupStatus } from "@repo/backups";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
-import { refreshBackups } from "@/actions/backups";
-import { DataList } from "@/components/widgets/data-list";
-import { PageHeader } from "@/components/widgets/page-header";
-import { StatCard } from "@/components/widgets/stat-card";
-import { ChartGrid, StatGrid } from "@/components/widgets/stat-grid";
-import { StatusIndicator } from "@/components/widgets/status-indicator";
-import type { BackupFetch } from "@/lib/backups";
-import { useRefreshInterval } from "@/lib/refresh-interval-context";
+import { refreshBackups } from "@/actions/backups/backups";
+import { DataList } from "@/components/shared/data-list";
+import { PageHeader } from "@/components/shared/page/page-header";
+import { StatCard } from "@/components/shared/stat-card";
+import { ChartGrid, StatGrid } from "@/components/shared/stat-grid";
+import { StatusIndicator } from "@/components/shared/status-indicator";
+import type { BackupFetch } from "@/lib/backups/backups";
+import { useRefreshInterval } from "@/providers/refresh-interval-context";
 import { cn, fetcher } from "@/lib/utils";
-import { BANNER_BORDER, SIZE_HELP, STATUS_DISPLAY, formatAge, formatApprox, formatBytes, relative } from "./backup-format";
-import { HelpLabel, When } from "./hint-popover";
+import { BANNER_BORDER, SIZE_HELP, STATUS_DISPLAY, formatAge, formatApprox, formatBytes, relative } from "@/lib/backups/backup-format";
+import { HelpLabel, When } from "@/components/shared/hint-popover";
 
 const VERIFICATION_LABEL = { ok: "Verified", failed: "Failed", pending: "Pending", none: "Not verified" } as const;
 

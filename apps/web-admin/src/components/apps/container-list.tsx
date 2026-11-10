@@ -1,9 +1,9 @@
 import type { AppContainer } from "@repo/metrics";
-import { relative } from "@/components/backups/backup-format";
-import { When } from "@/components/backups/hint-popover";
-import { DataList, type DataColumn } from "@/components/widgets/data-list";
-import { StatusIndicator, type IndicatorStatus } from "@/components/widgets/status-indicator";
-import { isFailedExit } from "@/lib/apps-model";
+import { relative } from "@/lib/backups/backup-format";
+import { When } from "@/components/shared/hint-popover";
+import { DataList, type DataColumn } from "@/components/shared/data-list";
+import { StatusIndicator, type IndicatorStatus } from "@/components/shared/status-indicator";
+import { isFailedExit } from "@/lib/apps/apps-model";
 
 function stateDisplay(c: AppContainer, live: boolean): { indicator: IndicatorStatus; label: string } {
   if (c.state === "running") {

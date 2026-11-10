@@ -1,5 +1,5 @@
 import { getDesignSize, getItemScale, hasCrop } from "@repo/ui/overlay";
-import type { OverlayItem } from "@/types/overlays";
+import type { OverlayItem } from "@repo/ui/components/overlay/types/item";
 
 /**
  * The box a design preset is drawn for, at the item's current scale, keeping

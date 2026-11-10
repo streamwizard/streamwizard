@@ -10,12 +10,12 @@ import {
   saveAuthorAction,
   searchAuthorAccountsAction,
   setAuthorDeletedAction,
-  type AccountOption,
-} from "@/actions/cms-authors";
-import { PageHeader } from "@/components/widgets/page-header";
-import { SaveBar } from "@/components/widgets/save-bar";
+} from "@/actions/cms/authors";
+import type { CmsAccountOption } from "@/types/cms";
+import { PageHeader } from "@/components/shared/page/page-header";
+import { SaveBar } from "@/components/shared/page/save-bar";
 import { MAX_BIO_LENGTH, SOCIAL_LINKS, parseSocialLinks, type SocialLinks } from "@/lib/cms/authors";
-import { PageCrumb } from "@/lib/crumbs";
+import { PageCrumb } from "@/lib/nav/crumbs";
 import { ConfirmButton } from "./confirm-button";
 import { FormField } from "./form-field";
 import { ImagePickerDialog } from "./image-picker-dialog";
@@ -34,7 +34,7 @@ export interface AuthorEditorState {
   bio: string;
   socialLinks: SocialLinks;
   avatar: AuthorAvatar | null;
-  account: AccountOption | null;
+  account: CmsAccountOption | null;
   deleted: boolean;
   postCount: number;
 }
@@ -49,12 +49,12 @@ function AccountLink({
   account,
   onChange,
 }: {
-  account: AccountOption | null;
-  onChange: (account: AccountOption | null) => void;
+  account: CmsAccountOption | null;
+  onChange: (account: CmsAccountOption | null) => void;
 }) {
   const uid = useId();
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<AccountOption[] | null>(null);
+  const [results, setResults] = useState<CmsAccountOption[] | null>(null);
   const [pending, start] = useTransition();
 
   const search = () =>

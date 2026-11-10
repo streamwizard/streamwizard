@@ -59,9 +59,10 @@ function frame(type: string, payload: unknown, subscriptionType?: string) {
   });
 }
 
-function fakeApi(initialShardCount: number | null) {
+function fakeApi(initialShardCount: number | null, bindDelayMs: Record<string, number> = {}) {
   const conduit = initialShardCount === null ? null : { id: "conduit-1", shard_count: initialShardCount, shards: [] };
   const bound: string[] = [];
+  const bindSpans: { shardId: string; start: number; end: number }[] = [];
   const resizes: number[] = [];
   const api = {
     eventsub: {
@@ -72,12 +73,15 @@ function fakeApi(initialShardCount: number | null) {
         return { data: conduit ? [conduit] : [] };
       },
       updateShardTransport: async (_conduit: string, shardId: string) => {
+        const start = Date.now();
+        if (bindDelayMs[shardId]) await Bun.sleep(bindDelayMs[shardId]);
+        bindSpans.push({ shardId, start, end: Date.now() });
         bound.push(shardId);
         return { data: [], errors: [] };
       },
     },
   } as unknown as TwitchApi;
-  return { api, bound, resizes };
+  return { api, bound, resizes, bindSpans };
 }
 
 async function waitFor(check: () => boolean, timeoutMs = 8000) {
@@ -94,10 +98,20 @@ afterEach(async () => {
 });
 
 function setup(
-  opts: { shardCount: number; shardIds?: string[]; conduitShards?: number | null; staggerMs?: number; heartbeatIntervalMs?: number },
+  opts: {
+    shardCount: number;
+    shardIds?: string[];
+    conduitShards?: number | null;
+    staggerMs?: number;
+    heartbeatIntervalMs?: number;
+    bindDelayMs?: Record<string, number>;
+  },
 ) {
   const twitch = startFakeTwitch();
-  const { api, bound, resizes } = fakeApi(opts.conduitShards === undefined ? opts.shardCount : opts.conduitShards);
+  const { api, bound, resizes, bindSpans } = fakeApi(
+    opts.conduitShards === undefined ? opts.shardCount : opts.conduitShards,
+    opts.bindDelayMs,
+  );
   const events: { shardId: string; event: EventSubLifecycleEvent }[] = [];
   const beats: EventSubReceiverStats[][] = [];
   const manager = new ConduitShardManager(
@@ -118,7 +132,7 @@ function setup(
   cleanups.push(() => twitch.stop());
   cleanups.push(() => manager.stop());
   const connected = () => events.filter((e) => e.event.type === "connected");
-  return { manager, twitch, bound, resizes, events, beats, connected };
+  return { manager, twitch, bound, resizes, bindSpans, events, beats, connected };
 }
 
 describe("parseShardIds", () => {
@@ -194,6 +208,16 @@ describe("ConduitShardManager", () => {
     const [a, b, c] = twitch.openedAt;
     expect(b! - a!).toBeGreaterThanOrEqual(50);
     expect(c! - b!).toBeGreaterThanOrEqual(50);
+  });
+
+  it("waits for a slow bind to finish before staggering the next shard", async () => {
+    const { manager, bindSpans, connected } = setup({ shardCount: 2, staggerMs: 30, bindDelayMs: { "0": 150 } });
+    await manager.start();
+    await waitFor(() => connected().length === 2);
+
+    const first = bindSpans.find((s) => s.shardId === "0")!;
+    const second = bindSpans.find((s) => s.shardId === "1")!;
+    expect(second.start - first.end).toBeGreaterThanOrEqual(25);
   });
 
   it("counts messages, notifications, keepalives, revocations and lost connections per shard", async () => {

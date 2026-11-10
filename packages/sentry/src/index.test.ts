@@ -36,6 +36,38 @@ describe("scrubLog", () => {
   });
 });
 
+describe("scrubLog OAuth client fields", () => {
+  const scrub = (message: string) => scrubLog({ level: "error", message })?.message;
+
+  it("redacts client_secret in query strings, inspected objects and JSON", () => {
+    expect(scrub("POST /oauth2/token?client_secret=abc123&grant_type=refresh_token")).toBe(
+      "POST /oauth2/token?[REDACTED]&grant_type=refresh_token",
+    );
+    expect(scrub("params: { client_secret: 'abc123', grant_type: 'client_credentials' }")).toBe(
+      "params: { [REDACTED]', grant_type: 'client_credentials' }",
+    );
+    expect(scrub('{"client_secret":"abc123","grant_type":"client_credentials"}')).toBe(
+      '{"[REDACTED]","grant_type":"client_credentials"}',
+    );
+    expect(scrub("CLIENT_SECRET=abc123")).toBe("[REDACTED]");
+  });
+
+  it("redacts client_id in a URL and JSON-serialized tokens", () => {
+    expect(scrub("https://id.twitch.tv/oauth2/token?client_id=abc123&grant_type=x")).toBe(
+      "https://id.twitch.tv/oauth2/token?[REDACTED]&grant_type=x",
+    );
+    expect(scrub('{"refresh_token":"abc123","access_token":"def456","scope":[]}')).toBe(
+      '{[REDACTED],[REDACTED],"scope":[]}',
+    );
+  });
+
+  it("leaves lines without those fields alone", () => {
+    expect(scrub("[twitch-api] token refresh failed: POST /oauth2/token -> 400")).toBe(
+      "[twitch-api] token refresh failed: POST /oauth2/token -> 400",
+    );
+  });
+});
+
 describe("sentryEnvironment", () => {
   const saved = { APP_ENV: process.env.APP_ENV, NODE_ENV: process.env.NODE_ENV };
   afterEach(() => {

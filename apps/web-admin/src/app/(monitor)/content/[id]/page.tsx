@@ -6,16 +6,16 @@ import { listCmsAuthors } from "@repo/supabase/queries/cms/authors";
 import { getCmsContentForEditor, listCmsContentOptions } from "@repo/supabase/queries/cms/content";
 import { listCmsCategories, listCmsTags } from "@repo/supabase/queries/cms/taxonomy";
 import { ContentEditor, type ContentStatus, type EditorImage } from "@/components/content/editor/content-editor";
-import { describeScheduleError } from "@/lib/cms/content-errors";
+import { describeScheduleError } from "@/lib/cms/publish/content-errors";
 import { contentType, draftFromRow, rowHasFutureBody } from "@/lib/cms/draft-row";
-import { publicContentUrl } from "@/lib/cms/publish";
+import { publicContentUrl } from "@/lib/cms/publish/publish";
 import { asReviewState } from "@/lib/cms/review";
-import { cmsAssetUrl } from "@/lib/cms/storage";
+import { cmsAssetUrl } from "@/lib/cms/media/storage";
 import { env } from "@/lib/env";
+import { isGuid } from "@repo/schemas/ids";
 
 export const dynamic = "force-dynamic";
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 async function loadImages(ids: (string | null)[]): Promise<Record<string, EditorImage>> {
   const images: Record<string, EditorImage> = {};
@@ -31,7 +31,7 @@ async function loadImages(ids: (string | null)[]): Promise<Record<string, Editor
 
 export default async function ContentEditorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  if (!UUID.test(id)) notFound();
+  if (!isGuid(id)) notFound();
   const { data: row, error } = await getCmsContentForEditor(supabaseAdmin, id);
   if (error) throw error;
   if (!row || row.deleted_at) notFound();

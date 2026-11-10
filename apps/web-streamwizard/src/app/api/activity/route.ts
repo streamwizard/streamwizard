@@ -1,12 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@repo/supabase/next/server";
 import { TtlCache } from "@repo/ttl-cache";
-import { isRelayedEvent, RELAYED_EVENTS } from "@/lib/activity-events";
-import { track } from "@/lib/track";
+import { isRelayedEvent, RELAYED_EVENTS } from "@/lib/tracking/activity-events";
+import { track } from "@/lib/tracking/track";
 
 /**
  * POST /api/activity — the dashboard reporting an action that no server action
- * sees. See lib/activity-events.ts for which ones and why.
+ * sees. See lib/tracking/activity-events.ts for which ones and why.
  *
  * A route handler rather than a server action: Next runs a client's server
  * actions one at a time, so a tracking action would queue in front of Save.

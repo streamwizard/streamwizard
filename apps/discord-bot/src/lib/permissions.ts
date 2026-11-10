@@ -1,7 +1,7 @@
 import type { GuildMember } from "discord.js";
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
-import { getCommandRoles } from "@repo/supabase/queries/discord";
+import { getCommandRoles } from "@repo/supabase/queries/discord/discord";
 import { TtlCache } from "@repo/ttl-cache";
 
 const CACHE_TTL_MS = 5 * 60 * 1000;

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { OverlayWsUrlProvider } from "@repo/ui/components/overlay/hooks/use-overlay-ws-url";
+import { env } from "@/lib/env";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -33,7 +35,9 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <OverlayWsUrlProvider url={env.NEXT_PUBLIC_WS_SERVER_URL}>{children}</OverlayWsUrlProvider>
+      </body>
     </html>
   );
 }

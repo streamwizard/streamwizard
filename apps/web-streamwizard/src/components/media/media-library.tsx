@@ -5,16 +5,11 @@ import { Upload, Music, Video, FileJson, Trash2, Loader2, Copy, ImageIcon, Folde
 import { Button, Progress } from "@repo/ui";
 import { cn } from "@repo/ui";
 import { toast } from "sonner";
-import {
-  confirmAssetUpload,
-  createAssetUpload,
-  deleteAsset,
-  type AssetListing,
-  type UserAsset,
-} from "@/actions/assets";
-import { uploadMimeType, type AssetKind } from "@/lib/asset-mime";
+import { confirmAssetUpload, createAssetUpload, deleteAsset } from "@/actions/media/assets";
+import type { AssetListing, UserAsset } from "@/types/media";
+import { uploadMimeType, type AssetKind } from "@/lib/media/asset-mime";
 import { formatBytes } from "@/lib/format";
-import { filesFromDrop, partitionUploadable } from "@/lib/media-upload";
+import { filesFromDrop, partitionUploadable } from "@/lib/media/media-upload";
 import { MediaPreviewDialog } from "./media-preview-dialog";
 
 interface Uploading {

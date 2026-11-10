@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import dagre from "@dagrejs/dagre";
 import type { Node, Edge } from "@xyflow/react";
-import type { BotConnSnapshot, ConsumerConnSnapshot, MonitorSnapshot } from "@/lib/monitor-ws";
+import type { BotConnSnapshot, ConsumerConnSnapshot, MonitorSnapshot } from "@repo/types/monitor";
 
 const SERVER_NODE_ID = "server";
 const NODE_WIDTH = 180;
@@ -123,9 +123,7 @@ export function useTopologyLayout(
         position: { x: 0, y: 0 },
         data: {
           roomId: room.roomId,
-          hasPublisher: room.hasPublisher,
           subscriberCount: room.subscriberCount,
-          streamId: room.streamId,
           isAnimating: false,
         },
       });
@@ -156,7 +154,7 @@ export function useTopologyLayout(
             },
           });
 
-          const connColor = conn.role === "publisher" ? "#60a5fa" : "#4ade80";
+          const connColor = "#4ade80";
           edges.push({
             id: `e-${roomNodeId}-${connNodeId}`,
             source: roomNodeId,

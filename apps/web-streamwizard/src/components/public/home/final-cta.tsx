@@ -1,9 +1,9 @@
-import { TrackedLink } from "../analytics/tracked-link";
+import { TrackedLink } from "@/components/shared/tracked-link";
 import { SectionView } from "../analytics/section-view";
 import { FaDiscord, FaGithub } from "react-icons/fa";
-import TwitchLogin from "@/components/buttons/twitch-login";
+import TwitchLogin from "@/components/shared/twitch/twitch-login";
 import { discordInviteLink, githubLink } from "@/lib/constant";
-import { Reveal } from "./reveal";
+import { Reveal } from "@/components/public/common/reveal";
 
 export function FinalCta() {
   return (

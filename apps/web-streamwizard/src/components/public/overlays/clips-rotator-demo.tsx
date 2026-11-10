@@ -30,8 +30,8 @@ import {
   type ClipTransitionMode,
   type TimeWindowPreset,
 } from "@repo/ui/overlay";
-import { InspectorReveal, InspectorSection } from "@/components/overlays/editor/inspector-section";
-import { createPlaybackOrder, seededRng } from "@/lib/clip-playback-order";
+import { InspectorReveal, InspectorSection } from "@/components/shared/inspector-section";
+import { createPlaybackOrder, seededRng } from "@/lib/clips/clip-playback-order";
 import { formatDate } from "@/lib/format";
 import { clipAlt, type RealClipCard } from "../home/demo-data";
 import { useDemoTracking } from "../analytics/use-demo-tracking";
@@ -45,7 +45,7 @@ import { useDemoTracking } from "../analytics/use-demo-tracking";
  *
  * The clips are real, from the same get_showcase_clips RPC the landing page
  * marquee runs on, and so is the video: the page resolves each clip's signed
- * MP4 on the server (see lib/showcase-clip-videos) and hands it down. Two
+ * MP4 on the server (see lib/public/showcase-clip-videos) and hands it down. Two
  * video elements alternate so the next clip is already loaded behind the one
  * on screen, which is how the widget itself avoids a black frame; the clip's
  * thumbnail sits underneath for the ones Twitch would not sign.
@@ -53,7 +53,7 @@ import { useDemoTracking } from "../analytics/use-demo-tracking";
  * Clips play to their end here exactly as they do in OBS, so the rotation is
  * driven by `ended` rather than by a timer.
  *
- * Ordering comes from lib/clip-playback-order, the editor's own play order,
+ * Ordering comes from lib/clips/clip-playback-order, the editor's own play order,
  * and the sort columns match CLIP_SORT_COLUMNS in the overlay query builder.
  * Modes, sorts and transitions come from the widget's config types, so the
  * page cannot offer an option the inspector does not have.

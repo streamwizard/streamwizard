@@ -9,8 +9,8 @@ import {
   hasCrop,
   type CropInsets,
 } from "@repo/ui/overlay";
-import type { OverlayItem, OverlaySceneWithItems } from "@/types/overlays";
-import { asClipDisplayFieldConfig } from "@/types/overlays";
+import type { OverlayItem, OverlaySceneWithItems } from "@repo/ui/components/overlay/types/item";
+import { asClipDisplayFieldConfig } from "@repo/ui/components/overlay/types/clips";
 import { useOverlayStore } from "@/stores/overlay-editor-store";
 import {
   pinToSceneEdge,

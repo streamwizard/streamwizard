@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // The node's "name" is used verbatim as its Linux hostname (see
-// rest-api's /api/nodes/claim handler, which passes it through
+// rest-api's /api/obs-nodes/claim handler, which passes it through
 // slugifyHostname -- a no-op for strings that already satisfy this
 // pattern). Enforcing the same RFC 1123 label rules at input time means
 // what the admin types is exactly what install.sh sets on the machine,

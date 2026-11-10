@@ -1,4 +1,4 @@
-import { signInWithTwitch } from "@/actions/auth";
+import { signInWithTwitch } from "@/actions/auth/sign-in";
 import { AuthShell } from "@/components/auth/auth-shell";
 
 interface LoginPageProps {

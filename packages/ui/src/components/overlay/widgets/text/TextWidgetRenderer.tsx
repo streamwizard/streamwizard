@@ -3,8 +3,9 @@
 import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useGoogleFont } from "../../hooks/use-google-font";
 import { getDesignSize } from "../../lib/item-scale";
-import { normalizeTextWidgetConfig } from "../../types";
-import type { OverlayItem, TextWidgetItemConfig } from "../../types";
+import { normalizeTextWidgetConfig } from "../../types/widgets";
+import type { TextWidgetItemConfig } from "../../types/widgets";
+import type { OverlayItem } from "../../types/item";
 import { hexToRgba } from "../goal/presets/shared";
 import { roundingRadiusPx } from "../media/media-widget-config";
 
@@ -125,7 +126,9 @@ export function TextWidgetRenderer({ item }: WidgetRenderProps) {
   ) : (
     <StyledText
       cfg={cfg}
-      style={{ wordBreak: "break-word", whiteSpace: "pre-wrap", lineHeight: 1.2, maxWidth: "100%" }}
+      // Auto margins centre the text like align-items does, but text taller
+      // than the box starts at the top, so only the end is cut, never the first line.
+      style={{ wordBreak: "break-word", whiteSpace: "pre-wrap", lineHeight: 1.2, maxWidth: "100%", marginTop: "auto", marginBottom: "auto" }}
     />
   );
 

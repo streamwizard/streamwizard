@@ -1,6 +1,6 @@
 import { reportError } from "@repo/sentry";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { getPlatformEventIdentity, type PlatformEventIdentity } from "@repo/supabase/queries/platform-events";
+import { getPlatformEventIdentity, type PlatformEventIdentity } from "@repo/supabase/queries/platform/events";
 
 // Server-only. Identity lookups for platform events (SW-334) emitted from
 // web-admin actions. Emitting itself is `logPlatformEvent` in @repo/supabase.
@@ -18,7 +18,7 @@ export async function eventIdentity(userId: string): Promise<PlatformEventIdenti
   try {
     return await getPlatformEventIdentity(supabaseAdmin, userId);
   } catch (error) {
-    reportError(error, "web-admin platform-events: identity");
+    reportError(error, "platform-events.identity");
     return EMPTY_IDENTITY;
   }
 }

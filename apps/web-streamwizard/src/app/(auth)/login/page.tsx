@@ -4,9 +4,9 @@ import Link from "next/link";
 import { Metadata } from "next";
 import { BarChart3, Cloud, Scissors } from "lucide-react";
 
-import TwitchLogin from "@/components/buttons/twitch-login";
+import TwitchLogin from "@/components/shared/twitch/twitch-login";
 import { discordInviteLink } from "@/lib/constant";
-import { absoluteUrl } from "@/lib/seo";
+import { absoluteUrl } from "@/lib/seo/seo";
 
 // Indexable on purpose: "streamwizard login" is a real query and this page
 // answers it. The canonical folds every /login?next=... variant the auth

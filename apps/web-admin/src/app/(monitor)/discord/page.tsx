@@ -1,70 +1,29 @@
-import Link from "next/link";
 import {
   Activity,
   AudioLines,
-  ChevronRight,
   DoorOpen,
   RadioTower,
   ScrollText,
   ShieldCheck,
   Ticket,
-  type LucideIcon,
 } from "lucide-react";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { getGuildCommandPermissions, getGuildSettings } from "@repo/supabase/queries/discord";
-import { getActivitySettings, getIgnoredChannelIds } from "@repo/supabase/queries/discord-activity";
-import { listDiscordSettingsAudit } from "@repo/supabase/queries/discord-audit";
-import { listDiscordLiveOptIns } from "@repo/supabase/queries/discord-live";
-import { listVoiceChannels, listVoiceHubs } from "@repo/supabase/queries/discord-voice";
-import { getLogRouting, resolveLogRoute } from "@repo/supabase/queries/platform-events";
-import { countOpenTickets, getTicketSettings } from "@repo/supabase/queries/tickets";
-import { PLATFORM_EVENT_TYPES } from "@repo/types";
-import { Card, CardContent } from "@repo/ui";
-import { AuditList } from "@/components/discord/audit-list";
-import { PageHeader } from "@/components/widgets/page-header";
-import { StatusIndicator } from "@/components/widgets/status-indicator";
+import { getGuildCommandPermissions, getGuildSettings } from "@repo/supabase/queries/discord/discord";
+import { getActivitySettings, getIgnoredChannelIds } from "@repo/supabase/queries/discord/activity";
+import { listDiscordSettingsAudit } from "@repo/supabase/queries/discord/audit";
+import { listDiscordLiveOptIns } from "@repo/supabase/queries/discord/live";
+import { listVoiceChannels, listVoiceHubs } from "@repo/supabase/queries/discord/voice";
+import { getLogRouting, resolveLogRoute } from "@repo/supabase/queries/platform/events";
+import { countOpenTickets, getTicketSettings } from "@repo/supabase/queries/tickets/tickets";
+import { PLATFORM_EVENT_TYPES } from "@repo/schemas/platform-events";
+import { Card, CardContent } from "@repo/ui/components/ui/card";
+import { AuditList } from "@/components/discord/overview/audit-list";
+import { PageHeader } from "@/components/shared/page/page-header";
+import { FeatureRow } from "@/components/discord/overview/feature-row";
 import { getGuild, getGuildChannels, getGuildRoles, requireDiscordContext } from "@/lib/discord/api";
 import { buildNameMap } from "@/lib/discord/names";
 
 export const dynamic = "force-dynamic";
-
-/** One line of the feature list: what it is, how it is set up, and whether it is on. */
-function FeatureRow({
-  href,
-  title,
-  icon: Icon,
-  enabled,
-  statusLabel,
-  lines,
-}: {
-  href: string;
-  title: string;
-  icon: LucideIcon;
-  enabled: boolean;
-  statusLabel?: string;
-  lines: string[];
-}) {
-  return (
-    <li>
-      <Link
-        href={href}
-        className="flex min-h-14 items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
-      >
-        <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium">{title}</p>
-          <p className="truncate text-sm text-muted-foreground">{lines.join(" · ")}</p>
-        </div>
-        <StatusIndicator
-          status={enabled ? "ok" : "muted"}
-          label={statusLabel ?? (enabled ? "On" : "Off")}
-          className="shrink-0 text-xs"
-        />
-        <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-      </Link>
-    </li>
-  );
-}
 
 export default async function DiscordOverviewPage() {
   const { guildId } = requireDiscordContext();

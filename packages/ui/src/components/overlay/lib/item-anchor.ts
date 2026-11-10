@@ -1,4 +1,4 @@
-import type { OverlayItem } from "../types";
+import type { OverlayItem } from "../types/item";
 
 /**
  * Where an item's `x`/`y` are measured from.

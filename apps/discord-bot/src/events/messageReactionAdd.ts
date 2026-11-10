@@ -1,5 +1,5 @@
 import { Events } from "discord.js";
-import { recordReaction } from "../lib/activity-tracker";
+import { recordReaction } from "@/lib/activity/activity-tracker";
 import type { BotEvent } from "../types/discord";
 
 export default {

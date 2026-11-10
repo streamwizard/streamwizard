@@ -1,7 +1,7 @@
 import { BackupCharts } from "@/components/backups/backup-charts";
 import { BackupDashboard } from "@/components/backups/backup-dashboard";
-import { fetchBackupSeries } from "@/lib/backup-series";
-import { getBackupOverview } from "@/lib/backups";
+import { fetchBackupSeries } from "@/lib/backups/backup-series";
+import { getBackupOverview } from "@/lib/backups/backups";
 
 export const dynamic = "force-dynamic";
 

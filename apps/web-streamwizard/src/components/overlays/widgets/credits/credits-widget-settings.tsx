@@ -1,14 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { env } from "@/lib/env";
 import { useOverlayStore } from "@/stores/overlay-editor-store";
 import { Loader2, Pencil, Play, Plus, RefreshCw, Sparkles, Square, X } from "lucide-react";
-import { buildDemoCreditsData, type CreditsData } from "@repo/schemas";
+import { buildDemoCreditsData, type CreditsData } from "@repo/schemas/widgets/credits";
 import {
   Button,
   cn,
-  ColorPicker,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -61,19 +60,17 @@ import {
   type CreditsWidgetItemConfig,
   type CreditsWidgetPreset,
 } from "@repo/ui/overlay";
-import {
-  FontWeightSelect,
-  GoogleFontSelect,
-  InspectorHint,
-  InspectorReveal,
-  InspectorSection,
-  SegmentedField,
-  SliderField,
-  SwitchField,
-  presetGeometry,
-  type SegmentedOption,
-} from "@/components/overlays/inspector-fields";
-import type { OverlayInspectorAppendProps } from "../../registry/overlay-widget-registry.types";
+import { FontWeightSelect } from "@/components/overlays/inspector-fields/font-weight-select";
+import { GoogleFontSelect } from "@/components/overlays/inspector-fields/google-font-select";
+import { InspectorHint } from "@/components/overlays/editor/inspector/inspector-hint";
+import { InspectorReveal, InspectorSection } from "@/components/shared/inspector-section";
+import { SegmentedField, type SegmentedOption } from "@/components/overlays/inspector-fields/segmented-field";
+import { SliderField } from "@/components/overlays/inspector-fields/slider-field";
+import { SwitchField } from "@/components/overlays/inspector-fields/switch-field";
+import { presetGeometry } from "@/components/overlays/inspector-fields/preset-geometry";
+import type { OverlayInspectorAppendProps } from "@/components/overlays/registry/overlay-widget-registry.types";
+import { ColorField } from "@/components/overlays/inspector-fields/color-field";
+import { useTwitchAsset } from "@/components/overlays/widgets/shared/use-twitch-widget-feed";
 
 /** One line of help at the top of each section's edit dialog. */
 const SECTION_HELP: Record<CreditsSection["id"], string> = {
@@ -177,16 +174,10 @@ function PresetSketch({ preset }: { preset: CreditsWidgetPreset }) {
   }
 }
 
-function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
-  return (
-    <div className="min-w-0 space-y-1.5">
-      <Label className="text-xs">{label}</Label>
-      <ColorPicker value={value} onChange={onChange} aria-label={`${label} color`} />
-    </div>
-  );
-}
-
-type SourceResponse = { status: "loading" } | { status: "failed" } | { status: "ready"; data: CreditsData };
+const CREDITS_SOURCE = {
+  resource: "credits",
+  ready: (data: CreditsData) => ({ data }),
+};
 
 /**
  * The stream the widget would roll right now, for the status line: read once
@@ -194,28 +185,8 @@ type SourceResponse = { status: "loading" } | { status: "failed" } | { status: "
  * (the same socket frames the canvas widget watches) or on Refresh.
  */
 function useCreditsSource() {
-  const [response, setResponse] = useState<SourceResponse>({ status: "loading" });
-  const [refreshKey, setRefreshKey] = useState(0);
+  const { response, refresh } = useTwitchAsset(CREDITS_SOURCE);
   const token = useOverlayStore((s) => s.scene?.subscriber_token);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch("/api/twitch/assets/credits");
-        if (!res.ok) throw new Error(String(res.status));
-        const data = (await res.json()) as CreditsData;
-        if (!cancelled) setResponse({ status: "ready", data });
-      } catch {
-        if (!cancelled) setResponse({ status: "failed" });
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [refreshKey]);
-
-  const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
 
   useEffect(() => {
     const wsUrl = env.NEXT_PUBLIC_WS_SERVER_URL;

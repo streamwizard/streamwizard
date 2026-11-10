@@ -1,4 +1,4 @@
-import { DISPLAY_FIELD_KEYS, type DisplayFieldKey } from "@/types/overlays";
+import { DISPLAY_FIELD_KEYS, type DisplayFieldKey } from "@repo/ui/components/overlay/types/clips";
 import { creatorField } from "./fields/creator-field";
 import { dateField } from "./fields/date-field";
 import { durationField } from "./fields/duration-field";

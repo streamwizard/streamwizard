@@ -1,0 +1,29 @@
+{
+  "name": "@repo/node-token",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "test": "bun test",
+    "generate-key": "bun scripts/generate-key.ts"
+  },
+  "dependencies": {
+    "jose": "^6.2.3"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/bun": "^1.3.6",
+    "@types/node": "^25.0.8",
+    "typescript": "^5.9.2"
+  }
+}

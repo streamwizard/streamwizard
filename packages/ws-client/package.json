@@ -10,13 +10,23 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./service-socket": {
+      "types": "./src/service-socket.ts",
+      "default": "./src/service-socket.ts"
     }
   },
   "scripts": {
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@repo/schemas": "workspace:*",
+    "@repo/service-token": "workspace:*"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
+    "@types/bun": "^1.3.6",
     "@types/node": "^25.0.8",
     "typescript": "^5.9.2"
   }

@@ -1,6 +1,3 @@
-// Next.js replaces NEXT_PUBLIC_* at build time; declare process so tsc is happy in this library package.
-declare const process: { env: Record<string, string | undefined> };
-
 export type WsEventListener = (msg: unknown) => void;
 
 export type WsRoomStatus = "connecting" | "connected" | "disconnected";

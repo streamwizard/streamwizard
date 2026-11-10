@@ -1,7 +1,7 @@
 import { OverwriteType, PermissionFlagsBits, type OverwriteData } from "discord.js";
-import type { TicketCategory } from "@repo/supabase/queries/ticket-config";
-import type { OpenerTicketStats } from "@repo/supabase/queries/ticket-lifecycle";
-import type { DiscordTicket, DiscordTicketSettings } from "@repo/supabase/queries/tickets";
+import type { TicketCategory } from "@repo/supabase/queries/tickets/config";
+import type { OpenerTicketStats } from "@repo/supabase/queries/tickets/lifecycle";
+import type { DiscordTicket, DiscordTicketSettings } from "@repo/supabase/queries/tickets/tickets";
 
 // Who may open a ticket, who counts as staff on it, and who can see its
 // channel. All of it is pure (ids and rows in, a decision out), so every rule

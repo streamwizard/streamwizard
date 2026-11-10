@@ -1,9 +1,9 @@
 import { ArrowRight } from "lucide-react";
-import { Button } from "@repo/ui";
+import { Button } from "@repo/ui/components/ui/button";
 import { productSectionLinks } from "@/lib/constant";
 import { SectionView } from "../analytics/section-view";
-import { TrackedLink } from "../analytics/tracked-link";
-import { Reveal } from "../home/reveal";
+import { TrackedLink } from "@/components/shared/tracked-link";
+import { Reveal } from "@/components/public/common/reveal";
 import { SceneSwitchLoop } from "./scene-switch-loop";
 
 /*

@@ -1,6 +1,6 @@
 import { InteractionContextType, MessageFlags, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import { supabase } from "@repo/supabase";
-import { addCommandRole, getCommandRoles, getGuildCommandPermissions, removeCommandRole } from "@repo/supabase/queries/discord";
+import { addCommandRole, getCommandRoles, getGuildCommandPermissions, removeCommandRole } from "@repo/supabase/queries/discord/discord";
 import type { Command } from "../types/discord";
 import { invalidateCommandPermissionCache } from "../lib/permissions";
 

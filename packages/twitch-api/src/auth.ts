@@ -1,5 +1,5 @@
 import axios from "axios";
-import { getChannelAccessToken } from "@repo/supabase";
+import { getChannelAccessToken } from "@repo/supabase/queries/twitch/tokens";
 import { TwitchApiBaseClient } from "./base-client";
 
 const VALIDATE_URL = "https://id.twitch.tv/oauth2/validate";

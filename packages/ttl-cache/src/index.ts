@@ -1,6 +1,7 @@
 /**
- * A bounded per-process TTL cache, shared by rest-api, twitch-assets and the
- * Discord bot. One implementation instead of one per call site.
+ * A bounded per-process TTL cache, shared by rest-api, ws-server,
+ * obs-auto-switcher, twitch-assets and the Discord bot. One implementation
+ * instead of one per call site.
  *
  * Started life in rest-api: every `/api/nodes/*` request used to cost an
  * uncached Supabase round trip just to resolve the caller's API key — at the

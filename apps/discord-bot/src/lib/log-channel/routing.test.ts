@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { isLogRouteActive, resolveLogRoute, type LogRouting } from "@repo/supabase/queries/platform-events";
+import { isLogRouteActive, resolveLogRoute, type LogRouting } from "@repo/supabase/queries/platform/events";
 
 const routing = (overrides: Partial<LogRouting> = {}): LogRouting => ({
   guildId: "1",

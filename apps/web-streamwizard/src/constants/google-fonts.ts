@@ -2,7 +2,7 @@ import { isUploadedFontRef, UPLOADED_FONT_PREFIX } from "@repo/ui/overlay";
 
 /**
  * Offline fallback when metadata fetch fails (subset of fonts.google.com).
- * The editor loads the full catalog via `getGoogleFontsCatalog()` in `src/lib/google-fonts-catalog.ts`.
+ * The editor loads the full catalog via `getGoogleFontsCatalog()` in `src/lib/overlays/google-fonts-catalog.ts`.
  */
 export const FALLBACK_GOOGLE_FONT_FAMILIES = [
   "Inter",

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { EmitPlatformEventInput } from "@repo/supabase/queries/platform-events";
+import type { EmitPlatformEventInput } from "@repo/supabase/queries/platform/events";
 import { createEventSubLogGroup, mergeEventSubRows } from "./eventsub-log-group";
 
 const SERVICE = "streamwizard-bot";

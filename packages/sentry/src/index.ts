@@ -9,6 +9,8 @@ import {
   type Log,
   type TransactionEvent,
 } from "@sentry/core";
+import { failureKey } from "./failure-key";
+import { toSafeError } from "./safe-error";
 
 export interface SentryConfig {
   dsn: string;
@@ -20,6 +22,9 @@ const PII_PATTERNS: RegExp[] = [
   /oauth2?[_-]?token[\s=:]+\S+/gi,     // OAuth tokens in messages/frames
   /access_token[\s=:]+\S+/gi,
   /refresh_token[\s=:]+\S+/gi,
+  /"(?:access|refresh)_token"\s*:\s*"[^"]*"/gi, // JSON-serialized token fields
+  /client_secret["']?\s*[=:]\s*["']?[^\s&"',;}]+/gi, // query string, JSON and inspected objects
+  /client_id=[^\s&"']+/gi,           // OAuth client id in a URL or query string
   /Bearer\s+[A-Za-z0-9\-._~+/]+=*/gi, // Authorization header values
   /eyJ[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]*/g, // raw JWTs
 ];
@@ -137,10 +142,7 @@ export interface ErrorLimiterOptions {
 export function errorLimitKey(event: Event): string {
   const ex = event.exception?.values?.at(-1);
   const raw = ex ? `${ex.type ?? "Error"}: ${ex.value ?? ""}` : (event.message ?? "unknown");
-  return raw
-    .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, "<id>")
-    .replace(/\d+/g, "<n>")
-    .slice(0, 200);
+  return failureKey(raw);
 }
 
 export function createErrorLimiter(options: ErrorLimiterOptions): (event: Event) => boolean {
@@ -210,10 +212,14 @@ export function getSentryOptions(config: SentryConfig) {
 // message (which broadcaster, which iteration). It stays out of the `context`
 // tag on purpose: tags are indexed for grouping, so folding an id into one
 // gives every occurrence its own bucket and the issue never aggregates.
+//
+// Axios errors are reduced to toSafeError's summary first: logged or captured
+// whole, they carry the request config, params and headers.
 export function reportError(error: unknown, context: string, extra?: Record<string, unknown>): void {
-  if (extra) console.error(`[${context}]`, extra, error);
-  else console.error(`[${context}]`, error);
-  captureException(error, { tags: { context }, extra });
+  const safe = toSafeError(error);
+  if (extra) console.error(`[${context}]`, extra, safe);
+  else console.error(`[${context}]`, safe);
+  captureException(safe, { tags: { context }, extra });
 }
 
 // Sentry batches events and sends them in the background, so a process that
@@ -241,8 +247,9 @@ export async function flushSentry(timeoutMs = 2000): Promise<void> {
 // usually a local mistake rather than a corrupted process, and exiting on one
 // turns a logged warning into an outage.
 export function reportFatal(error: unknown, context: string): void {
-  console.error(`[${context}] fatal — exiting`, error);
-  captureException(error);
+  const safe = toSafeError(error);
+  console.error(`[${context}] fatal — exiting`, safe);
+  captureException(safe);
   // Never let a hung transport hold the process open; flushSentry is already
   // bounded and never throws.
   void flushSentry().finally(() => {
@@ -258,8 +265,7 @@ export function reportFatal(error: unknown, context: string): void {
 // Only `warn` and `error` are forwarded. `log`/`info` are routine lifecycle
 // chatter (ticks, reconnects, chat traffic) that made up >95% of the volume,
 // and logs are a metered category; they still print to the container output.
-// Call Sentry.logger.info directly for the rare info line worth keeping. See
-// docs/sentry-log-noise-plan.md for the policy.
+// Call Sentry.logger.info directly for the rare info line worth keeping.
 export function createConsoleLogsIntegration() {
   return consoleLoggingIntegration({ levels: ["warn", "error"] });
 }

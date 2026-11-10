@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { Cpu, Eye, MonitorPlay, Radio } from "lucide-react";
-import { StatCard } from "@/components/widgets/stat-card";
-import { StatGrid } from "@/components/widgets/stat-grid";
-import type { ObsLoad } from "@/lib/overview-data";
+import { StatCard } from "@/components/shared/stat-card";
+import { StatGrid } from "@/components/shared/stat-grid";
+import type { ObsLoad } from "@/lib/overview/overview-data";
 
 const number = (value: number) => value.toLocaleString("en-US");
 

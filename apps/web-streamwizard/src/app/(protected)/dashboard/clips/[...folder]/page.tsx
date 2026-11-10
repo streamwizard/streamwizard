@@ -1,14 +1,15 @@
 import { AddClipsHelpDialog } from "@/components/clips/add-clips-help-dialog";
 import { ClipsDisplay } from "@/components/clips/clips-display";
-import { ClipsPaginationBar } from "@/components/nav/clips-pagination-bar";
-import { Button } from "@repo/ui";
+import { ClipsPaginationBar } from "@/components/clips/clips-pagination-bar";
+import { Button } from "@repo/ui/components/ui/button";
 import { createClient } from "@repo/supabase/next/server";
-import { getClipFolders } from "@repo/supabase/queries/clips";
-import buildClipQuery from "@/lib/utils/build-clip-query";
-import { parseClipPageSize } from "@/lib/utils/clip-pagination";
-import { parseClipView } from "@/lib/utils/clip-view";
-import { findFolderByUrlSegments, getFolderBreadcrumb, getFolderUrl } from "@/lib/utils/clip-folders";
-import { normalizeClipsWithFolders } from "@/types/database";
+import { reportError } from "@repo/sentry";
+import { getClipFolders } from "@repo/supabase/queries/clips/clips";
+import buildClipQuery from "@/lib/clips/build-clip-query";
+import { parseClipPageSize } from "@/lib/clips/clip-pagination";
+import { parseClipView } from "@/lib/clips/clip-view";
+import { findFolderByUrlSegments, getFolderBreadcrumb, getFolderUrl } from "@/lib/clips/clip-folders";
+import { normalizeClipsWithFolders } from "@/lib/clips/clips-with-folders";
 import { ClipSearchParams } from "@/types/pages";
 import { FolderX } from "lucide-react";
 import Link from "next/link";
@@ -60,7 +61,7 @@ export default async function Page({ params, searchParams }: PageProps) {
 
   const { data, error, count } = await query;
   if (error) {
-    console.error(error);
+    reportError(error, "clips-page: list folder clips");
     return null;
   }
   const pageIndex = parsedSearchParams.page ? parseInt(parsedSearchParams.page, 10) : 1;

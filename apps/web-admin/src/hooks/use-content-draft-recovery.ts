@@ -7,7 +7,7 @@ import {
   parseLocalDraft,
   readLocalDraftRaw,
   type StoredContentDraft,
-} from "@/lib/cms/local-draft";
+} from "@/lib/cms/editor/local-draft";
 import type { ContentDraft } from "@/lib/cms/draft";
 
 /**

@@ -1,4 +1,4 @@
-import { TrackedLink } from "../analytics/tracked-link";
+import { TrackedLink } from "@/components/shared/tracked-link";
 import { FaDiscord, FaGithub } from "react-icons/fa";
 import { BsTwitch } from "react-icons/bs";
 import { discordInviteLink, githubLink, twitchChannelLink } from "@/lib/constant";

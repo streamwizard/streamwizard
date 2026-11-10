@@ -1,14 +1,14 @@
 import { revalidateTag } from "next/cache";
 import { after, NextResponse } from "next/server";
 import { reportError } from "@repo/sentry";
-import { handleRevalidate } from "@/lib/cms-revalidate";
+import { handleRevalidate } from "@/lib/cms/cms-revalidate";
 import { env } from "@/lib/env";
-import { pingIndexNow } from "@/lib/indexnow";
+import { pingIndexNow } from "@/lib/seo/indexnow";
 
 /**
  * POST /api/revalidate: server-to-server only. web-admin and the rest-api CMS
  * scheduler send `Authorization: Bearer <CMS_REVALIDATE_SECRET>` and
- * `{ tags, mode, indexNow? }` after a post changes. See lib/cms-revalidate.ts.
+ * `{ tags, mode, indexNow? }` after a post changes. See lib/cms/cms-revalidate.ts.
  *
  * One container serves the site today, so refreshing this instance's cache is
  * refreshing the site. A second replica would need a shared cache handler.

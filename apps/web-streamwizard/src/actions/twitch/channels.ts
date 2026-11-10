@@ -1,46 +1,24 @@
 "use server";
 
-import { TwitchApi, type ChannelInformation } from "@repo/twitch-api";
-import { track } from "@/lib/track";
-import { createClient } from "@repo/supabase/next/server";
-import { getTwitchUserId } from "@repo/supabase/queries/user";
+import { TwitchApi } from "@repo/twitch-api";
+import { track } from "@/lib/tracking/track";
 import { reportError } from "@repo/sentry";
+import { tryAuthContext } from "@/lib/auth";
+import { updateChannelInfoSchema } from "@/schemas/twitch";
+import type { ChannelInfoResult } from "@/types/twitch-channel";
 
 /**
  * Reading and writing the signed-in streamer's own channel info.
  *
- * The broadcaster id comes from the session's Twitch integration and is never
+ * The broadcaster id comes from the session (tryAuthContext) and is never
  * taken from the caller — an id in the argument list is an id a client can
  * change, which would turn this into a way to rewrite other people's titles.
  */
 
-// Twitch rejects a longer title outright; checked here so the deck can say so
-// rather than surfacing an opaque 400 on a phone.
-const MAX_TITLE_LENGTH = 140;
-
-export interface ChannelInfoResult {
-  ok: boolean;
-  info?: ChannelInformation;
-  /**
-   * Box art for `info.game_id`, which `GET /channels` doesn't return.
-   *
-   * Resolved here rather than by the client so opening the tab costs one round
-   * trip from the phone instead of two chained ones. Still a Helix template
-   * with `{width}`/`{height}` in it — the caller picks the size it renders at.
-   */
-  boxArtUrl?: string;
-  error?: string;
-}
-
 export async function getMyChannelInfo(): Promise<ChannelInfoResult> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Not signed in" };
-
-  const twitchUserId = await getTwitchUserId(supabase);
-  if (!twitchUserId) return { ok: false, error: "Connect your Twitch account first" };
+  const ctx = await tryAuthContext();
+  if (!ctx) return { ok: false, error: "Not signed in" };
+  const twitchUserId = ctx.broadcasterId;
 
   try {
     const api = new TwitchApi(twitchUserId);
@@ -66,7 +44,7 @@ export async function getMyChannelInfo(): Promise<ChannelInfoResult> {
   }
 }
 
-export interface UpdateChannelInfoResult {
+interface UpdateChannelInfoResult {
   ok: boolean;
   error?: string;
 }
@@ -75,30 +53,19 @@ export async function updateChannelInfo(params: {
   title?: string;
   gameId?: string;
 }): Promise<UpdateChannelInfoResult> {
-  const title = params.title?.trim();
-  if (title !== undefined && title.length === 0) {
-    return { ok: false, error: "A stream needs a title" };
-  }
-  if (title !== undefined && title.length > MAX_TITLE_LENGTH) {
-    return { ok: false, error: `Titles are capped at ${MAX_TITLE_LENGTH} characters` };
-  }
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Not signed in" };
-
-  const twitchUserId = await getTwitchUserId(supabase);
-  if (!twitchUserId) return { ok: false, error: "Connect your Twitch account first" };
+  const ctx = await tryAuthContext();
+  if (!ctx) return { ok: false, error: "Not signed in" };
+  const parsed = updateChannelInfoSchema.safeParse(params);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid channel info" };
+  const twitchUserId = ctx.broadcasterId;
 
   try {
     const api = new TwitchApi(twitchUserId);
     await api.channels.updateChannelInfo(twitchUserId, {
-      title,
-      game_id: params.gameId,
+      title: parsed.data.title,
+      game_id: parsed.data.gameId,
     });
-    await track("stream_info_updated", {}, user);
+    await track("stream_info_updated", {}, ctx.user);
     return { ok: true };
   } catch (error) {
     reportError(error, "updateChannelInfo");

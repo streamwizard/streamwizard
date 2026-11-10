@@ -1,6 +1,6 @@
 "use client";
 
-import { parseClipView, type ClipView } from "@/lib/utils/clip-view";
+import { parseClipView, type ClipView } from "@/lib/clips/clip-view";
 import { ToggleGroup, ToggleGroupItem } from "@repo/ui";
 import { LayoutGrid, LayoutList } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";

@@ -1,20 +1,20 @@
 "use client";
 
-import { TwitchClipDialog } from "@/components/modals/twitch-clip-dialog";
-import { clipsWithFolders } from "@/types/database";
+import { TwitchClipDialog } from "@/components/clips/twitch-clip-dialog";
+import type { ClipWithFolders } from "@/types/database";
 import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
 
 type ClipDialogContextType = {
-  openClip: (clip: clipsWithFolders) => void;
+  openClip: (clip: ClipWithFolders) => void;
 };
 
 const ClipDialogContext = createContext<ClipDialogContextType | null>(null);
 
 export function ClipDialogProvider({ children }: { children: ReactNode }) {
-  const [clip, setClip] = useState<clipsWithFolders | null>(null);
+  const [clip, setClip] = useState<ClipWithFolders | null>(null);
   const [open, setOpen] = useState(false);
 
-  const openClip = useCallback((next: clipsWithFolders) => {
+  const openClip = useCallback((next: ClipWithFolders) => {
     setClip(next);
     setOpen(true);
   }, []);

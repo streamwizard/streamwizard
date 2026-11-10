@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { Footer } from "@/components/public/layout/footer";
-import Header from "@/components/public/layout/header";
+import { Footer } from "@/components/layout/public-footer";
+import Header from "@/components/layout/public-header";
 import { NotFoundContent } from "@/components/public/not-found/not-found-content";
 import { hasSessionCookie } from "@/lib/auth";
 

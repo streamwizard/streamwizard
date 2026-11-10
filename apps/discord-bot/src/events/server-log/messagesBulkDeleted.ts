@@ -3,7 +3,7 @@ import { emitAuditedEvent, guildChannelScope, isLoggedChannel } from "../../lib/
 import type { BotEvent } from "../../types/discord";
 import { truncate } from "../../lib/log-channel/embed-kit";
 import { channelRef, displayNameOf } from "../../lib/server-log/refs";
-import { archiveMessageDeletes } from "../../lib/tickets/archive";
+import { archiveMessageDeletes } from "@/lib/tickets/transcript/archive";
 
 const MAX_LINES = 20;
 const MAX_LINE = 180;

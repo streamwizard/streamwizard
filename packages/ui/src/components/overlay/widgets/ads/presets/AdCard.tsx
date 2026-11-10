@@ -1,6 +1,6 @@
 "use client";
 
-import { AdIcon, DRAIN_TRANSITION, FitText, capRadius, hexToRgba, textStyle, urgentStyle, type AdPresetProps } from "./shared";
+import { AdIcon, DRAIN_TRANSITION, FitBox, FitText, capRadius, hexToRgba, textStyle, urgentStyle, type AdPresetProps } from "./shared";
 
 /**
  * A card for the break itself: the line with its countdown, a message for
@@ -31,25 +31,28 @@ export function AdCard({ view, cfg }: AdPresetProps) {
         ...urgentStyle(view, cfg),
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: Math.round(cfg.fontSize * 0.55), minWidth: 0 }}>
-        {cfg.showIcon && <AdIcon phase={view.phase} size={Math.round(cfg.fontSize * 1.6)} color={cfg.accentColor} />}
-        <FitText style={{ flex: "1 1 auto", fontSize: Math.round(cfg.fontSize * 1.35), fontWeight: 700 }}>{view.text}</FitText>
-      </div>
-      {message && (
-        <span
-          style={{
-            opacity: 0.85,
-            fontWeight: 400,
-            overflowWrap: "anywhere",
-            display: "-webkit-box",
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
-          }}
-        >
-          {message}
-        </span>
-      )}
+      {/* At large font sizes the content shrinks to the card instead of being cut at the top and bottom. */}
+      <FitBox origin="left top" innerStyle={{ display: "flex", flexDirection: "column", gap: Math.round(cfg.fontSize * 0.5) }}>
+        <div style={{ display: "flex", alignItems: "center", gap: Math.round(cfg.fontSize * 0.55), minWidth: 0 }}>
+          {cfg.showIcon && <AdIcon phase={view.phase} size={Math.round(cfg.fontSize * 1.6)} color={cfg.accentColor} />}
+          <FitText style={{ flex: "1 1 auto", fontSize: Math.round(cfg.fontSize * 1.35), fontWeight: 700 }}>{view.text}</FitText>
+        </div>
+        {message && (
+          <span
+            style={{
+              opacity: 0.85,
+              fontWeight: 400,
+              overflowWrap: "anywhere",
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
+            {message}
+          </span>
+        )}
+      </FitBox>
       <div
         className="sw-goal-motion"
         aria-hidden

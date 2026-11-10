@@ -8,10 +8,10 @@ import { client } from "./lib/discord-client";
 import { env } from "./lib/env";
 import { loadCommands } from "./handlers/commandHandler";
 import { loadEvents } from "./handlers/eventHandler";
-import { shutdownTracker } from "./lib/activity-tracker";
+import { shutdownTracker } from "@/lib/activity/activity-tracker";
 import { stopAnnouncementScheduler } from "./lib/announcements/scheduler";
 import { stopLogWorker } from "./lib/log-channel/worker";
-import { stopTicketSweeper } from "./lib/tickets/sweeper";
+import { stopTicketSweeper } from "@/lib/tickets/automation/sweeper";
 import { startInternalServer } from "./http/server";
 
 async function main() {

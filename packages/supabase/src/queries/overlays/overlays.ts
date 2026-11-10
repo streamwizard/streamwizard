@@ -1,0 +1,254 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "../../types/supabase";
+
+type DBClient = SupabaseClient<Database>;
+type OverlaySceneInsert = Database["public"]["Tables"]["overlay_scenes"]["Insert"];
+type OverlaySceneUpdate = Database["public"]["Tables"]["overlay_scenes"]["Update"];
+
+export async function getOverlayScenes(client: DBClient, userId: string) {
+  return client.from("overlay_scenes").select("*").eq("user_id", userId).order("updated_at", { ascending: false });
+}
+
+/** What adding an overlay to OBS as a browser source needs. */
+export const OVERLAY_SCENE_OBS_SOURCE_COLUMNS = "id, name, slug, width, height, is_active";
+
+export async function getOverlayScenesForObsSource(client: DBClient, userId: string) {
+  return client
+    .from("overlay_scenes")
+    .select(OVERLAY_SCENE_OBS_SOURCE_COLUMNS)
+    .eq("user_id", userId)
+    .order("updated_at", { ascending: false })
+    .limit(200);
+}
+
+export async function getOverlayScene(client: DBClient, id: string, userId: string) {
+  const { data: scene, error: sceneError } = await client
+    .from("overlay_scenes")
+    .select("*")
+    .eq("id", id)
+    .eq("user_id", userId)
+    .single();
+
+  if (sceneError) return { scene: null, items: null, groups: null, error: sceneError };
+
+  const { data: items, error: itemsError } = await client
+    .from("overlay_items")
+    .select("*")
+    .eq("scene_id", id)
+    .order("z_index", { ascending: true });
+
+  if (itemsError) return { scene: null, items: null, groups: null, error: itemsError };
+
+  const { data: groups, error: groupsError } = await client
+    .from("overlay_item_groups")
+    .select("*")
+    .eq("scene_id", id);
+
+  if (groupsError) return { scene: null, items: null, groups: null, error: groupsError };
+  return { scene, items: items ?? [], groups: groups ?? [], error: null };
+}
+
+export async function getOverlaySceneBySlug(client: DBClient, slug: string) {
+  const { data: scene, error: sceneError } = await client
+    .from("overlay_scenes")
+    .select("*")
+    .eq("slug", slug)
+    .single();
+
+  if (sceneError) return { scene: null, items: null, error: sceneError };
+
+  const { data: items, error: itemsError } = await client
+    .from("overlay_items")
+    .select("*")
+    .eq("scene_id", scene.id)
+    .order("z_index", { ascending: true });
+
+  if (itemsError) return { scene: null, items: null, error: itemsError };
+  return { scene, items: items ?? [], error: null };
+}
+
+export async function createOverlayScene(client: DBClient, payload: OverlaySceneInsert) {
+  return client.from("overlay_scenes").insert(payload).select().single();
+}
+
+export async function updateOverlayScene(client: DBClient, id: string, userId: string, updates: OverlaySceneUpdate) {
+  return client.from("overlay_scenes").update(updates).eq("id", id).eq("user_id", userId).select().single();
+}
+
+export async function deleteOverlayScene(client: DBClient, id: string, userId: string) {
+  return client.from("overlay_scenes").delete().eq("id", id).eq("user_id", userId);
+}
+
+export async function getOverlayItems(client: DBClient, sceneId: string) {
+  return client.from("overlay_items").select("*").eq("scene_id", sceneId);
+}
+
+export async function getActiveOverlaySceneBySlug(client: DBClient, slug: string) {
+  return client
+    .from("overlay_scenes")
+    .select("*")
+    .eq("slug", slug)
+    .eq("is_active", true)
+    .single();
+}
+
+export async function getOverlaySceneRow(client: DBClient, id: string, userId: string) {
+  return client
+    .from("overlay_scenes")
+    .select("*")
+    .eq("id", id)
+    .eq("user_id", userId)
+    .single();
+}
+
+export async function getAllOverlayItemsByScene(client: DBClient, sceneId: string) {
+  return client
+    .from("overlay_items")
+    .select("*")
+    .eq("scene_id", sceneId)
+    .order("z_index", { ascending: true });
+}
+
+/** Embed / OBS: load scene by UUID without enforcing `user_id`; any `is_active` state */
+export async function getOverlaySceneByIdForEmbed(client: DBClient, sceneId: string) {
+  return client.from("overlay_scenes").select("*").eq("id", sceneId).maybeSingle();
+}
+
+/** Same filters as getActiveOverlaySceneBySlug but `.maybeSingle()` — missing slug is not an error row */
+export async function getActiveOverlaySceneBySlugMaybe(client: DBClient, slug: string) {
+  return client
+    .from("overlay_scenes")
+    .select("*")
+    .eq("slug", slug)
+    .eq("is_active", true)
+    .maybeSingle();
+}
+
+/** Whether an item sits in the given scene; the overlay API's ownership check. */
+export async function overlayItemBelongsToScene(client: DBClient, itemId: string, sceneId: string): Promise<boolean> {
+  const { data } = await client
+    .from("overlay_items")
+    .select("id")
+    .eq("id", itemId)
+    .eq("scene_id", sceneId)
+    .maybeSingle();
+  return !!data;
+}
+
+export async function getOverlayItemById(client: DBClient, itemId: string, sceneId: string) {
+  return client
+    .from("overlay_items")
+    .select("*")
+    .eq("id", itemId)
+    .eq("scene_id", sceneId)
+    .single();
+}
+
+export async function deleteOverlayItemsByIds(client: DBClient, ids: string[]) {
+  return client.from("overlay_items").delete().in("id", ids);
+}
+
+export async function updateOverlayItemData(
+  client: DBClient,
+  id: string,
+  data: Database["public"]["Tables"]["overlay_items"]["Update"]
+) {
+  return client.from("overlay_items").update(data).eq("id", id);
+}
+
+export async function insertOverlayItemsReturningIds(
+  client: DBClient,
+  items: Database["public"]["Tables"]["overlay_items"]["Insert"][]
+) {
+  return client.from("overlay_items").insert(items).select("id");
+}
+
+/** Insert that hands back the full rows, so a save can answer without re-reading the scene. */
+export async function insertOverlayItemsReturningRows(
+  client: DBClient,
+  items: Database["public"]["Tables"]["overlay_items"]["Insert"][]
+) {
+  return client.from("overlay_items").insert(items).select("*");
+}
+
+/**
+ * Writes changed items of one save in a single request. Every row must carry
+ * the same keys (bulk upsert sets a missing key to null) and an id the caller
+ * has read from the scene, so the conflict path is the one taken.
+ */
+export async function upsertOverlayItemsReturningRows(
+  client: DBClient,
+  items: Array<Database["public"]["Tables"]["overlay_items"]["Insert"] & { id: string }>
+) {
+  return client.from("overlay_items").upsert(items, { onConflict: "id" }).select("*");
+}
+
+export async function insertOverlayItems(
+  client: DBClient,
+  items: Database["public"]["Tables"]["overlay_items"]["Insert"][]
+) {
+  return client.from("overlay_items").insert(items);
+}
+
+type OverlayItemGroupInsert = Database["public"]["Tables"]["overlay_item_groups"]["Insert"];
+
+/** The editor's user groups for a scene. The live overlay never reads these. */
+export async function getOverlayItemGroups(client: DBClient, sceneId: string) {
+  return client.from("overlay_item_groups").select("*").eq("scene_id", sceneId);
+}
+
+/** Groups carry editor-made ids, so a save writes new and changed ones in one upsert. */
+export async function upsertOverlayItemGroups(client: DBClient, groups: OverlayItemGroupInsert[]) {
+  return client.from("overlay_item_groups").upsert(groups, { onConflict: "id" });
+}
+
+export async function insertOverlayItemGroups(client: DBClient, groups: OverlayItemGroupInsert[]) {
+  return client.from("overlay_item_groups").insert(groups);
+}
+
+export async function deleteOverlayItemGroupsByIds(client: DBClient, sceneId: string, ids: string[]) {
+  return client.from("overlay_item_groups").delete().eq("scene_id", sceneId).in("id", ids);
+}
+
+export async function getOverlaySceneBySubscriberToken(client: DBClient, token: string) {
+  return client
+    .from("overlay_scenes")
+    .select("id, user_id")
+    .eq("subscriber_token", token)
+    .maybeSingle();
+}
+
+/** ws-server re-check: which of these subscriber tokens still exist, and whose they are. */
+export async function selectSceneOwnersByTokens(client: DBClient, tokens: string[]) {
+  return client.from("overlay_scenes").select("subscriber_token, user_id").in("subscriber_token", tokens);
+}
+
+export async function getLatestSubscriberToken(client: DBClient, userId: string) {
+  return client
+    .from("overlay_scenes")
+    .select("subscriber_token")
+    .eq("user_id", userId)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+}
+
+/**
+ * Gives a scene a new URL and a new subscriber token in one write. Only the
+ * service role may change these two columns, so `client` must be an admin
+ * client; the user_id filter is what keeps it to the caller's own scene.
+ */
+export async function updateSceneUrlCredentials(
+  client: DBClient,
+  sceneId: string,
+  userId: string,
+  credentials: { slug: string; subscriber_token: string },
+) {
+  return client
+    .from("overlay_scenes")
+    .update(credentials)
+    .eq("id", sceneId)
+    .eq("user_id", userId)
+    .select("slug")
+    .single();
+}

@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { asCustomWidgetConfig } from "@/types/overlays";
+import { asCustomWidgetConfig } from "@repo/ui/components/overlay/types/item";
 import type { OverlayInspectorAppendProps } from "../../registry/overlay-widget-registry.types";
-import { getWidgets, getOrCreateWidgetInstance } from "@/actions/widgets";
-import type { Widget } from "@/actions/widgets";
+import { getWidgets, getOrCreateWidgetInstance } from "@/actions/widgets/widget-library";
+import type { Widget } from "@/types/widgets";
 import { Button } from "@repo/ui";
 import { WidgetFieldList } from "./widget-field-input";
 import { primeWidgetCache, useWidget } from "./widget-cache";

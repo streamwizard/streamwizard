@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { assertProxmoxName, assertValidFluxDuration } from "@repo/metrics";
-import { getAdminSession } from "@/lib/admin-session";
-import { fetchGuestSeries, fetchHostSeries } from "@/lib/vms";
+import { getAdminSession } from "@/lib/auth/admin-session";
+import { fetchGuestSeries, fetchHostSeries } from "@/lib/vms/vms";
 
 export const dynamic = "force-dynamic";
 

@@ -31,6 +31,6 @@ The shared half of the Discord message builder: what a designed message looks li
 
 ## Replacing theme artwork
 
-The shipped images are abstract placeholders. Swap a file in `assets/themes` (same name, 545x127 or 2x) or add a row to `THEMES` plus its file, then add the import in web-admin's `src/lib/discord/theme-assets.ts`.
+The shipped images are abstract placeholders. Swap a file in `assets/themes` (same name, 545x127 or 2x) or add a row to `THEMES` plus its file, then add the import in web-admin's `src/lib/discord/messages/theme-assets.ts`.
 
 Tests: `bun test`.

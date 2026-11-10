@@ -1,4 +1,4 @@
-import type { CreditsData } from "@repo/schemas";
+import type { CreditsData } from "@repo/schemas/widgets/credits";
 
 /**
  * Browser event that starts a roll on the editor canvas. Without `data` the

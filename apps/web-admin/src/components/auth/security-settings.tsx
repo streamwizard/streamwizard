@@ -1,5 +1,6 @@
 import { ShieldCheck, Smartphone } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui";
+import { Alert, AlertDescription, AlertTitle } from "@repo/ui/components/ui/alert";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
 
 export type TotpFactorView = { id: string; friendlyName: string; createdAt: string };
 

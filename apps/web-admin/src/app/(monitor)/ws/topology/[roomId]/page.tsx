@@ -1,25 +1,19 @@
-"use client";
-
-import { use } from "react";
-import { DesktopOnly } from "@/components/widgets/desktop-only";
-import { WsMonitorProvider } from "@/components/ws-monitor-provider";
+import { DesktopOnly } from "@/components/shared/page/desktop-only";
+import { WsMonitorProvider } from "@/providers/ws-monitor-provider";
 import { WsRoomTopology } from "@/components/topology/ws-room-topology";
-import { PageCrumb } from "@/lib/crumbs";
+import { MonitorUnconfigured } from "@/components/ws/monitor-unconfigured";
+import { PageCrumb } from "@/lib/nav/crumbs";
+import { monitorWsUrl } from "@/lib/monitor/monitor-config";
 
-export default function WsRoomTopologyPage({ params }: { params: Promise<{ roomId: string }> }) {
-  const { roomId } = use(params);
-  const wsUrl = process.env.NEXT_PUBLIC_WS_SERVER_URL ?? null;
-  const secret = process.env.NEXT_PUBLIC_MONITOR_SECRET ?? null;
+export default async function WsRoomTopologyPage({ params }: { params: Promise<{ roomId: string }> }) {
+  const { roomId } = await params;
+  const wsUrl = monitorWsUrl();
 
-  if (!wsUrl || !secret) {
+  if (!wsUrl) {
     return (
       <div className="space-y-2">
         <h1 className="text-xl font-semibold">Room topology</h1>
-        <p className="text-sm text-muted-foreground">
-          Set <code className="text-xs bg-muted px-1 py-0.5 rounded">NEXT_PUBLIC_WS_SERVER_URL</code> and{" "}
-          <code className="text-xs bg-muted px-1 py-0.5 rounded">NEXT_PUBLIC_MONITOR_SECRET</code> in{" "}
-          <code className="text-xs bg-muted px-1 py-0.5 rounded">.env.local</code> to enable topology view.
-        </p>
+        <MonitorUnconfigured what="the topology view" />
       </div>
     );
   }
@@ -28,7 +22,7 @@ export default function WsRoomTopologyPage({ params }: { params: Promise<{ roomI
     <>
       <PageCrumb label={decodeURIComponent(roomId)} href={`/ws/topology/${roomId}`} />
       <DesktopOnly tool="The room graph" backHref="/ws/rooms" backLabel="Open rooms">
-        <WsMonitorProvider wsUrl={wsUrl} monitorSecret={secret}>
+        <WsMonitorProvider wsUrl={wsUrl}>
           <WsRoomTopology roomId={decodeURIComponent(roomId)} />
         </WsMonitorProvider>
       </DesktopOnly>

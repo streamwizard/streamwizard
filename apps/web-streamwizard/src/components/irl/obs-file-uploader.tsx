@@ -11,7 +11,7 @@ import {
   renameMediaFile,
   uploadMediaFile,
   type MediaFile,
-} from "@/lib/media-actions";
+} from "@/lib/obs/media-actions";
 import { formatBytes } from "@/lib/format";
 
 interface Props {

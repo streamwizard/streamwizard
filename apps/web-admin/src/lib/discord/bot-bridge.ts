@@ -33,7 +33,7 @@ export async function callBot<T = { ok: true }>(
       cache: "no-store",
     });
   } catch (error) {
-    reportError(error, "web-admin discord: bot call", { path });
+    reportError(error, "discord.bot-call", { path });
     return { ok: false, reason: "network", error: "Couldn't reach the bot" };
   }
 

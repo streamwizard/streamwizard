@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
-import type { OverlayItem } from "./types";
+import type { OverlayItem } from "./types/item";
 import {
   getCropInsets,
   getDesignSize,
@@ -32,8 +32,9 @@ export function WidgetScaleFrame({
   const design = getDesignSize(item);
   const scale = getItemScale(item);
 
-  // Uncropped widgets render exactly as before — notably without a clipping
-  // wrapper, so renderers that animate outside their box (alerts) still can.
+  // Uncropped widgets render exactly as before, without a clipping wrapper, so
+  // a renderer that draws past its box (a glow, a hype train's smoke) still
+  // can on stream. The alert box clips itself on purpose (contain: paint).
   if (!hasCrop(item)) {
     return (
       <div

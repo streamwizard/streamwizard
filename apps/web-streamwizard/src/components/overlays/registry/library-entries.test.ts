@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { Tag, ListOrdered, Type } from "lucide-react";
 import { buildLibraryEntries, entriesForRenderMode, getLibraryEntries, groupLibraryEntriesByCategory } from "./overlay-widget-registry";
-import { filterLibraryWidgets } from "../editor/widget-search";
+import { filterLibraryWidgets } from "@/components/overlays/editor/library/widget-search";
 
 const definitions = [
   { type: "text_widget" as const, icon: Type, category: "layout" as const, library: { title: "Text" } },

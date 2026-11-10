@@ -1,4 +1,4 @@
-import { Card, CardContent } from "@repo/ui";
+import { Card, CardContent } from "@repo/ui/components/ui/card";
 
 const COPY = {
   "not-collected": {

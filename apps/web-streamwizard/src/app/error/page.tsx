@@ -1,9 +1,9 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { TriangleAlert } from "lucide-react";
-import { Button } from "@repo/ui";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@repo/ui";
-import { StreamWizardLogo } from "@/components/brand/streamwizard-logo";
+import { Button } from "@repo/ui/components/ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
+import { StreamWizardLogo } from "@/components/shared/streamwizard-logo";
 import { discordInviteLink } from "@/lib/constant";
 
 // A dead-end redirect target, not content: keep it out of search results.

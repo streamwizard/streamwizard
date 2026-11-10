@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { createClient } from "@repo/supabase/next/server";
-import { getTwitchProfile } from "@repo/supabase/queries/user";
+import { getTwitchProfile } from "@repo/supabase/queries/users/user";
 import { requireProductAccess } from "@/lib/require-product-access";
-import { getAutoSwitcherConfig } from "@/actions/supabase/auto-switcher";
+import { getAutoSwitcherConfig } from "@/actions/irl/auto-switcher";
 import { DeckContent } from "@/components/deck/deck-content";
 
 export const metadata: Metadata = {

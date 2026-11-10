@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { Edge } from "@xyflow/react";
-import type { MonitorEnvelope } from "@/lib/monitor-ws";
+import type { MonitorEnvelope } from "@repo/types/monitor";
 
 const DOT_TRAVEL_MS = 600;
 
@@ -83,11 +83,6 @@ export function useEdgeAnimation(
         emit(roomEdgeId, DOT_TRAVEL_MS, !hasConnEdges);
         for (const ce of connEdges) {
           emit(ce.id, DOT_TRAVEL_MS * 2, true);
-        }
-      } else if (evt.role === "publisher") {
-        emit(roomEdgeId, 0, !hasConnEdges);
-        for (const ce of connEdges) {
-          emit(ce.id, DOT_TRAVEL_MS, true);
         }
       }
     }

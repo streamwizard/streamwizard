@@ -1,6 +1,6 @@
 "use client";
 
-import { SectionBlock, StepStage, hexToRgba, type CreditsPresetProps } from "./shared";
+import { FitBox, NamesInColumns, SectionBlock, StepStage, hexToRgba, namesColumnCount, type CreditsPresetProps } from "./shared";
 
 /** Letterbox bars, each this share of the height. */
 const BAR = 0.12;
@@ -46,9 +46,15 @@ export function CreditsCinematic({ sections, cfg, playback }: CreditsPresetProps
         style={{ top: `${BAR * 100}%`, bottom: `${BAR * 100}%`, padding: `0 ${Math.round(cfg.fontSize * 2)}px` }}
       >
         {(section) => (
-          <div style={{ maxHeight: "100%", overflow: "hidden" }}>
-            <SectionBlock section={section} cfg={big} gap={Math.round(big.fontSize * 0.3)} />
-          </div>
+          // A long names list flows into columns, then shrinks to fit between
+          // the bars if it must, instead of losing its tail.
+          <FitBox style={namesColumnCount(section) > 1 ? { width: "100%" } : undefined}>
+            {namesColumnCount(section) > 1 ? (
+              <NamesInColumns section={section} cfg={big} columns={namesColumnCount(section)} columnGap={big.fontSize * 2} />
+            ) : (
+              <SectionBlock section={section} cfg={big} gap={Math.round(big.fontSize * 0.3)} />
+            )}
+          </FitBox>
         )}
       </StepStage>
     </div>

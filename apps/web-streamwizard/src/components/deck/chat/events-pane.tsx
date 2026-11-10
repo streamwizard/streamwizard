@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { cn } from "@repo/ui";
 import { ChevronDown, Inbox } from "lucide-react";
-import { EVENT_CONFIG } from "@/lib/event-config";
+import { EVENT_CONFIG } from "@/lib/stream-events/event-config";
 import type { DeckEvent } from "@/hooks/deck/use-deck-chat-room";
 
 /**

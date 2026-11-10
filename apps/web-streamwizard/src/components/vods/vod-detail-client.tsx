@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { TwitchVideo, parseDuration } from "@/types/twitch-video";
+import type { TwitchVideo } from "@/types/twitch-video";
+import { parseDuration } from "@/lib/twitch/twitch-video";
 import { Button } from "@repo/ui";
 import { Badge } from "@repo/ui";
 import { Input } from "@repo/ui";
 import { Label } from "@repo/ui";
 import { TwitchPlayerComponent, type TwitchPlayer } from "@/components/vods/twitch-player";
-import { VideoTimeline } from "./timeline";
+import { VideoTimeline } from "./timeline/video-timeline";
 import { StreamEventsPanel } from "./stream-events-panel";
 import { EventTypeFilter } from "./event-type-filter";
 import { useVideoPlayerStore } from "@/stores/video-dialog-store";

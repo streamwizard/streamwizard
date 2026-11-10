@@ -1,6 +1,14 @@
 import Link from "next/link";
 import { SearchX } from "lucide-react";
-import { Button, Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@repo/ui";
+import { Button } from "@repo/ui/components/ui/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@repo/ui/components/ui/empty";
 
 /** Filters that match nothing. A plain link, so it works before the page hydrates. */
 export function ContentEmptyState({ noun, clearHref }: { noun: string; clearHref: string }) {

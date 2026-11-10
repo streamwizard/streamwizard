@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, type CSSProperties } from "react";
 import { getDesignSize } from "../../lib/item-scale";
-import type { OverlayItem } from "../../types";
+import type { OverlayItem } from "../../types/item";
 import {
   normalizeImageWidgetConfig,
   normalizeVideoWidgetConfig,

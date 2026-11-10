@@ -1,4 +1,4 @@
-import { GetClipDownloadURL } from "@/actions/twitch/clips";
+import { getClipDownloadUrl } from "@/server/twitch/clip-download";
 import { createClient } from "@repo/supabase/next/server";
 import { NextRequest, NextResponse } from "next/server";
 import { reportError } from "@repo/sentry";
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await GetClipDownloadURL(clipId, user.id);
+    const result = await getClipDownloadUrl(clipId, user.id);
 
     if (!result.success || !result.data?.data?.[0]) {
       return NextResponse.json(
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     reportError(error, "api/overlays/preview");
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal server error" },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

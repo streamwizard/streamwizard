@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  FitBox,
   FitText,
   PollHeader,
   SHARE_EASE,
@@ -21,6 +22,7 @@ import {
  */
 export function PollBars({ view, cfg, pulses }: PollPresetProps) {
   const rowMax = Math.round(cfg.fontSize * 2.2);
+  const rowMin = Math.round(cfg.fontSize * 1.4);
   const radius = capRadius(cfg.radius, rowMax);
   const pad = Math.round(cfg.fontSize * 0.6);
   return (
@@ -36,7 +38,11 @@ export function PollBars({ view, cfg, pulses }: PollPresetProps) {
       }}
     >
       <PollHeader view={view} cfg={cfg} />
-      <div style={{ flex: "1 1 auto", minHeight: 0, display: "flex", flexDirection: "column", justifyContent: "center", gap: Math.round(cfg.fontSize * 0.35) }}>
+      {/* Rows never get shorter than a line of text; with many choices (a prediction has up to ten) the list shrinks to fit. */}
+      <FitBox
+        style={{ flex: "1 1 auto", display: "flex", flexDirection: "column" }}
+        innerStyle={{ flex: "1 0 auto", display: "flex", flexDirection: "column", justifyContent: "center", gap: Math.round(cfg.fontSize * 0.35) }}
+      >
         {view.choices.map((c) => {
           const value = choiceValueText(c, cfg);
           return (
@@ -47,7 +53,7 @@ export function PollBars({ view, cfg, pulses }: PollPresetProps) {
                 position: "relative",
                 flex: "1 1 0",
                 maxHeight: rowMax,
-                minHeight: 0,
+                minHeight: rowMin,
                 borderRadius: radius,
                 background: trackPaint(cfg),
                 overflow: "hidden",
@@ -92,7 +98,7 @@ export function PollBars({ view, cfg, pulses }: PollPresetProps) {
             </div>
           );
         })}
-      </div>
+      </FitBox>
     </div>
   );
 }

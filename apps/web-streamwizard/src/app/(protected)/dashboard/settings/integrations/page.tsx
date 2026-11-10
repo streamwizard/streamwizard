@@ -1,5 +1,5 @@
 import { getAuthContext } from "@/lib/auth";
-import { getDiscordIntegrationByUserId, getTwitchUsernameByUserId } from "@repo/supabase/queries/user";
+import { getDiscordIntegrationByUserId, getTwitchUsernameByUserId } from "@repo/supabase/queries/users/user";
 import { DiscordIntegrationSection } from "@/components/settings/discord-integration-section";
 import { TwitchIntegrationSection } from "@/components/settings/twitch-integration-section";
 
@@ -8,11 +8,12 @@ export default async function IntegrationsSettingsPage({
 }: {
   searchParams: Promise<{ discordRole?: string }>;
 }) {
-  const { supabase, user } = await getAuthContext();
-  const { discordRole } = await searchParams;
+  const [{ supabase, user }, { discordRole }] = await Promise.all([getAuthContext(), searchParams]);
 
-  const twitchUsername = await getTwitchUsernameByUserId(supabase, user.id);
-  const { data: discord } = await getDiscordIntegrationByUserId(supabase, user.id);
+  const [twitchUsername, { data: discord }] = await Promise.all([
+    getTwitchUsernameByUserId(supabase, user.id),
+    getDiscordIntegrationByUserId(supabase, user.id),
+  ]);
 
   return (
     <div className="w-full max-w-2xl space-y-6">

@@ -15,12 +15,20 @@ function remotePatternFor(url: string | undefined) {
   }
 }
 
+function splitList(value: string | undefined) {
+  return (value ?? "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactCompiler: true,
-  // Allows accessing the dev server (and its HMR websocket) from the LAN IP
-  // in addition to localhost/127.0.0.1, e.g. when testing from another device.
-  allowedDevOrigins: ["127.0.0.1", "10.10.10.73"],
+  // Hosts besides localhost that may reach the dev server and its HMR
+  // websocket. DEV_ALLOWED_ORIGINS adds more (comma-separated), e.g. a LAN
+  // address when testing from another device.
+  allowedDevOrigins: ["127.0.0.1", ...splitList(process.env.DEV_ALLOWED_ORIGINS)],
   turbopack: {
     root: path.resolve(__dirname, "../.."),
   },

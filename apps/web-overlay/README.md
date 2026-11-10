@@ -9,11 +9,12 @@ Takes the scenes you build in the dashboard (`web-streamwizard`) and renders the
 ## How it's wired
 
 - **`app/[overlayId]/page.tsx`** — the server-rendered canvas. `overlayId` is either an active overlay **slug** or a scene **UUID** (the UUID path skips the `is_active` check, for embed tooling).
-- **Server Actions** (`app/actions/*`) — trusted reads via the service-role Supabase client (`@repo/supabase/next/admin`) and the shared `queries/*`. No end-user auth — OBS just loads a URL.
+- **Scene loading** (`src/lib/overlay-loader.ts`, server-only) — trusted reads via the service-role Supabase client (`@repo/supabase/next/admin`) and the shared `queries/*`. No end-user auth — OBS just loads a URL.
+- **Server actions** (`src/actions/*`) — clip playlists and custom widgets. Each parses the scene token and item id with Zod, then checks them with `resolveOverlayItem`.
 - **Clip video** — played straight from Twitch's CDN. The server only mints the signed MP4 URL; no video passes through this app.
 - **Widgets** — pure renderers live in `@repo/ui`; this app supplies the data containers (e.g. `ClipsWidgetContainer`) and registers them in `page.tsx`.
 
-The widget container/renderer split and the overlay data rules are documented in the root [`ARCHITECTURE.md`](../../ARCHITECTURE.md).
+The widget container/renderer split and the overlay data rules are documented in [`.claude/rules/architecture/web-apps.md`](../../.claude/rules/architecture/web-apps.md).
 
 > **Heads up:** this app runs a pinned, modified build of Next.js — see [`AGENTS.md`](./AGENTS.md). Check the bundled docs in `node_modules/next/dist/docs/` before assuming an API behaves the way the public docs say.
 
@@ -26,3 +27,5 @@ bun dev --filter=@repo/web-overlay
 ```
 
 Runs on [https://localhost:3001](https://localhost:3001) — it serves over **HTTPS** (`--experimental-https`) because OBS browser sources expect a secure origin.
+
+To open it from another device (OBS on a second PC), set `DEV_ALLOWED_ORIGINS` to a comma-separated list of the hosts you use, for example your machine's LAN address. Next blocks dev requests and HMR from any other origin; `127.0.0.1` is always allowed.

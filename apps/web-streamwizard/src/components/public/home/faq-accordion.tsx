@@ -2,7 +2,7 @@
 
 import { ChevronDownIcon } from "lucide-react";
 import { captureEvent } from "@repo/posthog";
-import { TrackedLink } from "../analytics/tracked-link";
+import { TrackedLink } from "@/components/shared/tracked-link";
 
 /*
  * The FAQ list as native <details>/<summary> rather than the Radix accordion.

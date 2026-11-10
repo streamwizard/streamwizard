@@ -1,6 +1,7 @@
 "use client";
 
-import { TwitchVideo, formatThumbnailUrl } from "@/types/twitch-video";
+import type { TwitchVideo } from "@/types/twitch-video";
+import { formatThumbnailUrl } from "@/lib/twitch/twitch-video";
 import { formatDate } from "@/lib/format";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui";
 import { Checkbox } from "@repo/ui";

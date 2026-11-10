@@ -1,8 +1,8 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@repo/supabase/next/server";
-import { getProductAccess, type ProductAccess } from "@repo/supabase/queries/subscriptions";
-import { track } from "@/lib/track";
+import { getProductAccess, type ProductAccess } from "@repo/supabase/queries/subscriptions/subscriptions";
+import { track } from "@/lib/tracking/track";
 
 export type { ProductAccess };
 

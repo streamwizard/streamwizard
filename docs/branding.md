@@ -83,7 +83,7 @@ Everything about wording, humor, error copy, and empty states lives in `docs/ton
 
 Primary mark is a single-color silhouette at `apps/web-streamwizard/public/logo.png`.
 
-Render it with the `StreamWizardLogo` component at `apps/web-streamwizard/src/components/brand/streamwizard-logo.tsx`, never with a raw `<img>`. The component applies the PNG as a CSS mask over `bg-current`, so the mark inherits `currentColor`. That is the whole reason one file works on every background: change the text color, the logo follows.
+Render it with the `StreamWizardLogo` component at `apps/web-streamwizard/src/components/shared/streamwizard-logo.tsx`, never with a raw `<img>`. The component applies the PNG as a CSS mask over `bg-current`, so the mark inherits `currentColor`. That is the whole reason one file works on every background: change the text color, the logo follows.
 
 Defaults: 160x160, `role="img"`, `aria-label="StreamWizard"`, class `bg-current text-sidebar-foreground`.
 
@@ -140,7 +140,7 @@ All tokens live in `apps/web-streamwizard/src/app/globals.css` unless stated oth
 
 | Name | Value | Where it lives | Use |
 |---|---|---|---|
-| Twitch purple | `#9146FF` | `TWITCH_PURPLE` in `apps/web-streamwizard/src/lib/og-image.tsx`, `0x9146ff` in `apps/discord-bot/src/lib/branding.ts` | Borrowed authority, on someone else's surface |
+| Twitch purple | `#9146FF` | `TWITCH_PURPLE` in `apps/web-streamwizard/src/lib/seo/og-image.tsx`, `0x9146ff` in `apps/discord-bot/src/lib/branding.ts` | Borrowed authority, on someone else's surface |
 | Wizard purple | `#9e7aff` | `--color-three` in globals.css, `primary` in `apps/docs/docs.json`, widget accent default | StreamWizard's own purple, inside the product |
 | Gradient amber | `#ffbd7a` | `--color-one` | Atmosphere only |
 | Gradient pink | `#fe8bbb` | `--color-two` | Atmosphere only |
@@ -205,7 +205,7 @@ Ordered steps of one thing (speed bands, size classes) are not five series: they
 
 ### Social card colors
 
-Fixed, in `apps/web-streamwizard/src/lib/og-image.tsx`:
+Fixed, in `apps/web-streamwizard/src/lib/seo/og-image.tsx`:
 
 | Role | Value |
 |---|---|
@@ -284,7 +284,7 @@ Covered in section 4. Radial, heavily transparent, background only.
 
 ### Social cards
 
-One layout for every public route, in `apps/web-streamwizard/src/lib/og-image.tsx`. 1200x630 PNG.
+One layout for every public route, in `apps/web-streamwizard/src/lib/seo/og-image.tsx`. 1200x630 PNG.
 
 Layout, top to bottom:
 
@@ -354,12 +354,12 @@ Tailwind v4's preflight sets buttons to `cursor: default`. globals.css restores 
 | Concern | File |
 |---|---|
 | Theme tokens, radius, animations, base layer | `apps/web-streamwizard/src/app/globals.css` |
-| Social card colors and layout | `apps/web-streamwizard/src/lib/og-image.tsx` |
+| Social card colors and layout | `apps/web-streamwizard/src/lib/seo/og-image.tsx` |
 | Discord embed accent | `apps/discord-bot/src/lib/branding.ts` |
 | Docs theme and logos | `apps/docs/docs.json` |
 | Social and product links | `apps/web-streamwizard/src/lib/constant.ts` |
 | Overlay widget defaults | `packages/ui/src/components/overlay/types/base.ts` |
-| Logo component | `apps/web-streamwizard/src/components/brand/streamwizard-logo.tsx` |
+| Logo component | `apps/web-streamwizard/src/components/shared/streamwizard-logo.tsx` |
 
 ---
 

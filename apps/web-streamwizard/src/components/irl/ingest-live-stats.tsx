@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { IngestStatsPayload } from "@repo/types";
+import type { IngestStatsPayload } from "@repo/types/overlay-ws";
 import { supabase } from "@repo/supabase/next/client";
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui";
 import { env } from "@/lib/env";

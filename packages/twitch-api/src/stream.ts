@@ -1,5 +1,5 @@
 import { TwitchApiBaseClient } from "./base-client";
-import type { Stream, GetStreamsParams, GetStreamsResponse } from "@repo/types";
+import type { Stream, GetStreamsParams, GetStreamsResponse } from "@repo/types/helix";
 
 interface GetStreamKeyResponse {
     data: { stream_key: string }[];

@@ -24,6 +24,8 @@ import {
   corsHeaders,
   isPlausibleToken,
   isRateLimited,
+  isUsersLookupLimited,
+  takeUsersHelixBudget,
 } from "@/lib/widget-api";
 
 /**
@@ -106,10 +108,8 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/twitch/[reso
     return NextResponse.json({ error: "Unknown resource" }, { status: 404, headers });
   }
 
-  // Header only. /api/widgets/state still accepts ?token= for widgets written
-  // against its original contract; this route is new, so it has no such debt
-  // and shouldn't take one on — a token in a query string ends up in server
-  // logs, referrers and error reports.
+  // Header only, like every widget API: a token in a query string ends up in
+  // server logs, referrers and error reports.
   const token = bearerToken(req);
   if (!token) {
     return NextResponse.json({ error: "Missing token" }, { status: 401, headers });
@@ -171,7 +171,8 @@ async function handle(
       if (raw.some((id) => !/^\d+$/.test(id))) {
         return { error: "Ids must be numeric Twitch user ids", status: 400 };
       }
-      return { data: { users: await resolveUsers(raw) } };
+      if (isUsersLookupLimited(broadcasterId)) return { error: "Rate limited", status: 429 };
+      return { data: { users: await resolveUsers(raw, { allowFetch: takeUsersHelixBudget }) } };
     }
 
     case "game": {

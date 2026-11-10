@@ -11,7 +11,7 @@ import {
   type LogRouting,
   type PlatformEvent,
   type PlatformEventOutcome,
-} from "@repo/supabase/queries/platform-events";
+} from "@repo/supabase/queries/platform/events";
 import { formatPlatformEvent } from "./formatters";
 
 // Delivers platform events (SW-334) to the StreamWizard log channel.

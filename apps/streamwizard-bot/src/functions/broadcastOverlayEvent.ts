@@ -1,4 +1,4 @@
-import type { OverlayEventType } from "@repo/types";
+import type { OverlayEventType } from "@repo/types/overlay-ws";
 import { overlayWsClient } from "../overlay-ws-client";
 import { enrichOverlayEvent } from "./enrichOverlayEvent";
 import { resolveUserId } from "./resolveUserId";

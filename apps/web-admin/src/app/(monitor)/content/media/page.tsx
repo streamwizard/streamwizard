@@ -1,8 +1,8 @@
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { listCmsAssets, selectUnreferencedCmsAssets } from "@repo/supabase/queries/cms/assets";
 import { MediaLibrary } from "@/components/content/media-library";
-import { toMediaItem } from "@/lib/cms/media-items";
-import { cmsUploadsEnabled } from "@/lib/cms/storage";
+import { toMediaItem } from "@/lib/cms/media/media-items";
+import { cmsUploadsEnabled } from "@/lib/cms/media/storage";
 
 export const dynamic = "force-dynamic";
 

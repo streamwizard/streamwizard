@@ -1,6 +1,6 @@
 import { Download } from "lucide-react";
 import { SectionView } from "../analytics/section-view";
-import { RevealGroup } from "../home/reveal";
+import { RevealGroup } from "@/components/public/common/reveal";
 
 /*
  * Downloads close the page: the clip leaves the dashboard the same way it

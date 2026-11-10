@@ -7,7 +7,7 @@ import {
   type Role,
   type User,
 } from "discord.js";
-import type { DiscordChannelRef, DiscordRoleRef, DiscordUserRef } from "@repo/types";
+import type { DiscordChannelRef, DiscordRoleRef, DiscordUserRef } from "@repo/types/platform-events";
 import { truncate } from "../log-channel/embed-kit";
 
 // Plain, serialisable snapshots of Discord objects for event payloads, plus

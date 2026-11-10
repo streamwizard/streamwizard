@@ -1,4 +1,4 @@
-import { OG_CONTENT_TYPE, OG_SIZE, renderOgImage } from "@/lib/og-image";
+import { OG_CONTENT_TYPE, OG_SIZE, renderOgImage } from "@/lib/seo/og-image";
 
 export const alt = "Stream overlays and alerts – StreamWizard";
 export const size = OG_SIZE;

@@ -1,27 +1,20 @@
 import { requireProductAccess } from "@/lib/require-product-access";
-import { getMissingTwitchScopes } from "@/lib/twitch-scopes";
-import { listIngestKeys } from "@/actions/ingest-keys";
-import { getAutoSwitcherConfig } from "@/actions/supabase/auto-switcher";
-import { createAdminClient } from "@repo/supabase/next/admin";
-import { getActiveIngestNodeHosts } from "@repo/supabase/queries/ingest-nodes";
+import { getMissingTwitchScopes } from "@/lib/twitch/twitch-scopes";
+import { listIngestKeys } from "@/actions/irl/ingest-keys";
+import { getAutoSwitcherConfig } from "@/actions/irl/auto-switcher";
 import { CloudObsContent } from "@/components/irl/cloud-obs/cloud-obs-content";
+import { getObsPullHost } from "@/lib/obs/obs-pull-host";
 
 export default async function CloudObsPage() {
   const access = await requireProductAccess("cloud_obs");
-  const [{ data: keys }, autoSwitcherConfig, nodeHosts, missingTwitchScopes] = await Promise.all([
+  const [{ data: keys }, autoSwitcherConfig, obsPullHost, missingTwitchScopes] = await Promise.all([
     listIngestKeys(),
     getAutoSwitcherConfig(),
-    getActiveIngestNodeHosts(createAdminClient()),
+    getObsPullHost(),
     // The instance streams with the user's Twitch stream key, which sign-in
     // does not ask for; this page prompts for it when the token lacks it.
     getMissingTwitchScopes("cloud_obs"),
   ]);
-
-  // The cloud OBS instance pulls the incoming feed back over the tailnet. This
-  // comes from the linked ingest node, falling back to env/placeholder only
-  // when no node is linked (e.g. local dev). Key management (and the public
-  // push host) now lives on /dashboard/irl/ingest.
-  const obsPullHost = nodeHosts?.tailscale_ip ?? process.env.NEXT_PUBLIC_OBS_PULL_HOST ?? "your-ingest-tailscale-ip";
 
   return (
     <CloudObsContent

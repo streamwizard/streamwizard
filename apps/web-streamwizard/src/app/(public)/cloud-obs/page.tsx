@@ -1,18 +1,18 @@
 import type { Metadata } from "next";
-import { absoluteUrl, breadcrumbSchema, faqPageSchema } from "@/lib/seo";
-import { JsonLd } from "@/components/seo/json-ld";
-import { CloudObsShowcase } from "@/components/public/home/cloud-obs-showcase";
+import { absoluteUrl, breadcrumbSchema, faqPageSchema } from "@/lib/seo/seo";
+import { JsonLd } from "@/components/public/seo/json-ld";
+import { CloudObsShowcase } from "@/components/public/home/obs/cloud-obs-showcase";
 import { IngestSection } from "@/components/public/cloud-obs/ingest-section";
-import { AutoSwitcherSection } from "@/components/public/cloud-obs/auto-switcher-section";
-import { SwitcherPresetsSection } from "@/components/public/cloud-obs/switcher-presets-section";
-import { ChatNoticesSection } from "@/components/public/cloud-obs/chat-notices-section";
-import { DeckSection } from "@/components/public/cloud-obs/deck-section";
-import { SwitcherDemoProvider } from "@/components/public/cloud-obs/switcher-demo-store";
+import { AutoSwitcherSection } from "@/components/public/cloud-obs/switcher/auto-switcher-section";
+import { SwitcherPresetsSection } from "@/components/public/cloud-obs/switcher/switcher-presets-section";
+import { ChatNoticesSection } from "@/components/public/cloud-obs/chat/chat-notices-section";
+import { DeckSection } from "@/components/public/cloud-obs/deck/deck-section";
+import { SwitcherDemoProvider } from "@/components/public/cloud-obs/switcher/switcher-demo-store";
 import { IrlOverlaysSection } from "@/components/public/cloud-obs/irl-overlays-section";
 import { CloudObsFaqSection, CLOUD_OBS_FAQ_ITEMS } from "@/components/public/cloud-obs/cloud-obs-faq-section";
 import { BetaNote } from "@/components/public/cloud-obs/beta-note";
 import { FinalCta } from "@/components/public/home/final-cta";
-import { FeatureTrustStrip } from "@/components/public/layout/feature-trust-strip";
+import { FeatureTrustStrip } from "@/components/public/common/feature-trust-strip";
 
 /*
  * Cloud OBS for IRL streamers. The showcase is the summary, shared with the

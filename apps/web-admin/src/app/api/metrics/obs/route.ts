@@ -13,9 +13,9 @@ import {
   queryObsInstanceSnapshot,
 } from "@repo/metrics";
 import { NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/admin-session";
-import { getRegisteredNodeIds, filterToRegistered, labelNodes } from "@/lib/registry-nodes";
-import { getFleet, type FleetNode } from "@/lib/node-fleet";
+import { getAdminSession } from "@/lib/auth/admin-session";
+import { getRegisteredNodeIds, filterToRegistered, labelNodes } from "@/lib/nodes/registry-nodes";
+import { getFleet, type FleetNode } from "@/lib/nodes/node-fleet";
 import { settled } from "@/lib/settled";
 
 export const dynamic = "force-dynamic";

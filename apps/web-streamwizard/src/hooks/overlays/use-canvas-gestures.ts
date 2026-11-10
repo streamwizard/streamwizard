@@ -8,13 +8,13 @@ import {
   resolveAnchoredPosition,
   withAbsolutePosition,
 } from "@repo/ui/overlay";
-import type { OverlayItem } from "@/types/overlays";
+import type { OverlayItem } from "@repo/ui/components/overlay/types/item";
 import { isRootLayerType } from "@/components/overlays/registry/overlay-widget-registry";
 import {
   computeSnap,
   type GapBadge,
   type Guide,
-} from "@/components/overlays/editor/snapping";
+} from "@/components/overlays/editor/canvas/snapping";
 import { useOverlayStore } from "@/stores/overlay-editor-store";
 import {
   computeCropUpdate,
@@ -22,11 +22,11 @@ import {
   groupMoveBounds,
   resolveDragAxis,
   type DragItemStart,
-} from "@/components/overlays/editor/canvas-resize-math";
-import { snapToGrid } from "@/components/overlays/editor/canvas-preferences";
+} from "@/components/overlays/editor/canvas/canvas-resize-math";
+import { snapToGrid } from "@/components/overlays/editor/canvas/canvas-preferences";
 import { fromAbsoluteGeometry } from "@/components/overlays/editor/overlay-item-helpers";
-import { extendsSelection } from "@/components/overlays/editor/selection-modifiers";
-import { expandToOutermostGroups } from "@/components/overlays/editor/item-groups";
+import { extendsSelection } from "@/components/overlays/editor/canvas/selection-modifiers";
+import { expandToOutermostGroups } from "@/components/overlays/editor/layers/item-groups";
 
 /** Screen-px snap radius; converted to scene px by dividing by zoom. */
 const SNAP_THRESHOLD_PX = 8;

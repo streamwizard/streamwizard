@@ -1,7 +1,7 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from "discord.js";
 import type { ChatInputCommandInteraction } from "discord.js";
 import { supabase } from "@repo/supabase";
-import { getDiscordIntegrationByDiscordUserId } from "@repo/supabase/queries/discord";
+import { getDiscordIntegrationByDiscordUserId } from "@repo/supabase/queries/discord/discord";
 import { env } from "./env";
 import { expireReply } from "./ephemeral";
 

@@ -2,7 +2,7 @@
 
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ClipsWidgetConfig, DisplayFieldKey, ClipDataRow } from "../../types";
+import type { ClipsWidgetConfig, DisplayFieldKey, ClipDataRow } from "../../types/clips";
 import { formatClipField } from "../../lib/format-clip-fields";
 import { reportOverlayActivity } from "../../lib/overlay-activity";
 import { describeMediaError } from "./media-error";

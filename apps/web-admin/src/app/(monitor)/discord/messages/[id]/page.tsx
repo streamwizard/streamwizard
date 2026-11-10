@@ -1,22 +1,22 @@
 import { notFound } from "next/navigation";
 import { MESSAGE_TEMPLATES, parseBuiltMessage } from "@repo/discord-message";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { getBuiltMessage } from "@repo/supabase/queries/discord-built-messages";
-import { BuiltMessageEditor } from "@/components/discord/built-message-editor";
+import { getBuiltMessage } from "@repo/supabase/queries/discord/built-messages";
+import { BuiltMessageEditor } from "@/components/discord/messages/built-message-editor";
 import { getBotProfile, getGuildChannels, requireDiscordContext } from "@/lib/discord/api";
-import { bannerUploadsEnabled } from "@/lib/discord/banner-storage";
-import { MESSAGE_CHANNEL_KINDS } from "@/lib/discord/built-messages";
+import { bannerUploadsEnabled } from "@/lib/discord/messages/banner-storage";
+import { MESSAGE_CHANNEL_KINDS } from "@/lib/discord/messages/built-messages";
 import { toChannelOptions } from "@/lib/discord/options";
-import { getBuilderThemes } from "@/lib/discord/theme-assets";
-import { PageCrumb } from "@/lib/crumbs";
+import { getBuilderThemes } from "@/lib/discord/messages/theme-assets";
+import { PageCrumb } from "@/lib/nav/crumbs";
+import { isGuid } from "@repo/schemas/ids";
 
 export const dynamic = "force-dynamic";
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function DiscordMessagePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  if (!UUID.test(id)) notFound();
+  if (!isGuid(id)) notFound();
 
   const { guildId } = requireDiscordContext();
   const [row, channels, bot] = await Promise.all([

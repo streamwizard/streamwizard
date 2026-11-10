@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Badge, cn } from "@repo/ui";
+import { Badge } from "@repo/ui/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { Clock, ListChecks } from "lucide-react";
 import { DIFFICULTY_LABELS, SHORT_DATE, type ContentCard as Card, type Difficulty } from "@/lib/cms/published";
 import { ContentCoverFallback } from "./content-cover-fallback";

@@ -33,7 +33,7 @@ export type PredictionWidgetState = PredictionSnapshot | null;
 
 /**
  * Test predictions use this id (the Test buttons); see demoPrediction in
- * @repo/schemas. The widget keeps them apart from the real prediction so a
+ * @repo/schemas/widgets/test-events. The widget keeps them apart from the real prediction so a
  * reset can drop them.
  */
 export const DEMO_PREDICTION_ID = "demo-prediction";

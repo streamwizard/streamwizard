@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { AutoSwitcherStatus } from "@repo/schemas";
+import type { AutoSwitcherStatus } from "@repo/schemas/auto-switcher/auto-switcher";
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, Progress } from "@repo/ui";
 import { Activity } from "lucide-react";
 

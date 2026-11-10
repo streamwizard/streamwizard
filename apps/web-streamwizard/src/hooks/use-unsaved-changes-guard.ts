@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { UnsavedChangesDialogProps } from "@/components/modals/unsaved-changes-dialog";
+import type { UnsavedChangesDialogProps } from "@/components/shared/unsaved-changes-dialog";
 
 /**
  * Warns before unsaved work is thrown away.

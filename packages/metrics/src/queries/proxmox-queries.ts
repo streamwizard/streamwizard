@@ -3,8 +3,7 @@ import { fluxFrom } from "../buckets";
 
 // Proxmox VE metrics for web-admin's /vms pages. Proxmox VE writes these
 // itself (Datacenter → Metric Server → InfluxDB) into the proxmox bucket; our
-// code never writes them. Shape: docs/proxmox-monitoring-plan.md, "InfluxDB
-// schema (verified)". In short:
+// code never writes them. Shape:
 //   guests    object=qemu|lxc, tags host (guest name), nodename, vmid
 //             system, ballooninfo, blockstat (+instance), nics (+instance)
 //   nodes     object=nodes, tag host (node name), no nodename

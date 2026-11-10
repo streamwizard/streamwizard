@@ -2,9 +2,9 @@ import { MessageFlags, type ButtonInteraction } from "discord.js";
 import { isButtonActionKey, parseButtonCustomId, type ButtonActionKey } from "@repo/discord-message";
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
-import { getDiscordIntegrationByDiscordUserId } from "@repo/supabase/queries/discord";
+import { getDiscordIntegrationByDiscordUserId } from "@repo/supabase/queries/discord/discord";
 import { buildLinkRow } from "./account";
-import { handleCreateButton } from "./tickets/open";
+import { handleCreateButton } from "@/lib/tickets/open/open";
 import { expireReply } from "./ephemeral";
 
 // Action buttons on messages from web-admin's message builder. The builder

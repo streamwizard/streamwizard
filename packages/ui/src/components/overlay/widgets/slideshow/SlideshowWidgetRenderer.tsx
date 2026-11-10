@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { getDesignSize } from "../../lib/item-scale";
-import type { OverlayItem } from "../../types";
+import type { OverlayItem } from "../../types/item";
 import { roundingRadiusPx } from "../media/media-widget-config";
 import {
   SLIDESHOW_TRANSITION_MS,

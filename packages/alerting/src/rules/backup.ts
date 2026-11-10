@@ -6,7 +6,7 @@ import {
   type BackupPollData,
   type BackupVmIssueCode,
 } from "@repo/backups";
-import { listBackupEventsSince } from "@repo/supabase/queries/backups";
+import { listBackupEventsSince } from "@repo/supabase/queries/platform/backups";
 import type { AlertRule, Breach, EnvContext, RuleOverrides } from "../types";
 import { customRule } from "./builders";
 import {
@@ -18,7 +18,7 @@ import {
 } from "./thresholds";
 
 /**
- * Proxmox backup rules (docs/backup-monitoring-plan.md). rest-api's poller and
+ * Proxmox backup rules. rest-api's poller and
  * webhook receiver write backup_poll_state / backup_events; these rules read
  * them and reuse the same status function as the /backups page, so the page
  * and /alerts never disagree. No poll row at all means monitoring isn't set

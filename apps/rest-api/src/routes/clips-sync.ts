@@ -1,24 +1,26 @@
 import { type Context } from "hono";
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
-import { getTwitchIntegrationWithTokenByUserId } from "@repo/supabase/queries/user";
-import { getClipSync } from "@repo/supabase/queries/sync";
+import { getTwitchIntegrationWithTokenByUserId } from "@repo/supabase/queries/users/user";
+import { getClipSync } from "@repo/supabase/queries/clips/sync";
 import { TwitchApi } from "@repo/twitch-api";
-import { syncTwitch } from "../functions/sync-twitch";
+import { startTwitchSync } from "@/modules/streams/clip-sync";
 
 /**
  * POST /api/clips/sync
  *
- * Triggers a Twitch clips sync for the authenticated user.
+ * Starts a Twitch clips sync for the authenticated user and answers without
+ * waiting for it: a full history pull can take hundreds of Helix pages.
+ * GET /api/clips/sync-status reports how it ends.
  * Requires Supabase authentication via JWT token.
  *
  * Request:
  * - Headers: Authorization: Bearer <token> OR Cookie with Supabase auth token
- * - Body (optional): { skipRecentCheck?: boolean }
+ * - No body. The one-hour throttle can't be turned off from here.
  *
  * Response:
- * - 200: { success: true, clipsCount: number, message: string }
- * - 204: { success: true, skipped: true, message: string } (if sync was skipped due to recent sync)
+ * - 202: { success: true, started: true, status: "syncing", message: string }
+ * - 429: { success: false, skipped: true, lastSync, message } (a sync is running or ran in the last hour)
  * - 400: { error: string }
  * - 401: { error: string } (if not authenticated)
  * - 404: { error: string } (if Twitch integration not found)
@@ -34,15 +36,6 @@ export async function syncClipsHandler(c: Context) {
     }
 
     const userId = user.id;
-
-    // Get optional parameters from request body
-    let skipRecentCheck = false;
-    try {
-      const body = await c.req.json();
-      skipRecentCheck = body?.skipRecentCheck === true;
-    } catch {
-      // No body or invalid JSON, use defaults
-    }
 
     // Look up the user's Twitch integration to get their broadcaster_id
     const { data: integration, error: integrationError } = await getTwitchIntegrationWithTokenByUserId(supabase, userId);
@@ -71,18 +64,17 @@ export async function syncClipsHandler(c: Context) {
     // Initialize TwitchApi
     const TwitchAPI = new TwitchApi(integration.twitch_user_id);
 
-    // Trigger the sync
-    const totalClips = await syncTwitch(integration.twitch_user_id, TwitchAPI, { skipRecentCheck });
+    const result = await startTwitchSync(integration.twitch_user_id, TwitchAPI);
 
-    // Check if sync was skipped
-    if (totalClips === null || (typeof totalClips === "object" && "skipped" in totalClips)) {
-      const lastSync = totalClips && "lastSync" in totalClips ? totalClips.lastSync : null;
+    if ("skipped" in result) {
       return c.json(
         {
           success: false,
           skipped: true,
-          lastSync,
-          message: "Sync skipped. Last sync was less than an hour ago.",
+          lastSync: result.lastSync,
+          message: result.running
+            ? "Already syncing your clips. Give it a minute."
+            : "Synced less than an hour ago. Try again later.",
         },
         429,
       );
@@ -91,21 +83,16 @@ export async function syncClipsHandler(c: Context) {
     return c.json(
       {
         success: true,
-        clipsCount: totalClips.clipsCount,
-        message: `Successfully synced ${totalClips.clipsCount} clips`,
+        started: true,
+        status: "syncing",
+        message: "Syncing your clips",
       },
-      200,
+      202,
     );
   } catch (error) {
-    // Answered as a 500 instead of rethrown, so safeErrorHandler never sees it.
-    reportError(error, "clips-sync.run");
-    return c.json(
-      {
-        error: "Sync failed",
-        message: error instanceof Error ? error.message : "Unknown error occurred",
-      },
-      500,
-    );
+    // Answered as a 500 instead of rethrown.
+    reportError(error, "clips-sync.start");
+    return c.json({ error: "Sync failed", message: "Something broke on our end. Try again?" }, 500);
   }
 }
 
@@ -151,12 +138,6 @@ export async function syncStatusHandler(c: Context) {
     );
   } catch (error) {
     reportError(error, "clips-sync.status");
-    return c.json(
-      {
-        error: "Failed to get sync status",
-        message: error instanceof Error ? error.message : "Unknown error occurred",
-      },
-      500,
-    );
+    return c.json({ error: "Failed to get sync status", message: "Something broke on our end. Try again?" }, 500);
   }
 }

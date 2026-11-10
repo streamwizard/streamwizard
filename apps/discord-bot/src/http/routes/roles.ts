@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { migrateVerifiedRole } from "../../lib/setup-wizard";
+import { migrateVerifiedRole } from "@/lib/setup/setup-wizard";
 import type { AppEnv } from "../types";
 import { readJson, snowflake } from "../validation";
 

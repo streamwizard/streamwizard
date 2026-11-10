@@ -1,6 +1,6 @@
 import { Activity, Database, Trophy } from "lucide-react";
 import { SectionView } from "./section-view";
-import { Reveal, RevealGroup } from "../home/reveal";
+import { Reveal, RevealGroup } from "@/components/public/common/reveal";
 
 /*
  * The method, spelled out (SW-308). The sections above show what the page

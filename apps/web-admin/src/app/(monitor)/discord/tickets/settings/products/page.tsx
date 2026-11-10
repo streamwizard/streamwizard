@@ -4,8 +4,8 @@ import {
   TICKET_ACTIVE_LIMIT,
   TICKET_DESCRIPTION_MAX,
   TICKET_NAME_MAX,
-} from "@repo/supabase/queries/ticket-config";
-import { TicketProductsManager } from "@/components/discord/ticket-products-manager";
+} from "@repo/supabase/queries/tickets/config";
+import { TicketProductsManager } from "@/components/discord/tickets/settings/ticket-products-manager";
 import { requireDiscordContext } from "@/lib/discord/api";
 
 export const dynamic = "force-dynamic";

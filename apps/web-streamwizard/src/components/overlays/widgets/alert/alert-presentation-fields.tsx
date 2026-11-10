@@ -24,19 +24,16 @@ import {
   type AlertHighlightAnimation,
   type AlertPresentation,
 } from "@repo/ui/overlay";
-import {
-  FontWeightSelect,
-  GoogleFontSelect,
-  GroupLabel,
-  InspectorHint,
-  InspectorReveal,
-  InspectorSection,
-  MediaCardField,
-  SliderField,
-  SwitchField,
-  TextAlignSelect,
-} from "@/components/overlays/inspector-fields";
-import { AlertTokenChips } from "./alert-token-chips";
+import { FontWeightSelect } from "@/components/overlays/inspector-fields/font-weight-select";
+import { GoogleFontSelect } from "@/components/overlays/inspector-fields/google-font-select";
+import { GroupLabel } from "@/components/overlays/inspector-fields/panel-labels";
+import { InspectorHint } from "@/components/overlays/editor/inspector/inspector-hint";
+import { InspectorReveal, InspectorSection } from "@/components/shared/inspector-section";
+import { MediaCardField } from "@/components/overlays/inspector-fields/media-card-field";
+import { SliderField } from "@/components/overlays/inspector-fields/slider-field";
+import { SwitchField } from "@/components/overlays/inspector-fields/switch-field";
+import { TextAlignSelect } from "@/components/overlays/inspector-fields/text-align-select";
+import { AlertTokenChips } from "@/components/overlays/widgets/alert/tokens/alert-token-chips";
 import { AlertLayoutPicker } from "./alert-layout-picker";
 import { AlertEffectField, AlertEffectPreview } from "./alert-effect-field";
 import { alertEffectLabel } from "./alert-widget-labels";

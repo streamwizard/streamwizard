@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import type { ChannelChatMessageEvent } from "@repo/schemas";
+import type { ChannelChatMessageEvent } from "@repo/schemas/eventsub/chat";
 import { useChatAssets } from "@/hooks/deck/use-chat-assets";
 import type { DeckChatRoom } from "@/hooks/deck/use-deck-chat-room";
 import { ChatComposer } from "@/components/deck/chat/chat-composer";

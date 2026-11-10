@@ -1,8 +1,8 @@
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
-import { getTwitchIntegrationByBroadcasterId } from "@repo/supabase/queries/user";
+import { getTwitchIntegrationByBroadcasterId } from "@repo/supabase/queries/users/user";
 import { createUserStateService } from "@repo/user-state";
-import { postInternalBroadcast } from "./ws-server";
+import { postInternalBroadcast } from "@/lib/ws-server";
 
 /**
  * Records stream lifecycle into user_states. This webhook is the ONLY place

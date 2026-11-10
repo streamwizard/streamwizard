@@ -2,41 +2,25 @@
 
 import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { cn } from "@/lib/utils";
 import { formatElapsed } from "@/lib/format";
 
 export type ConnectionNodeData = {
   connId: string;
-  role: "publisher" | "subscriber";
+  role: "subscriber";
   connectedAt: number;
   channels: string[];
 };
 
 export const ConnectionNode = memo(function ConnectionNode({ data }: NodeProps) {
   const { connId, role, connectedAt, channels } = data as ConnectionNodeData;
-  const isPub = role === "publisher";
   const duration = formatElapsed(Date.now() - connectedAt);
 
   return (
-    <div
-      className={cn(
-        "rounded-md border px-3 py-2 shadow-sm min-w-[100px]",
-        isPub
-          ? "border-blue-500/30 bg-blue-950/40"
-          : "border-green-500/30 bg-green-950/40"
-      )}
-    >
-      <Handle type="target" position={Position.Top} className={cn("!w-2 !h-2", isPub ? "!bg-blue-400" : "!bg-green-400")} />
+    <div className="rounded-md border border-green-500/30 bg-green-950/40 px-3 py-2 shadow-sm min-w-[100px]">
+      <Handle type="target" position={Position.Top} className="!w-2 !h-2 !bg-green-400" />
 
       <div className="flex items-center gap-2 mb-0.5">
-        <span
-          className={cn(
-            "text-[10px] font-medium uppercase tracking-wider",
-            isPub ? "text-blue-400" : "text-green-400"
-          )}
-        >
-          {role}
-        </span>
+        <span className="text-[10px] font-medium uppercase tracking-wider text-green-400">{role}</span>
         <span className="text-[10px] text-muted-foreground font-mono">{connId}</span>
       </div>
 

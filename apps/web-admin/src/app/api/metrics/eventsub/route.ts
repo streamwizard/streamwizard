@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/admin-session";
-import { fetchEventsubMetrics } from "@/lib/eventsub-metrics";
+import { getAdminSession } from "@/lib/auth/admin-session";
+import { fetchEventsubMetrics } from "@/lib/eventsub/eventsub-metrics";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     return NextResponse.json(await fetchEventsubMetrics(fluxRange, window));
   } catch (err) {
     // Only a bad range/window gets here; every source handles its own errors.
-    console.error("[eventsub metrics]", err);
+    console.warn("[eventsub metrics]", err);
     return NextResponse.json({ error: "bad request" }, { status: 400 });
   }
 }

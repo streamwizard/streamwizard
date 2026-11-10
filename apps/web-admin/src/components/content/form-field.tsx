@@ -1,4 +1,4 @@
-import { Label } from "@repo/ui";
+import { Label } from "@repo/ui/components/ui/label";
 
 export function FormField({
   label,

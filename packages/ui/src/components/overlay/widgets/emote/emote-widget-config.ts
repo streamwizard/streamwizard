@@ -1,4 +1,4 @@
-import type { OverlayItemConfig } from "../../types";
+import type { OverlayItemConfig } from "../../types/item";
 import type { ThirdPartyProvider } from "../../../chat/types";
 
 export const EMOTE_WIDGET_TYPE = "emote_widget" as const;

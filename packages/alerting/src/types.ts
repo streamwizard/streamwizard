@@ -144,7 +144,7 @@ export interface AlertNotification {
   ruleTitle: string;
   env: Env;
   entityId: string;
-  /** Human-friendly entity name (e.g. "test (100.71.15.32)"); the engine
+  /** Human-friendly entity name (e.g. "test (100.64.0.10)"); the engine
    * resolves it from the registry, entityId stays the stable key. */
   entityLabel?: string;
   /** Set when the entity is a registry node — name, address, last stats. */

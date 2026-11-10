@@ -1,10 +1,10 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Events } from "discord.js";
 import { TtlCache } from "@repo/ttl-cache";
 import { reportError } from "@repo/sentry";
-import { recordMessage } from "../lib/activity-tracker";
-import { archiveNewMessage } from "../lib/tickets/archive";
+import { recordMessage } from "@/lib/activity/activity-tracker";
+import { archiveNewMessage } from "@/lib/tickets/transcript/archive";
 import { TICKET_IDS } from "../lib/tickets/ids";
-import { findDmTicketGuild } from "../lib/tickets/open";
+import { findDmTicketGuild } from "@/lib/tickets/open/open";
 import type { BotEvent } from "../types/discord";
 import type { Message } from "discord.js";
 

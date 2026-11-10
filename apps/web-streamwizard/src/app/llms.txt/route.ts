@@ -1,4 +1,4 @@
-import { renderLlmsTxt } from "@/lib/llms";
+import { renderLlmsTxt } from "@/lib/seo/llms";
 
 /*
  * A route handler rather than public/llms.txt so the file is built from the

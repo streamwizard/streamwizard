@@ -1,3 +1,4 @@
+import { describeError } from "@repo/sentry/safe-error";
 import { TwitchApiBaseClient } from "./base-client";
 
 export class TwitchFollowersClient extends TwitchApiBaseClient {
@@ -25,7 +26,7 @@ export class TwitchFollowersClient extends TwitchApiBaseClient {
       const data = response.data?.data ?? [];
       return Array.isArray(data) && data.length > 0;
     } catch (error) {
-      console.error("Error checking follower status:", error);
+      console.warn(`[twitch-api] follower check failed: ${describeError(error)}`);
       return false;
     }
   }
@@ -48,7 +49,7 @@ export class TwitchFollowersClient extends TwitchApiBaseClient {
       }
       return null;
     } catch (error) {
-      console.error("Error fetching follow info:", error);
+      console.warn(`[twitch-api] follow info lookup failed: ${describeError(error)}`);
       return null;
     }
   }

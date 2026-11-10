@@ -1,6 +1,9 @@
 import { IrlFieldWidgetRenderer } from "./IrlFieldWidgetRenderer";
-import { DEFAULT_IRL_FIELD_WIDGET_ITEM_CONFIG, resolvedTextWidgetFontFamily } from "../../types";
-import type { OverlayItem } from "../../types";
+import {
+  DEFAULT_IRL_FIELD_WIDGET_ITEM_CONFIG,
+  resolvedTextWidgetFontFamily,
+} from "../../types/widgets";
+import type { OverlayItem } from "../../types/item";
 
 export const IRL_FIELD_WIDGET_DEFAULT_SIZE = { w: 200, h: 50 } as const;
 

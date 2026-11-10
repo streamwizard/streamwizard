@@ -12,17 +12,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/ui";
-import {
-  GoogleFontSelect,
-  InspectorHint,
-  InspectorReveal,
-  InspectorSection,
-  SegmentedField,
-  SliderField,
-  SwitchField,
-  type SegmentedOption,
-} from "@/components/overlays/inspector-fields";
-import { buildWidgetTestEvent } from "@repo/schemas";
+import { GoogleFontSelect } from "@/components/overlays/inspector-fields/google-font-select";
+import { InspectorHint } from "@/components/overlays/editor/inspector/inspector-hint";
+import { InspectorReveal, InspectorSection } from "@/components/shared/inspector-section";
+import { SegmentedField, type SegmentedOption } from "@/components/overlays/inspector-fields/segmented-field";
+import { SliderField } from "@/components/overlays/inspector-fields/slider-field";
+import { SwitchField } from "@/components/overlays/inspector-fields/switch-field";
+import { buildWidgetTestEvent } from "@repo/schemas/widgets/test-events";
 import {
   HYPE_TRAIN_PREVIEW_EVENT,
   HYPE_TRAIN_WIDGET_JOIN_EFFECTS,

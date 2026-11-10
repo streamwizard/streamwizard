@@ -1,6 +1,6 @@
 import { ApplicationCommandType, ContextMenuCommandBuilder, InteractionContextType, MessageFlags } from "discord.js";
 import type { ContextMenuCommand } from "../types/discord";
-import { getOpenTicket } from "../lib/ticket-activity";
+import { getOpenTicket } from "@/lib/tickets/ticket-activity";
 import { findCategory, getTicketConfig, isStaff } from "../lib/tickets";
 
 // Pin a message in a ticket without Manage Messages: the bot pins it. The

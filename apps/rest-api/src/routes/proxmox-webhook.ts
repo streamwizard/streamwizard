@@ -2,14 +2,14 @@ import { createHash } from "node:crypto";
 import { classifyEvent, jobLevelGuests, parseVzdumpGuests, type BackupPollData } from "@repo/backups";
 import { reportError } from "@repo/sentry";
 import type { Json } from "@repo/supabase";
-import type { BackupEventInsert } from "@repo/supabase/queries/backups";
+import type { BackupEventInsert } from "@repo/supabase/queries/platform/backups";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
-import { z } from "zod";
-import { secretsMatch } from "../lib/secret-compare";
+import { secretsMatch } from "@/lib/secret-compare";
+import { proxmoxWebhookPayloadSchema } from "@/schemas/proxmox-webhook";
 
 /**
- * Receiver for Proxmox VE / PBS notification webhooks (docs/backup-monitoring-plan.md).
+ * Receiver for Proxmox VE / PBS notification webhooks.
  *
  * Proxmox sends each notification once, with a 10 s timeout and no retry, so
  * this does the minimum before answering: check the token, validate, decide
@@ -21,20 +21,6 @@ export const WEBHOOK_TOKEN_HEADER = "x-proxmox-webhook-token";
 
 /** vzdump notifications include the full task log; this caps what we keep. */
 const MAX_STORED_MESSAGE_CHARS = 64 * 1024;
-
-const payloadSchema = z.object({
-  source: z
-    .string()
-    .min(1)
-    .max(64)
-    .regex(/^[A-Za-z0-9._-]+$/),
-  title: z.string().max(1000),
-  message: z.string(),
-  severity: z.enum(["info", "notice", "warning", "error", "unknown"]),
-  timestamp: z.number().int().positive(),
-  // Proxmox metadata fields are strings; accept scalars and stringify.
-  fields: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).default({}),
-});
 
 export interface ProxmoxWebhookDeps {
   /** Unset disables the receiver (404). */
@@ -68,9 +54,11 @@ export function createProxmoxWebhookRoute(deps: ProxmoxWebhookDeps) {
       } catch {
         return c.json({ error: "Body must be JSON" }, 400);
       }
-      const parsed = payloadSchema.safeParse(body);
+      const parsed = proxmoxWebhookPayloadSchema.safeParse(body);
       if (!parsed.success) {
-        return c.json({ error: "Invalid payload", issues: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`) }, 400);
+        // Which fields failed stays in our logs; the caller only learns it was rejected.
+        console.warn("[proxmox-webhook] invalid payload:", parsed.error.issues.map((i) => i.path.join(".") || "(root)").join(", "));
+        return c.json({ error: "Invalid payload" }, 400);
       }
 
       const payload = parsed.data;

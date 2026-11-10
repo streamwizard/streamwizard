@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowDownToLine,
   ArrowLeftToLine,
@@ -18,11 +18,6 @@ import {
   cn,
   ColorPicker,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   Textarea,
   ToggleGroup,
   ToggleGroupItem,
@@ -55,20 +50,17 @@ import {
   type ChatWidgetNameColorMode,
   type ChatWidgetPreset,
 } from "@repo/ui/overlay";
-import {
-  FontWeightSelect,
-  GoogleFontSelect,
-  GroupLabel,
-  InspectorHint,
-  InspectorReveal,
-  InspectorSection,
-  SegmentedField,
-  SliderField,
-  SwitchField,
-  type SegmentedOption,
-} from "@/components/overlays/inspector-fields";
-import type { OverlayItem } from "@/types/overlays";
-import type { OverlayInspectorAppendProps } from "../../registry/overlay-widget-registry.types";
+import { FontWeightSelect } from "@/components/overlays/inspector-fields/font-weight-select";
+import { GoogleFontSelect } from "@/components/overlays/inspector-fields/google-font-select";
+import { GroupLabel } from "@/components/overlays/inspector-fields/panel-labels";
+import { InspectorHint } from "@/components/overlays/editor/inspector/inspector-hint";
+import { InspectorReveal, InspectorSection } from "@/components/shared/inspector-section";
+import { SegmentedField, type SegmentedOption } from "@/components/overlays/inspector-fields/segmented-field";
+import { SliderField } from "@/components/overlays/inspector-fields/slider-field";
+import { SwitchField } from "@/components/overlays/inspector-fields/switch-field";
+import type { OverlayItem } from "@repo/ui/components/overlay/types/item";
+import type { OverlayInspectorAppendProps } from "@/components/overlays/registry/overlay-widget-registry.types";
+import { OptionSelect } from "@/components/overlays/inspector-fields/option-select";
 
 /** The settings that decide how tall one horizontal row is. */
 const HORIZONTAL_HEIGHT_KEYS = ["layout", "preset", "fontSize", "padding"] as const;
@@ -114,47 +106,6 @@ function chatBoxGeometry(
     // the top edge; stop at the edge instead.
     y: item.anchor_y === "top" ? Math.max(0, y) : y,
   };
-}
-
-function AnimationSelect<T extends string>({
-  id,
-  label,
-  value,
-  options,
-  hint,
-  disabled,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  value: T;
-  options: readonly T[];
-  hint?: ReactNode;
-  disabled?: boolean;
-  onChange: (v: T) => void;
-}) {
-  return (
-    <div className="min-w-0 space-y-2">
-      <div className="flex items-center gap-1">
-        <Label htmlFor={id} className="text-xs">
-          {label}
-        </Label>
-        {hint ? <InspectorHint label={`About ${label.toLowerCase()}`}>{hint}</InspectorHint> : null}
-      </div>
-      <Select value={value} onValueChange={(v) => onChange(v as T)} disabled={disabled}>
-        <SelectTrigger id={id} size="sm" className="w-full text-xs">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {options.map((option) => (
-            <SelectItem key={option} value={option} className="text-xs">
-              {CHAT_WIDGET_ANIMATION_LABELS[option as keyof typeof CHAT_WIDGET_ANIMATION_LABELS]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  );
 }
 
 /** A two-line sketch of each preset, so the choice reads before the label does. */
@@ -482,18 +433,20 @@ export function ChatWidgetSettings({ item, updateItem }: OverlayInspectorAppendP
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <AnimationSelect
+            <OptionSelect
               id="chat-animation-in"
               label="Animate in"
               value={cfg.animationIn}
               options={CHAT_WIDGET_ANIMATIONS_IN}
+              labels={CHAT_WIDGET_ANIMATION_LABELS}
               onChange={(animationIn: ChatWidgetAnimationIn) => patchConfig({ animationIn })}
             />
-            <AnimationSelect
+            <OptionSelect
               id="chat-animation-out"
               label="Animate out"
               value={cfg.animationOut}
               options={CHAT_WIDGET_ANIMATIONS_OUT}
+              labels={CHAT_WIDGET_ANIMATION_LABELS}
               disabled={!fading}
               hint={fading ? "Plays as a message fades out." : "Plays when a message fades out. Turn on Fade out old messages to use it."}
               onChange={(animationOut: ChatWidgetAnimationOut) => patchConfig({ animationOut })}

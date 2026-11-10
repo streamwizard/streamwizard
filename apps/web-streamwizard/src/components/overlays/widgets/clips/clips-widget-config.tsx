@@ -16,7 +16,7 @@ import { Slider } from "@repo/ui";
 import { Switch } from "@repo/ui";
 import { Database } from "@repo/supabase";
 import { X } from "lucide-react";
-import { InspectorSection } from "../../editor/inspector-section";
+import { InspectorSection } from "@/components/shared/inspector-section";
 import {
   DEFAULT_CLIPS_WIDGET_ITEM_CONFIG,
   type ClipSourceMode,
@@ -24,7 +24,7 @@ import {
   type ClipTransitionMode,
   type ClipsWidgetItemConfig,
   type TimeWindowPreset,
-} from "@/types/overlays";
+} from "@repo/ui/components/overlay/types/clips";
 
 interface ClipsWidgetConfigPanelProps {
   config: ClipsWidgetItemConfig;

@@ -1,6 +1,6 @@
 import { Split, Table2, Target } from "lucide-react";
 import { SectionView } from "./section-view";
-import { Reveal, RevealGroup } from "../home/reveal";
+import { Reveal, RevealGroup } from "@/components/public/common/reveal";
 import { CategoryFillDemo } from "./category-fill-demo";
 
 /*

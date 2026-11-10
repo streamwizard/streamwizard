@@ -10,20 +10,22 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@repo/logger": "workspace:*",
     "@repo/metrics": "workspace:*",
-    "@repo/schemas": "workspace:*",
     "@repo/posthog": "workspace:*",
+    "@repo/schemas": "workspace:*",
     "@repo/sentry": "workspace:*",
+    "@repo/service-token": "workspace:*",
     "@repo/supabase": "workspace:*",
-    "@repo/user-state": "workspace:*",
     "@repo/twitch-api": "workspace:*",
     "@repo/twitch-assets": "workspace:*",
     "@repo/twitch-eventsub": "workspace:*",
-    "@repo/logger": "workspace:*",
     "@repo/types": "workspace:*",
+    "@repo/ttl-cache": "workspace:*",
+    "@repo/user-state": "workspace:*",
+    "@repo/ws-client": "workspace:*",
     "@sentry/bun": "^10",
     "date-fns": "^4.1.0",
-    "lovely-logs": "^2.7.2",
     "zod": "^4.4.3"
   },
   "devDependencies": {

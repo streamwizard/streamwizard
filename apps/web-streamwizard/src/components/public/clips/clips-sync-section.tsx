@@ -1,6 +1,6 @@
 import { History, RadioTower, RefreshCw } from "lucide-react";
 import { SectionView } from "../analytics/section-view";
-import { Reveal } from "../home/reveal";
+import { Reveal } from "@/components/public/common/reveal";
 import { SyncTimeline } from "./sync-timeline";
 
 /*

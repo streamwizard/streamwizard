@@ -4,8 +4,8 @@ import {
   createOverlayPlaylistClipQuery,
   getClipFolderJunctions,
   pickRandomOverlayClip,
-} from "@repo/supabase/queries/clips";
-import { getTwitchUserIdByUserIdMaybe } from "@repo/supabase/queries/user";
+} from "@repo/supabase/queries/clips/clips";
+import { getTwitchUserIdByUserIdMaybe } from "@repo/supabase/queries/users/user";
 import { slimClipsWidgetItemConfig, type ClipsWidgetItemConfig } from "@repo/ui/overlay";
 import { TtlCache } from "@repo/ttl-cache";
 import {
@@ -15,16 +15,20 @@ import {
 } from "@/lib/overlay-clip-query-builder";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { reportError } from "@repo/sentry";
-import { getClipDownloadUrl } from "@/actions/twitch";
+import { ClipUnavailableError, getClipDownloadUrl } from "@/lib/clip-download-url";
 import { isUuid, resolveOverlayItem, type AuthorizedOverlayItem } from "@/lib/overlay-item-auth";
+import { overlayTokenSchema } from "@/schemas/overlay-token";
+import type { ClipCursor } from "@/types/clips";
+import { guidSchema, isTwitchClipId } from "@repo/schemas/ids";
+import { z } from "zod";
 
 /** Minimal clip identity for Twitch Helix downloads (broadcaster id from clips row). */
-export type PlaylistClip = {
+type PlaylistClip = {
   twitchClipId: string;
   broadcasterId: string;
 };
 
-export type OverlayClipForDisplay = PlaylistClip & {
+type OverlayClipForDisplay = PlaylistClip & {
   id: string;
   title: string;
   creator_name: string;
@@ -34,17 +38,7 @@ export type OverlayClipForDisplay = PlaylistClip & {
   duration: number | null;
 };
 
-/**
- * Position in a sequential rotation: the sort column's value on the clip that
- * just played, plus its id as tiebreak. Keyset rather than offset so clips
- * synced mid-stream slot into place instead of shifting everything after them.
- */
-export type ClipCursor = {
-  sortValue: string | number | null;
-  clipId: string;
-};
-
-export type NextOverlayClip = {
+type NextOverlayClip = {
   clip: OverlayClipForDisplay;
   /**
    * Twitch's signed MP4 URL, already minted — saves the caller a round trip.
@@ -279,24 +273,51 @@ const clipsItems = new TtlCache<AuthorizedOverlayItem>({
   maxEntries: 2000,
 });
 
-const MAX_EXCLUDED = 200;
-const TWITCH_CLIP_ID = /^[A-Za-z0-9_-]{1,128}$/;
+/**
+ * Calls per scene owner per minute, across all their scenes and items. A
+ * widget asks once per clip transition (a few times a minute, plus a burst of
+ * three while the player ring fills), and each answer can cost a Helix call on
+ * the shared app token, so a caller looping on this mustn't get to spend it
+ * freely. Per process, like the other limits in this app.
+ */
+const CLIPS_PER_OWNER_LIMIT = 30;
+const ownerCalls = new TtlCache<{ count: number }>({ ttlMs: 60_000, maxEntries: 2000 });
 
-function parseCursor(raw: unknown): ClipCursor | null {
-  if (!raw || typeof raw !== "object") return null;
-  const { sortValue, clipId } = raw as Record<string, unknown>;
-  if (!isUuid(clipId)) return null;
-  if (sortValue === null || (typeof sortValue === "number" && Number.isFinite(sortValue))) {
-    return { sortValue, clipId };
+function isOwnerRateLimited(userId: string): boolean {
+  const entry = ownerCalls.get(userId);
+  if (!entry) {
+    ownerCalls.set(userId, { count: 1 });
+    return false;
   }
-  if (typeof sortValue === "string" && sortValue.length <= 64) return { sortValue, clipId };
-  return null;
+  entry.count++;
+  return entry.count > CLIPS_PER_OWNER_LIMIT;
 }
 
-function parseExcluded(raw: unknown): string[] {
-  if (!Array.isArray(raw)) return [];
-  return raw.filter((id): id is string => typeof id === "string" && TWITCH_CLIP_ID.test(id)).slice(-MAX_EXCLUDED);
-}
+const MAX_EXCLUDED = 200;
+
+/**
+ * The token and item id must be right, or there is nothing to serve. A bad
+ * cursor or exclude list only costs the caller its place: the rotation starts
+ * over, and ids that aren't Twitch clip ids are dropped, as before.
+ */
+const nextOverlayClipInputSchema = z.object({
+  subscriberToken: overlayTokenSchema,
+  overlayItemId: guidSchema,
+  cursor: z
+    .object({
+      sortValue: z.union([z.null(), z.number(), z.string().max(64)]),
+      clipId: guidSchema,
+    })
+    .nullable()
+    .catch(null),
+  excludeTwitchClipIds: z
+    .array(z.unknown())
+    .max(MAX_EXCLUDED * 5)
+    .catch([])
+    .transform((ids) =>
+      ids.filter(isTwitchClipId).slice(-MAX_EXCLUDED),
+    ),
+});
 
 /**
  * One clip, ready to play. The widget keeps three players in a ring — one
@@ -315,20 +336,40 @@ export async function getNextOverlayClip(
   rawCursor: ClipCursor | null,
   rawExcludeTwitchClipIds: string[]
 ): Promise<NextOverlayClip | null> {
+  const parsed = nextOverlayClipInputSchema.safeParse({
+    subscriberToken,
+    overlayItemId,
+    cursor: rawCursor,
+    excludeTwitchClipIds: rawExcludeTwitchClipIds,
+  });
+  if (!parsed.success) return null;
+  const { cursor, excludeTwitchClipIds } = parsed.data;
+
+  try {
+    return await serveNextClip(parsed.data.subscriberToken, parsed.data.overlayItemId, cursor, excludeTwitchClipIds);
+  } catch (err) {
+    // null keeps the current clip on screen; the widget asks again next transition.
+    reportError(err, "clips.get-next-overlay-clip");
+    return null;
+  }
+}
+
+async function serveNextClip(
+  subscriberToken: string,
+  overlayItemId: string,
+  cursor: ClipCursor | null,
+  excludeTwitchClipIds: string[]
+): Promise<NextOverlayClip | null> {
   // The tenant and the filters come from the overlay credential, never from
   // the caller (see resolveOverlayItem).
-  const item =
-    typeof subscriberToken === "string" && typeof overlayItemId === "string"
-      ? await clipsItems.fetch(`${subscriberToken}:${overlayItemId}`, () =>
-          resolveOverlayItem(subscriberToken, overlayItemId)
-        )
-      : null;
+  const item = await clipsItems.fetch(`${subscriberToken}:${overlayItemId}`, () =>
+    resolveOverlayItem(subscriberToken, overlayItemId)
+  );
   if (!item || item.type !== "clips_widget") return null;
 
   const sceneUserId = item.userId;
+  if (isOwnerRateLimited(sceneUserId)) return null;
   const c = slimClipsWidgetItemConfig(item.config);
-  const cursor = parseCursor(rawCursor);
-  const excludeTwitchClipIds = parseExcluded(rawExcludeTwitchClipIds);
 
   const scope = await resolveClipScope(sceneUserId, c);
   if (scope.kind === "empty") return null;
@@ -363,6 +404,10 @@ export async function getNextOverlayClip(
       return { clip: toDisplayClip(row), videoUrl, cursor: nextCursor };
     } catch (err) {
       reportError(err, "clips.getNextOverlayClip.downloadUrl", { twitch_clip_id: row.twitch_clip_id });
+      // A 429 or a Twitch outage says nothing about the clip, and the next
+      // clip would hit it too. Hand back null; the widget keeps the current
+      // clip on screen and asks again on the next transition.
+      if (!(err instanceof ClipUnavailableError)) return null;
       deadClips.set(row.twitch_clip_id, Date.now() + DEAD_CLIP_TTL_MS);
       from = nextCursor;
       skipped.push(row.twitch_clip_id);

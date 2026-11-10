@@ -1,12 +1,15 @@
 import { reportError } from "@repo/sentry";
-import { Badge, Card, CardContent, Empty, EmptyDescription, EmptyHeader, EmptyTitle, Popover, PopoverContent, PopoverTrigger } from "@repo/ui";
+import { Badge } from "@repo/ui/components/ui/badge";
+import { Card, CardContent } from "@repo/ui/components/ui/card";
+import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/ui/popover";
 import { When } from "@/components/users/detail";
 import { ResyncEventSubButton } from "@/components/users/user-actions";
-import { DataList } from "@/components/widgets/data-list";
-import { formatRelativeTime } from "@/lib/discord/tickets";
-import type { UserSubscriptionState } from "@/lib/user-eventsub";
-import { loadUserEventSub, type UserEventSubState } from "@/lib/user-eventsub-server";
-import { loadAdminUser } from "@/lib/users";
+import { EventSubMessage } from "@/components/users/eventsub-message";
+import { DataList } from "@/components/shared/data-list";
+import { formatRelativeTime } from "@/lib/discord/tickets/tickets";
+import type { UserSubscriptionState } from "@/lib/users/user-eventsub";
+import { loadUserEventSub, type UserEventSubState } from "@/lib/users/user-eventsub-server";
+import { loadAdminUser } from "@/lib/users/users";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -22,30 +25,19 @@ const STATE: Record<UserSubscriptionState, { label: string; hint: string; classN
   },
 };
 
-function Message({ title, description }: { title: string; description: string }) {
-  return (
-    <Empty className="border">
-      <EmptyHeader>
-        <EmptyTitle>{title}</EmptyTitle>
-        <EmptyDescription>{description}</EmptyDescription>
-      </EmptyHeader>
-    </Empty>
-  );
-}
-
 export default async function UserEventSubPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await loadAdminUser(id);
-  if (!user.twitch) return <Message title="No Twitch account" description="EventSub subscriptions hang off the Twitch channel." />;
+  if (!user.twitch) return <EventSubMessage title="No Twitch account" description="EventSub subscriptions hang off the Twitch channel." />;
 
   let state: UserEventSubState;
   try {
     state = await loadUserEventSub(user.twitch.userId, user.twitch.scopes);
   } catch (error) {
     reportError(error, "users/eventsub: load");
-    return <Message title="Couldn't reach Twitch" description="Get EventSub Subscriptions failed. Reload to try again." />;
+    return <EventSubMessage title="Couldn't reach Twitch" description="Get EventSub Subscriptions failed. Reload to try again." />;
   }
-  if (!state.configured) return <Message title="Twitch isn't configured" description={state.reason} />;
+  if (!state.configured) return <EventSubMessage title="Twitch isn't configured" description={state.reason} />;
 
   const { diff } = state;
   const needsFix = diff.counts.missing + diff.counts.failed;

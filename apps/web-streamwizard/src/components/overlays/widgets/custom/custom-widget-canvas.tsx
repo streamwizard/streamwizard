@@ -1,10 +1,10 @@
 "use client";
 
 import { memo, useEffect, useMemo, useRef, useState } from "react";
-import { asCustomWidgetConfig } from "@/types/overlays";
-import type { CustomWidgetItemConfig } from "@/types/overlays";
+import { asCustomWidgetConfig } from "@repo/ui/components/overlay/types/item";
+import type { CustomWidgetItemConfig } from "@repo/ui/components/overlay/types/widgets";
 import type { OverlayCanvasProps } from "../../registry/overlay-widget-registry.types";
-import { getOrCreateWidgetInstance } from "@/actions/widgets";
+import { getOrCreateWidgetInstance } from "@/actions/widgets/widget-library";
 import { useOverlayStore } from "@/stores/overlay-editor-store";
 import { fetchWidget } from "./widget-cache";
 import {
@@ -15,7 +15,7 @@ import {
 } from "@repo/ui/overlay";
 import type { CustomWidgetIframeHandle, WidgetFieldSchema } from "@repo/ui/overlay";
 import { env } from "@/lib/env";
-import { applyEditorStateWrite, useEditorStateData } from "@/components/demo/editor-state-data";
+import { applyEditorStateWrite, useEditorStateData } from "@/components/shared/demo/editor-state-data";
 
 /**
  * Reloading the document restarts the widget's script, so a slider drag waits

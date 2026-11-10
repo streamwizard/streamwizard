@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import type { PreviewClip } from "@/actions/overlays-preview";
-import type { DisplayFieldKey } from "@/types/overlays";
+import type { PreviewClip } from "@/types/clips";
+import type { DisplayFieldKey } from "@repo/ui/components/overlay/types/clips";
 
 /** One clips-widget nested display row (`clip_display_field` variants). Customize per key in `fields/*.ts`. */
 export interface ClipNestedDisplayFieldDefinition<

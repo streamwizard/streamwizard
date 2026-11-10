@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { absoluteUrl, breadcrumbSchema, faqPageSchema, softwareApplicationSchema } from "@/lib/seo";
-import { JsonLd } from "@/components/seo/json-ld";
-import { PageHero } from "@/components/public/layout/page-hero";
+import { absoluteUrl, breadcrumbSchema, faqPageSchema, softwareApplicationSchema } from "@/lib/seo/seo";
+import { JsonLd } from "@/components/public/seo/json-ld";
+import { PageHero } from "@/components/public/common/page-hero";
 import { FinalCta } from "@/components/public/home/final-cta";
 import { PlansSection } from "@/components/public/pricing/plans-section";
 import { WhyPaidSection } from "@/components/public/pricing/why-paid-section";

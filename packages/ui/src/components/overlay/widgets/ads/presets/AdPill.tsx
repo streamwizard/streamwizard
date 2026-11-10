@@ -1,6 +1,6 @@
 "use client";
 
-import { AdIcon, DRAIN_TRANSITION, FitText, capRadius, hexToRgba, textStyle, urgentStyle, type AdPresetProps } from "./shared";
+import { AdIcon, DRAIN_TRANSITION, FitBox, FitText, capRadius, hexToRgba, textStyle, urgentStyle, type AdPresetProps } from "./shared";
 
 /** A compact badge: icon, the line with its countdown, and a thin drain along the bottom. */
 export function AdPill({ view, cfg }: AdPresetProps) {
@@ -16,7 +16,6 @@ export function AdPill({ view, cfg }: AdPresetProps) {
         boxSizing: "border-box",
         display: "flex",
         alignItems: "center",
-        gap: Math.round(cfg.fontSize * 0.5),
         padding: `0 ${pad}px`,
         borderRadius: capRadius(cfg.radius, 9999),
         background: hexToRgba(cfg.trackColor, cfg.trackOpacity),
@@ -24,8 +23,15 @@ export function AdPill({ view, cfg }: AdPresetProps) {
         ...urgentStyle(view, cfg),
       }}
     >
-      {cfg.showIcon && <AdIcon phase={view.phase} size={Math.round(cfg.fontSize * 1.15)} color={cfg.accentColor} />}
-      <FitText style={{ flex: "1 1 auto" }}>{view.text}</FitText>
+      {/* A large font in a short pill shrinks to its height instead of being cut at the top and bottom. */}
+      <FitBox
+        origin="left top"
+        style={{ flex: "1 1 auto" }}
+        innerStyle={{ display: "flex", alignItems: "center", gap: Math.round(cfg.fontSize * 0.5) }}
+      >
+        {cfg.showIcon && <AdIcon phase={view.phase} size={Math.round(cfg.fontSize * 1.15)} color={cfg.accentColor} />}
+        <FitText style={{ flex: "1 1 auto" }}>{view.text}</FitText>
+      </FitBox>
       {view.phase !== "back" && (
         <div
           className="sw-goal-motion"

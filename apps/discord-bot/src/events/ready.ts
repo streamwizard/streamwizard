@@ -1,9 +1,9 @@
 import { Events } from "discord.js";
-import { reconcileVoiceSessions } from "../lib/activity-tracker";
+import { reconcileVoiceSessions } from "@/lib/activity/activity-tracker";
 import { startAnnouncementScheduler } from "../lib/announcements/scheduler";
 import { startLogWorker } from "../lib/log-channel/worker";
-import { reconcileOpenTickets } from "../lib/tickets/reconcile";
-import { startTicketSweeper } from "../lib/tickets/sweeper";
+import { reconcileOpenTickets } from "@/lib/tickets/transcript/reconcile";
+import { startTicketSweeper } from "@/lib/tickets/automation/sweeper";
 import { reconcileTempChannels } from "../lib/voice/lifecycle";
 import { reportError } from "@repo/sentry";
 import type { BotEvent } from "../types/discord";

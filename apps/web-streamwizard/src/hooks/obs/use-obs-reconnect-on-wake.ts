@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect } from "react";
-import { getMyLatestInstanceAction } from "@/actions/nodes";
+import { getMyLatestInstanceAction } from "@/actions/obs/nodes";
 import type { ObsStopReason } from "@/hooks/obs/use-obs-lifecycle-notifications";
 import type { ContainerStatus } from "@/hooks/obs/use-obs-instance-session";
 

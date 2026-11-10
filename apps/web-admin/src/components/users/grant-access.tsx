@@ -4,8 +4,8 @@ import { createContext, useCallback, useContext, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { Button } from "@repo/ui";
-import { GrantDialog } from "@/components/subscriptions/subscription-dialogs";
-import type { ProductWithPlans, UserRow } from "@/components/subscriptions/types";
+import { GrantDialog } from "@/components/users/subscriptions/subscription-dialogs";
+import type { ProductWithPlans, UserRow } from "@/components/users/subscriptions/types";
 import { cn } from "@/lib/utils";
 
 const GrantAccessContext = createContext<((user: UserRow) => void) | null>(null);

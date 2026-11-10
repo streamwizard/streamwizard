@@ -2,7 +2,7 @@ import type { ChatInputCommandInteraction, ContextMenuCommandInteraction } from 
 import { trackServer } from "@repo/posthog/server";
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
-import { getUserIdentity } from "@repo/supabase/queries/identity";
+import { getUserIdentity } from "@repo/supabase/queries/users/identity";
 import { TtlCache } from "@repo/ttl-cache";
 
 // Everyone who is not a linked StreamWizard account is filed under this one

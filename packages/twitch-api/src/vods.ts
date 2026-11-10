@@ -1,4 +1,4 @@
-import { GetVodsResponse } from "@repo/types";
+import type { GetVodsResponse } from "@repo/types/helix";
 import { TwitchApiBaseClient } from "./base-client";
 
 export interface Vod {

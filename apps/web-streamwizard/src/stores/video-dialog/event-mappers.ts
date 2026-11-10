@@ -1,7 +1,7 @@
 import type { Database } from "@repo/supabase";
 import type { TimelineEvent } from "@/components/vods/timeline/types";
 import { StreamEventType, type Clip } from "@/types/stream-events";
-import { getStreamEventDisplayInfo } from "@/lib/utils/stream-events";
+import { getStreamEventDisplayInfo } from "@/lib/stream-events/stream-events";
 import type { TwitchStreamMarker } from "@/types/twitch-video";
 
 /**

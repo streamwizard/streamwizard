@@ -24,13 +24,8 @@ import {
   Input,
   Label,
 } from "@repo/ui";
-import {
-  type IngestStreamKey,
-  createIngestKey,
-  deleteIngestKey,
-  rotateIngestKey,
-  sendIngestKeyDiscordDM,
-} from "@/actions/ingest-keys";
+import { createIngestKey, deleteIngestKey, rotateIngestKey, sendIngestKeyDiscordDM } from "@/actions/irl/ingest-keys";
+import type { IngestStreamKey } from "@repo/supabase/queries/ingest/ingest";
 
 function copy(value: string, what: string) {
   navigator.clipboard.writeText(value);
