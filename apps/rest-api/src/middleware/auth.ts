@@ -2,7 +2,11 @@
 import type { Context, MiddlewareHandler, Next } from "hono";
 import { setCookie } from "hono/cookie";
 import { reportError } from "@repo/sentry";
+import { createReportThrottle, errorFingerprint } from "@repo/sentry/throttle";
 import { createRequestClient, type RequestClient } from "@repo/supabase/request-client";
+
+// GoTrue failures repeat on every request while it is down.
+const allowAuthReport = createReportThrottle({ intervalMs: 60 * 60_000 });
 
 declare module "hono" {
   interface ContextVariableMap {
@@ -77,7 +81,7 @@ export const supabaseAuth = (): MiddlewareHandler => {
     if (!supabase) {
       return c.json(
         {
-          error: "Supabase client not initialized",
+          error: "Internal server error",
           message: "Internal server error",
         },
         500
@@ -92,19 +96,22 @@ export const supabaseAuth = (): MiddlewareHandler => {
       } = await supabase.auth.getUser();
 
       if (error) {
-        console.error("Auth error:", error.message, error.status);
+        console.warn("[auth] getUser failed:", error.status, error.code);
+        // A missing, expired or forged token is an expected 401. Only GoTrue
+        // itself failing (5xx or no answer) is worth a report, once an hour.
+        if ((!error.status || error.status >= 500) && allowAuthReport(errorFingerprint(error))) {
+          reportError(error, "auth: get user", { status: error.status });
+        }
         return c.json(
           {
             error: "Unauthorized",
             message: "Please sign in to access this resource",
-            details: error.message,
           },
           401
         );
       }
 
       if (!user) {
-        console.error("No user found in session");
         return c.json(
           {
             error: "Unauthorized",
@@ -119,9 +126,8 @@ export const supabaseAuth = (): MiddlewareHandler => {
 
       await next();
     } catch (error) {
-      // Returned as a 500 rather than rethrown, so safeErrorHandler never sees
-      // it — an auth middleware that is throwing on every request would look
-      // like silence in Sentry without this.
+      // Answered here with its own body; the report keeps an auth middleware
+      // that throws on every request from looking like silence in Sentry.
       reportError(error, "auth.middleware");
       return c.json(
         {

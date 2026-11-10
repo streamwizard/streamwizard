@@ -1,12 +1,13 @@
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { getAlertStates } from "@repo/supabase/queries/alerts";
-import { Badge, Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
+import { getAlertStates } from "@repo/supabase/queries/alerts/alerts";
+import { Badge } from "@repo/ui/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
 import { SilenceMenu } from "@/components/alerts/silence-menu";
-import { DataList } from "@/components/widgets/data-list";
-import { PageHeader } from "@/components/widgets/page-header";
-import { StatCard } from "@/components/widgets/stat-card";
-import { StatGrid } from "@/components/widgets/stat-grid";
-import { StatusIndicator, type IndicatorStatus } from "@/components/widgets/status-indicator";
+import { DataList } from "@/components/shared/data-list";
+import { PageHeader } from "@/components/shared/page/page-header";
+import { StatCard } from "@/components/shared/stat-card";
+import { StatGrid } from "@/components/shared/stat-grid";
+import { StatusIndicator, type IndicatorStatus } from "@/components/shared/status-indicator";
 import { homeEnv } from "@/lib/home-env";
 
 export const dynamic = "force-dynamic";

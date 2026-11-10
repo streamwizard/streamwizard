@@ -1,40 +1,29 @@
 import Link from "next/link";
-import { Archive, CheckCheck, Inbox, Link2Off, MoonStar, SearchX, Ticket } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { Link2Off } from "lucide-react";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { getDiscordUserIdForUser } from "@repo/supabase/queries/discord";
-import { listTicketCategories, listTicketProducts } from "@repo/supabase/queries/ticket-config";
+import { getDiscordUserIdForUser } from "@repo/supabase/queries/discord/discord";
+import { listTicketCategories, listTicketProducts } from "@repo/supabase/queries/tickets/config";
 import {
   type DiscordTicket,
   type OpenTicketCounts,
   type TicketListFilters,
   getOpenTicketCounts,
   listTickets,
-} from "@repo/supabase/queries/tickets";
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-  Button,
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-  Input,
-  NativeSelect,
-  NativeSelectOption,
-} from "@repo/ui";
-import { TicketFiltersForm } from "@/components/discord/ticket-filters-form";
-import { TicketList } from "@/components/discord/ticket-list";
-import { TicketListLive } from "@/components/discord/ticket-list-live";
-import { PageTabs } from "@/components/page-tabs";
-import { FilterPanel } from "@/components/widgets/filter-panel";
-import { PageHeader } from "@/components/widgets/page-header";
-import { assertAdmin } from "@/lib/assert-admin";
+} from "@repo/supabase/queries/tickets/tickets";
+import { Alert, AlertDescription, AlertTitle } from "@repo/ui/components/ui/alert";
+import { Button } from "@repo/ui/components/ui/button";
+import { Input } from "@repo/ui/components/ui/input";
+import { NativeSelect, NativeSelectOption } from "@repo/ui/components/ui/native-select";
+import { TicketFiltersForm } from "@/components/shared/ticket-filters-form";
+import { TicketEmptyList } from "@/components/discord/tickets/ticket-empty-list";
+import { TicketList } from "@/components/discord/tickets/ticket-list";
+import { TicketListLive } from "@/components/discord/tickets/ticket-list-live";
+import { PageTabs } from "@/components/shared/page/page-tabs";
+import { FilterPanel } from "@/components/shared/filter-panel";
+import { PageHeader } from "@/components/shared/page/page-header";
+import { assertAdmin } from "@/lib/auth/assert-admin";
 import { requireDiscordContext } from "@/lib/discord/api";
-import { TICKET_CLOSE_CODE_LABELS } from "@/lib/discord/tickets";
+import { TICKET_CLOSE_CODE_LABELS } from "@/lib/discord/tickets/tickets";
 import { resolveDiscordProfiles } from "@/lib/discord/users";
 
 export const dynamic = "force-dynamic";
@@ -136,38 +125,6 @@ function viewHref(view: View, params: Params): string {
   }
   const query = next.toString();
   return query ? `/discord/tickets?${query}` : "/discord/tickets";
-}
-
-const EMPTY: Record<View, { icon: LucideIcon; title: string; description: string }> = {
-  open: { icon: Inbox, title: "Nothing open", description: "Every ticket is closed. Enjoy the quiet while it lasts." },
-  needs_reply: { icon: CheckCheck, title: "Everyone has a reply", description: "No opener is waiting on staff right now." },
-  stale: { icon: MoonStar, title: "Nothing has gone quiet", description: "Every open ticket has had a message inside the reminder window." },
-  closed: { icon: Archive, title: "No closed tickets yet", description: "Closed tickets and their transcripts land here." },
-  all: { icon: Ticket, title: "No tickets yet", description: "Quiet in support, for now." },
-};
-
-function EmptyList({ view, filtered }: { view: View; filtered: boolean }) {
-  const state = filtered
-    ? { icon: SearchX, title: "No tickets match", description: "Loosen a filter or clear them all." }
-    : EMPTY[view];
-  return (
-    <Empty className="border">
-      <EmptyHeader>
-        <EmptyMedia variant="icon">
-          <state.icon />
-        </EmptyMedia>
-        <EmptyTitle>{state.title}</EmptyTitle>
-        <EmptyDescription>{state.description}</EmptyDescription>
-      </EmptyHeader>
-      {filtered && (
-        <EmptyContent>
-          <Button variant="outline" size="sm" className="h-11 md:h-8" asChild>
-            <Link href={viewHref(view, {})}>Clear filters</Link>
-          </Button>
-        </EmptyContent>
-      )}
-    </Empty>
-  );
 }
 
 export default async function DiscordTicketsPage({ searchParams }: { searchParams: Promise<Params> }) {
@@ -309,7 +266,7 @@ export default async function DiscordTicketsPage({ searchParams }: { searchParam
       )}
 
       {tickets.length === 0 ? (
-        <EmptyList view={view} filtered={filtered} />
+        <TicketEmptyList view={view} filtered={filtered} clearHref={viewHref(view, {})} />
       ) : (
         <TicketList
           tickets={tickets}

@@ -6,8 +6,8 @@ import {
   type Scene,
   type SceneItem,
 } from "@repo/obs-web";
-import { clearSceneOverride, setSceneOverride, upsertAutoSwitcherConfig } from "@/actions/supabase/auto-switcher";
-import type { AutoSwitcherConfigRow } from "@repo/supabase/queries/auto-switcher";
+import { clearSceneOverride, setSceneOverride, upsertAutoSwitcherConfig } from "@/actions/irl/auto-switcher";
+import type { AutoSwitcherConfigRow } from "@repo/supabase/queries/irl/auto-switcher";
 import { AutoSwitcherStatusCard } from "./auto-switcher-status-card";
 import { useAutoSwitcherStatus } from "@/hooks/obs/use-auto-switcher-status";
 

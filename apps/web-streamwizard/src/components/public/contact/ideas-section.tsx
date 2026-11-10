@@ -1,7 +1,7 @@
 import { FaGithub } from "react-icons/fa";
 import { SectionView } from "@/components/public/analytics/section-view";
-import { TrackedLink } from "@/components/public/analytics/tracked-link";
-import { RevealGroup } from "@/components/public/home/reveal";
+import { TrackedLink } from "@/components/shared/tracked-link";
+import { RevealGroup } from "@/components/public/common/reveal";
 import { githubLink } from "@/lib/constant";
 
 // The four categories from the actual ticket modal, reused as a visual.

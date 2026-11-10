@@ -40,7 +40,7 @@ function unauthorized(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const headers = { ...corsHeaders(req), "Cache-Control": "no-store" };
 
-  const token = bearerToken(req) ?? req.nextUrl.searchParams.get("token");
+  const token = bearerToken(req);
   if (!token) {
     return NextResponse.json({ error: "Missing token" }, { status: 400, headers });
   }
@@ -82,8 +82,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400, headers });
   }
 
-  const { token: bodyToken, key, value, op: rawOp } = body as Record<string, unknown>;
-  const token = bearerToken(req) ?? bodyToken;
+  const { key, value, op: rawOp } = body as Record<string, unknown>;
+  const token = bearerToken(req);
   // `op` arrived with the atomic-mutation API; older widgets that only ever
   // sent {key, value} keep working because absence means plain set.
   const op = rawOp === undefined ? "set" : rawOp;

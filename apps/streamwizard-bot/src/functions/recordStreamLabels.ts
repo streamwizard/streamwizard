@@ -1,7 +1,7 @@
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
-import { upsertLatestLabels } from "@repo/supabase/queries/stream-labels";
-import { isLabelEventType, latestLabelColumns } from "@repo/schemas";
+import { upsertLatestLabels } from "@repo/supabase/queries/stream/labels";
+import { isLabelEventType, latestLabelColumns } from "@repo/schemas/widgets/stream-labels";
 
 /**
  * Keeps the stream_labels row (latest follower, sub, cheer, raid, ...) current

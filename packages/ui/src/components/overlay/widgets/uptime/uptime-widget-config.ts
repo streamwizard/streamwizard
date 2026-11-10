@@ -2,7 +2,7 @@ import {
   DEFAULT_GOOGLE_FONT_FAMILY,
   isValidGoogleFontFamilyName,
   type GoogleFontFamily,
-} from "../../types";
+} from "../../types/base";
 
 /**
  * How long the stream has been live, from the stream's own start time on

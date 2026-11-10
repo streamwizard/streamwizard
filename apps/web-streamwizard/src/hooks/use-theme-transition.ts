@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useTheme } from "next-themes";
 import { useThemeTransitionStore } from "@/stores/light-mode-transition-store";
+import { env } from "@/lib/env";
 import { useSessionStore } from "@/stores/session-store";
 
 export function useThemeTransition() {
@@ -37,7 +38,7 @@ export function useThemeTransition() {
     if (!animationsEnabled) { withTransition(() => setTheme("dark")); return; }
 
     const audio = new Audio(
-      `${process.env.NEXT_PUBLIC_CDN_URL}/public/animations/darkmode-transfer.e012277a6b60.webm`
+      `${env.NEXT_PUBLIC_CDN_URL}/public/animations/darkmode-transfer.e012277a6b60.webm`
     );
     audio.volume = 0.05;
     audio.play().catch(() => {});

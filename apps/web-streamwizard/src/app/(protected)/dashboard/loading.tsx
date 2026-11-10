@@ -1,4 +1,4 @@
-import { Skeleton } from "@repo/ui";
+import { Skeleton } from "@repo/ui/components/ui/skeleton";
 
 export default function Loading() {
   return <div className="flex min-h-[calc(100dvh-8rem)] flex-col items-center justify-center gap-8">

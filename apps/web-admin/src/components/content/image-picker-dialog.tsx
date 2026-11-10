@@ -4,16 +4,16 @@ import { useCallback, useEffect, useState, useTransition } from "react";
 import { Search, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input } from "@repo/ui";
-import { listCmsMediaAction } from "@/actions/cms-media";
+import { listCmsMediaAction } from "@/actions/cms/media";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
   ResponsiveDialogDescription,
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
-} from "@/components/widgets/responsive-dialog";
-import type { CmsUploadPurpose } from "@/lib/cms/media";
-import type { CmsMediaItem } from "@/lib/cms/media-items";
+} from "@/components/shared/responsive-dialog";
+import type { CmsUploadPurpose } from "@/lib/cms/media/media";
+import type { CmsMediaItem } from "@/lib/cms/media/media-items";
 import { ImageUploadDialog } from "./image-upload-dialog";
 
 interface ImagePickerDialogProps {

@@ -1,9 +1,10 @@
 import { refreshSession } from "@repo/supabase/next/proxy";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { isUserAdmin } from "@repo/supabase/queries/obs-nodes";
+import { isUserAdmin } from "@repo/supabase/queries/auth/roles";
 import { isStrongSession, type JwtPayload } from "@repo/supabase/auth/session-strength";
 import { NextResponse, type NextRequest } from "next/server";
 import { buildCsp } from "@/lib/csp";
+import { env } from "@/lib/env";
 
 // Paths that render without an admin session. Everything else is denied here,
 // before any page runs: a layout gate alone is not enough, because App Router
@@ -55,14 +56,17 @@ export async function proxy(request: NextRequest) {
   // console so missing directives surface before staging. The *request* header
   // above must keep the enforcing name either way — Next reads the nonce from it.
   const responseHeader =
-    process.env.NODE_ENV === "development" ? "Content-Security-Policy-Report-Only" : "Content-Security-Policy";
+    env.NODE_ENV === "development" ? "Content-Security-Policy-Report-Only" : "Content-Security-Policy";
   response.headers.set(responseHeader, csp);
   return response;
 }
 
+// Every path except Next's own output (/_next/…) and the three icon files.
+// No "skip anything with a file extension" rule: dynamic routes accept such
+// paths (/discord/tickets/12.css renders ticket 12), and a skipped request
+// skips the admin gate and the CSP with it (SW-485). The icons are skipped so
+// the login page can show them to signed-out visitors. Next reads this
+// statically, so it has to stay an inline string literal.
 export const config = {
-  matcher: [
-    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-    "/(api|trpc)(.*)",
-  ],
+  matcher: ["/((?!_next/|favicon\\.ico$|icon\\.png$|apple-icon\\.png$).*)"],
 };

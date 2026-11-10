@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { type InputEvent, parseInputEvent } from "./input-events";
 
 // obs-websocket v5 op codes
 const OP_HELLO = 0;
@@ -8,10 +9,29 @@ const OP_IDENTIFY = 1;
 const OP_IDENTIFIED = 2;
 const OP_REQUEST = 6;
 const OP_REQUEST_RESPONSE = 7;
+const OP_REQUEST_BATCH = 8;
+const OP_REQUEST_BATCH_RESPONSE = 9;
 const OP_EVENT = 5;
 
-// General | Scenes | Outputs | Vendors
-const EVENT_SUBSCRIPTIONS = (1 << 0) | (1 << 2) | (1 << 6) | (1 << 9);
+const REQUEST_TIMEOUT_MS = 10_000;
+
+interface BatchResult {
+  requestStatus: { result: boolean; code: number; comment?: string };
+  responseData?: unknown;
+}
+
+// General | Scenes | Inputs | Outputs | SceneItems | Vendors. Inputs carries
+// renames and settings changes; the per-frame volume meters are a separate
+// high-volume group and stay off.
+const EVENT_SUBSCRIPTIONS = (1 << 0) | (1 << 2) | (1 << 3) | (1 << 6) | (1 << 7) | (1 << 9);
+
+// Input events that change what sceneItems or a source's settings say.
+// The rest of the Inputs group (mute, volume, audio sync) is ignored.
+const INPUT_REFRESH_EVENTS = new Set(["InputNameChanged", "InputSettingsChanged", "InputCreated", "InputRemoved"]);
+
+// Removing several sources at once fires one event each; one scene refresh
+// after they settle is enough.
+const SCENE_ITEM_REFRESH_DELAY_MS = 250;
 
 export type ObsConnectionStatus = "closed" | "connecting" | "open";
 
@@ -26,6 +46,14 @@ export interface Scene {
 export interface SceneItem {
   sceneItemId: number;
   sourceUuid: string;
+  sourceName: string;
+  /** The input's kind (`ffmpeg_source`, `browser_source`, ...); null for a nested scene or group. */
+  inputKind?: string | null;
+}
+
+/** A source taken out of a scene, by anyone connected to this OBS. */
+export interface SceneItemRemovedEvent {
+  sceneName: string;
   sourceName: string;
 }
 
@@ -98,6 +126,9 @@ export function useObsWebSocket({ getWsUrl, password }: UseObsWebSocketOptions) 
   const retryCountRef = useRef(0);
   // Map of `${sceneName}:${uuid}` → sceneItemId (integer) for SetSceneItemEnabled
   const sceneItemMapRef = useRef<Map<string, number>>(new Map());
+  const sceneItemRefreshRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sceneItemRemovedListenersRef = useRef(new Set<(event: SceneItemRemovedEvent) => void>());
+  const inputListenersRef = useRef(new Set<(event: InputEvent) => void>());
 
   const [status, setStatus] = useState<ObsConnectionStatus>("closed");
   const [isAutoRetrying, setIsAutoRetrying] = useState(false);
@@ -122,22 +153,40 @@ export function useObsWebSocket({ getWsUrl, password }: UseObsWebSocketOptions) 
     socketRef.current?.send(JSON.stringify({ op, d }));
   }, []);
 
-  const request = useCallback(<T = unknown>(requestType: string, requestData?: unknown): Promise<T> => {
-    return new Promise((resolve, reject) => {
-      const requestId = crypto.randomUUID();
-      pendingRef.current.set(requestId, {
-        resolve: (data) => resolve(data as T),
-        reject,
-      });
-      send(OP_REQUEST, { requestType, requestId, requestData });
+  // Registers a pending reply before the frame goes out, and fails it after
+  // REQUEST_TIMEOUT_MS (OBS busy, or the frame dropped on the way).
+  const awaitReply = useCallback((requestId: string, label: string) => {
+    return new Promise<unknown>((resolve, reject) => {
+      pendingRef.current.set(requestId, { resolve, reject });
       setTimeout(() => {
         if (pendingRef.current.has(requestId)) {
           pendingRef.current.delete(requestId);
-          reject(new Error(`Request "${requestType}" timed out`));
+          reject(new Error(`Request "${label}" timed out`));
         }
-      }, 10_000);
+      }, REQUEST_TIMEOUT_MS);
     });
-  }, [send]);
+  }, []);
+
+  const request = useCallback(<T = unknown>(requestType: string, requestData?: unknown): Promise<T> => {
+    const requestId = crypto.randomUUID();
+    const reply = awaitReply(requestId, requestType);
+    send(OP_REQUEST, { requestType, requestId, requestData });
+    return reply as Promise<T>;
+  }, [send, awaitReply]);
+
+  // Many requests in one frame. The node's proxy drops a connection's frames
+  // past 10 per 200 ms, so a request per scene sent at once loses some on a
+  // bigger scene list. Results come back in request order, each with its
+  // own status.
+  const requestBatch = useCallback(
+    (requests: { requestType: string; requestData?: unknown }[]): Promise<BatchResult[]> => {
+      const requestId = crypto.randomUUID();
+      const reply = awaitReply(requestId, `batch of ${requests.length}`);
+      send(OP_REQUEST_BATCH, { requestId, requests });
+      return reply as Promise<BatchResult[]>;
+    },
+    [send, awaitReply],
+  );
 
   const fetchScenes = useCallback(async () => {
     const data = await request<{ scenes: Scene[]; currentProgramSceneName: string }>("GetSceneList");
@@ -149,25 +198,24 @@ export function useObsWebSocket({ getWsUrl, password }: UseObsWebSocketOptions) 
     // Build sceneItemId lookup for each scene so we can call SetSceneItemEnabled
     const map = new Map<string, number>();
     const itemsByScene: Record<string, SceneItem[]> = {};
-    await Promise.all(
-      sorted.map(async (scene) => {
-        try {
-          const items = await request<{ sceneItems: SceneItem[] }>(
-            "GetSceneItemList",
-            { sceneName: scene.sceneName }
-          );
-          itemsByScene[scene.sceneName] = items.sceneItems;
-          for (const item of items.sceneItems) {
-            map.set(`${scene.sceneName}:${item.sourceUuid}`, item.sceneItemId);
-          }
-        } catch {
-          // non-fatal; toggle will be a no-op for items missing from the map
-        }
-      })
-    );
+    const results = sorted.length
+      ? await requestBatch(
+          sorted.map((scene) => ({ requestType: "GetSceneItemList", requestData: { sceneName: scene.sceneName } })),
+        )
+      : [];
+    sorted.forEach((scene, i) => {
+      const result = results[i];
+      // A scene whose list failed is left out; toggling its items is a no-op.
+      if (!result?.requestStatus.result) return;
+      const { sceneItems } = result.responseData as { sceneItems: SceneItem[] };
+      itemsByScene[scene.sceneName] = sceneItems;
+      for (const item of sceneItems) {
+        map.set(`${scene.sceneName}:${item.sourceUuid}`, item.sceneItemId);
+      }
+    });
     sceneItemMapRef.current = map;
     setSceneItems(itemsByScene);
-  }, [request]);
+  }, [request, requestBatch]);
 
   // Creates a scene if it doesn't already exist. Safe to call unconditionally —
   // a duplicate-name create is treated as a no-op rather than an error.
@@ -185,6 +233,34 @@ export function useObsWebSocket({ getWsUrl, password }: UseObsWebSocketOptions) 
     if (data.scenes.some((s) => s.sceneName === sceneName)) return;
     await createScene(sceneName);
   }, [request, createScene]);
+
+  // Keeps sceneItems current when sources are added, removed, renamed or
+  // repointed inside OBS itself, not only through this hook.
+  const scheduleSceneItemRefresh = useCallback(() => {
+    if (sceneItemRefreshRef.current) clearTimeout(sceneItemRefreshRef.current);
+    sceneItemRefreshRef.current = setTimeout(() => {
+      sceneItemRefreshRef.current = null;
+      fetchScenes().catch(() => {});
+    }, SCENE_ITEM_REFRESH_DELAY_MS);
+  }, [fetchScenes]);
+
+  // Subscribe to sources being removed from a scene. Returns the unsubscribe.
+  const onSceneItemRemoved = useCallback((listener: (event: SceneItemRemovedEvent) => void) => {
+    const listeners = sceneItemRemovedListenersRef.current;
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
+  }, []);
+
+  // Subscribe to sources being created, changed, renamed or deleted. Returns the unsubscribe.
+  const onInputEvent = useCallback((listener: (event: InputEvent) => void) => {
+    const listeners = inputListenersRef.current;
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
+  }, []);
 
   const sceneHasSource = useCallback((sceneName: string, sourceName: string) => {
     return (sceneItems[sceneName] ?? []).some((item) => item.sourceName === sourceName);
@@ -236,6 +312,27 @@ export function useObsWebSocket({ getWsUrl, password }: UseObsWebSocketOptions) 
   // After creation the source is stretched to fill the whole canvas so the
   // feed is fullscreen from the start (OBS drops a new media source at its
   // native pixel size otherwise, which can leave it invisible/off-frame).
+  // Bounds a scene item to the base (canvas) resolution and lets OBS scale
+  // the feed to fit inside, so a pulled feed fills the frame.
+  const fillCanvas = useCallback(async (sceneName: string, sceneItemId: number) => {
+    try {
+      const video = await request<{ baseWidth: number; baseHeight: number }>("GetVideoSettings");
+      await request("SetSceneItemTransform", {
+        sceneName,
+        sceneItemId,
+        sceneItemTransform: {
+          positionX: 0,
+          positionY: 0,
+          boundsType: "OBS_BOUNDS_SCALE_INNER",
+          boundsWidth: video.baseWidth,
+          boundsHeight: video.baseHeight,
+        },
+      });
+    } catch {
+      // Non-fatal: source is still added, just not auto-sized.
+    }
+  }, [request]);
+
   const addMediaSourceToScene = useCallback(async (sceneName: string, inputName: string, url: string) => {
     const created = await request<{ sceneItemId: number }>("CreateInput", {
       sceneName,
@@ -249,46 +346,65 @@ export function useObsWebSocket({ getWsUrl, password }: UseObsWebSocketOptions) 
       },
       sceneItemEnabled: true,
     });
-
-    // Fill the canvas: bound the item to the base (canvas) resolution and let
-    // OBS scale the feed to fit inside those bounds.
-    try {
-      const video = await request<{ baseWidth: number; baseHeight: number }>("GetVideoSettings");
-      await request("SetSceneItemTransform", {
-        sceneName,
-        sceneItemId: created.sceneItemId,
-        sceneItemTransform: {
-          positionX: 0,
-          positionY: 0,
-          boundsType: "OBS_BOUNDS_SCALE_INNER",
-          boundsWidth: video.baseWidth,
-          boundsHeight: video.baseHeight,
-        },
-      });
-    } catch {
-      // Non-fatal: source is still added, just not auto-sized.
-    }
-
+    await fillCanvas(sceneName, created.sceneItemId);
     await fetchScenes();
-  }, [request, fetchScenes]);
+  }, [request, fillCanvas, fetchScenes]);
 
-  // Creates a Browser Source pointed at `url` (an alert widget link, e.g.
-  // StreamElements) and drops it into `sceneName`, enabled. Sized to a
-  // standard 1080p canvas — alert widgets are transparent overlays, so this
-  // covers the frame without needing per-widget dimensions. `reroute_audio`
-  // ("Control audio via OBS" in the UI) is on so alert sound routes through
-  // OBS's mixer — required for the Source Clone in addSourceCloneToScene to
-  // carry audio into other scenes at all.
-  const addBrowserSourceToScene = useCallback(async (sceneName: string, inputName: string, url: string) => {
-    await request("CreateInput", {
+  // Puts a source that still exists (in another scene) into `sceneName`,
+  // filling the canvas like addMediaSourceToScene.
+  const addExistingSourceToScene = useCallback(async (sceneName: string, sourceName: string) => {
+    const created = await request<{ sceneItemId: number }>("CreateSceneItem", {
       sceneName,
-      inputName,
-      inputKind: "browser_source",
-      inputSettings: { url, width: 1920, height: 1080, reroute_audio: true },
+      sourceName,
       sceneItemEnabled: true,
     });
+    await fillCanvas(sceneName, created.sceneItemId);
     await fetchScenes();
-  }, [request, fetchScenes]);
+  }, [request, fillCanvas, fetchScenes]);
+
+  // Changes some of an input's settings and keeps the rest. OBS sends
+  // InputSettingsChanged, which refreshes sceneItems.
+  const setInputSettings = useCallback(async (inputName: string, inputSettings: Record<string, unknown>) => {
+    await request("SetInputSettings", { inputName, inputSettings, overlay: true });
+  }, [request]);
+
+  // Settings of several inputs in one batch frame (see requestBatch for why
+  // not one request each). Inputs OBS couldn't read are left out.
+  const getInputSettings = useCallback(async (inputNames: string[]) => {
+    const settings: Record<string, Record<string, unknown>> = {};
+    if (inputNames.length === 0) return settings;
+    const results = await requestBatch(
+      inputNames.map((inputName) => ({ requestType: "GetInputSettings", requestData: { inputName } })),
+    );
+    inputNames.forEach((inputName, i) => {
+      const result = results[i];
+      if (!result?.requestStatus.result) return;
+      const data = result.responseData as { inputSettings?: Record<string, unknown> } | undefined;
+      if (data?.inputSettings) settings[inputName] = data.inputSettings;
+    });
+    return settings;
+  }, [requestBatch]);
+
+  // Creates a Browser Source pointed at `url` (an overlay or alert widget
+  // link, e.g. StreamElements) and drops it into `sceneName`, enabled. Sized
+  // to a standard 1080p canvas unless `size` says otherwise — alert widgets
+  // are transparent overlays, so that covers the frame without per-widget
+  // dimensions. `reroute_audio` ("Control audio via OBS" in the UI) is on so
+  // alert sound routes through OBS's mixer — required for the Source Clone in
+  // addSourceCloneToScene to carry audio into other scenes at all.
+  const addBrowserSourceToScene = useCallback(
+    async (sceneName: string, inputName: string, url: string, size?: { width: number; height: number }) => {
+      await request("CreateInput", {
+        sceneName,
+        inputName,
+        inputKind: "browser_source",
+        inputSettings: { url, width: size?.width ?? 1920, height: size?.height ?? 1080, reroute_audio: true },
+        sceneItemEnabled: true,
+      });
+      await fetchScenes();
+    },
+    [request, fetchScenes],
+  );
 
   // Creates a Source Clone (the exeldro obs-source-clone plugin, bundled with
   // every StreamWizard instance) in `sceneName` that mirrors `sourceName`'s
@@ -351,6 +467,13 @@ export function useObsWebSocket({ getWsUrl, password }: UseObsWebSocketOptions) 
           };
           pollStats();
           statsIntervalRef.current = setInterval(pollStats, 2000);
+        } else if (message.op === OP_REQUEST_BATCH_RESPONSE) {
+          const { requestId, results } = message.d as { requestId: string; results: BatchResult[] };
+          const pending = pendingRef.current.get(requestId);
+          if (pending) {
+            pendingRef.current.delete(requestId);
+            pending.resolve(results);
+          }
         } else if (message.op === OP_REQUEST_RESPONSE) {
           const { requestId, requestStatus, responseData } = message.d as {
             requestId: string;
@@ -378,6 +501,16 @@ export function useObsWebSocket({ getWsUrl, password }: UseObsWebSocketOptions) 
             setIsStreaming(eventData.outputActive as boolean);
           } else if (eventType === "SceneListChanged") {
             fetchScenes().catch(() => {});
+          } else if (eventType === "SceneItemCreated" || eventType === "SceneItemRemoved") {
+            const { sceneName, sourceName } = eventData;
+            if (eventType === "SceneItemRemoved" && typeof sceneName === "string" && typeof sourceName === "string") {
+              for (const listener of sceneItemRemovedListenersRef.current) listener({ sceneName, sourceName });
+            }
+            scheduleSceneItemRefresh();
+          } else if (INPUT_REFRESH_EVENTS.has(eventType)) {
+            const inputEvent = parseInputEvent(eventType, eventData);
+            if (inputEvent) for (const listener of inputListenersRef.current) listener(inputEvent);
+            scheduleSceneItemRefresh();
           } else if (eventType === "VendorEvent") {
             // vendorName lives inside eventData for VendorEvent, not at the top level
             const { vendorName, eventType: innerType, eventData: innerData } = eventData as {
@@ -396,6 +529,10 @@ export function useObsWebSocket({ getWsUrl, password }: UseObsWebSocketOptions) 
         if (statsIntervalRef.current) {
           clearInterval(statsIntervalRef.current);
           statsIntervalRef.current = null;
+        }
+        if (sceneItemRefreshRef.current) {
+          clearTimeout(sceneItemRefreshRef.current);
+          sceneItemRefreshRef.current = null;
         }
         socketRef.current = null;
         pendingRef.current.forEach((p) => p.reject(new Error("Connection closed")));
@@ -438,7 +575,7 @@ export function useObsWebSocket({ getWsUrl, password }: UseObsWebSocketOptions) 
       connectingRef.current = false;
       setStatus("closed");
     });
-  }, [getWsUrl, password, send, fetchScenes, fetchStreamStatus]);
+  }, [getWsUrl, password, send, fetchScenes, fetchStreamStatus, scheduleSceneItemRefresh]);
 
   const disconnect = useCallback(() => {
     socketRef.current?.close();
@@ -490,10 +627,15 @@ export function useObsWebSocket({ getWsUrl, password }: UseObsWebSocketOptions) 
     setSceneItemEnabled,
     setSourceFilterEnabled,
     addMediaSourceToScene,
+    addExistingSourceToScene,
+    getInputSettings,
+    setInputSettings,
     addBrowserSourceToScene,
     addSourceCloneToScene,
     createScene,
     ensureSceneExists,
     sceneHasSource,
+    onSceneItemRemoved,
+    onInputEvent,
   };
 }

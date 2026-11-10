@@ -33,7 +33,7 @@ export function CommandsTable({ commands }: CommandsTableProps) {
     setLoadingStates(prev => ({ ...prev, [defaultCommandId]: true }));
     
     try {
-      await toggleDefaultCommand(defaultCommandId, !currentEnabled);
+      if (!(await toggleDefaultCommand(defaultCommandId, !currentEnabled))) throw new Error("Toggle was refused");
       toast.success(`Command ${!currentEnabled ? 'enabled' : 'disabled'} successfully`);
     } catch (error) {
       toast.error("Failed to update command");
@@ -45,7 +45,7 @@ export function CommandsTable({ commands }: CommandsTableProps) {
 
   const handleDuplicate = async (commandId: string, commandName: string) => {
     try {
-      await duplicateToCustomCommand(commandId);
+      if (!(await duplicateToCustomCommand(commandId))) throw new Error("Duplicate was refused");
       toast.success(`Command "${commandName}" duplicated to custom commands`);
     } catch (error) {
       toast.error("Failed to duplicate command");

@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../../types/supabase";
-import { withMetrics } from "../with-metrics";
+import { withMetrics } from "../../lib/with-metrics";
 
 /** CMS categories and tags. Writes are service-role only; anon reads both. */
 

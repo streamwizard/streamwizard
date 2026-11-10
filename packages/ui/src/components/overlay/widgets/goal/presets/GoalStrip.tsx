@@ -47,7 +47,7 @@ export function GoalStrip({ view, cfg, pulseKey }: GoalPresetProps) {
           <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", opacity: 0.8 }}>{view.title}</span>
         )}
         {stats && (
-          <FitText align="right" style={{ marginLeft: "auto", flexShrink: 0, maxWidth: statsMaxWidth(showTitle) }}>
+          <FitText align="right" style={{ marginLeft: "auto", flexShrink: showTitle ? 0 : 1, maxWidth: statsMaxWidth(showTitle) }}>
             {stats}
           </FitText>
         )}

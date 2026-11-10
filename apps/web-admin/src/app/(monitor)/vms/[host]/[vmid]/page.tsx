@@ -2,20 +2,24 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { Clock, Cpu, DatabaseBackup, Gauge, HardDrive, MemoryStick, Server } from "lucide-react";
-import { Badge, Button, Card, CardContent } from "@repo/ui";
+import { Badge } from "@repo/ui/components/ui/badge";
+import { Button } from "@repo/ui/components/ui/button";
+import { Card, CardContent } from "@repo/ui/components/ui/card";
 import { STREAMWIZARD_VM_TAG, VM_ALERT_RULES, isStreamwizardVm } from "@repo/alerting/rules";
-import { assertProxmoxName, queryProxmoxGuestInfo, type ProxmoxGuestInfo } from "@repo/metrics";
-import { NodeMetricChart } from "@/components/charts/node-metric-chart";
-import { relative } from "@/components/backups/backup-format";
-import { When } from "@/components/backups/hint-popover";
-import { PageHeader } from "@/components/widgets/page-header";
-import { StatCard } from "@/components/widgets/stat-card";
-import { StatGrid } from "@/components/widgets/stat-grid";
-import { StatusIndicator } from "@/components/widgets/status-indicator";
+import { assertProxmoxName, queryProxmoxGuestInfo } from "@repo/metrics";
+import { NodeMetricChart } from "@/components/shared/charts/node-metric-chart";
+import { relative } from "@/lib/backups/backup-format";
+import { When } from "@/components/shared/hint-popover";
+import { PageHeader } from "@/components/shared/page/page-header";
+import { StatCard } from "@/components/shared/stat-card";
+import { StatGrid } from "@/components/shared/stat-grid";
+import { StatusIndicator } from "@/components/shared/status-indicator";
 import { ChartSection } from "@/components/vms/chart-section";
 import { VmAlertsCard } from "@/components/vms/vm-alerts-card";
+import { GuestDiskStat } from "@/components/vms/guest-disk-stat";
+import { GuestFacts } from "@/components/vms/guest-facts";
+import { GuestNetLine } from "@/components/vms/guest-net-line";
 import {
-  AGENT_LABEL,
   HELD_ON_HOST_HINT,
   RAM_CACHE_HINT,
   formatPct,
@@ -24,12 +28,11 @@ import {
   usageTone,
   vmHostHref,
   vmStatusDisplay,
-} from "@/components/vms/vm-format";
+} from "@/lib/vms/vm-format";
 import { AutoRefresh } from "@/components/vms/auto-refresh";
 import { formatBytes } from "@/lib/format";
-import { getGuestNet, pveConfigured, type GuestRef } from "@/lib/pve";
-import { fetchGuestSeries, getVm, guestRef } from "@/lib/vms";
-import { PageCrumb } from "@/lib/crumbs";
+import { fetchGuestSeries, getVm, guestRef } from "@/lib/vms/vms";
+import { PageCrumb } from "@/lib/nav/crumbs";
 
 export const dynamic = "force-dynamic";
 
@@ -39,57 +42,6 @@ function safeDecode(value: string): string {
   } catch {
     return value;
   }
-}
-
-function Fact({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="min-w-0">
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className="font-mono text-sm break-words">{children}</dd>
-    </div>
-  );
-}
-
-function Facts({ info }: { info: ProxmoxGuestInfo }) {
-  return (
-    <dl className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-3 lg:grid-cols-6">
-      <Fact label="PVE status">{info.status ?? "—"}</Fact>
-      <Fact label="QEMU status">{info.qmpstatus ?? "—"}</Fact>
-      <Fact label="QEMU version">{info.qemuVersion ?? "—"}</Fact>
-      <Fact label="Machine">{info.machine ?? "—"}</Fact>
-      <Fact label="Lock">{info.lock ?? "none"}</Fact>
-      <Fact label="Process">{info.pid != null ? `pid ${info.pid}` : "—"}</Fact>
-    </dl>
-  );
-}
-
-/** IPs and agent state from the PVE API, streamed in after the page. */
-async function GuestNetLine({ guest }: { guest: GuestRef }) {
-  if (!guest.running) return <p className="text-sm text-muted-foreground">Not running, no IPs.</p>;
-  if (!pveConfigured()) return <p className="text-sm text-muted-foreground">IPs need PVE_HOSTS in this environment.</p>;
-  const net = (await getGuestNet([guest]))[`${guest.host}:${guest.vmid}`];
-  return (
-    <p className="font-mono text-sm break-words">
-      {net && net.ips.length > 0 ? net.ips.join(", ") : <span className="text-muted-foreground">No IPs known</span>}
-      <span className="ml-2 font-sans text-muted-foreground">· {AGENT_LABEL[net?.agent ?? "off"] ?? net?.agent}</span>
-    </p>
-  );
-}
-
-/** Disk use from the guest agent (qemu) or Proxmox itself (lxc). */
-async function DiskStat({ guest, lxcDisk }: { guest: GuestRef; lxcDisk: { used: number; total: number } | null }) {
-  const agentDisk = lxcDisk || !guest.running ? null : (await getGuestNet([guest]))[`${guest.host}:${guest.vmid}`]?.disk;
-  const disk = lxcDisk ?? (agentDisk ? { used: agentDisk.usedBytes, total: agentDisk.totalBytes } : null);
-  const pct = disk ? pctOf(disk.used, disk.total) : null;
-  return (
-    <StatCard
-      title="Disk"
-      value={formatPct(pct)}
-      description={disk ? `${formatBytes(disk.used)} of ${formatBytes(disk.total)}, ${formatBytes(disk.total - disk.used)} free` : guest.type === "qemu" ? "Needs the guest agent" : "Not reported"}
-      tone={usageTone(pct)}
-      icon={HardDrive}
-    />
-  );
 }
 
 // The charts share the page with the Alerts column until 1280px, so two per row only fits from there.
@@ -111,7 +63,7 @@ export default async function VmDetailPage({ params }: { params: Promise<{ host:
 
   const [info, series] = await Promise.all([
     queryProxmoxGuestInfo(host, vmid).catch((error) => {
-      console.error("[vm info]", error);
+      console.warn("[vm info]", error);
       return null;
     }),
     fetchGuestSeries(host, vmid, "24h", "1h"),
@@ -174,7 +126,7 @@ export default async function VmDetailPage({ params }: { params: Promise<{ host:
       {info && (
         <Card className="order-4 lg:order-none">
           <CardContent className="px-4 py-4 sm:px-6">
-            <Facts info={info} />
+            <GuestFacts info={info} />
           </CardContent>
         </Card>
       )}
@@ -204,7 +156,7 @@ export default async function VmDetailPage({ params }: { params: Promise<{ host:
           icon={Server}
         />
         <Suspense fallback={<StatCard title="Disk" value="…" icon={HardDrive} />}>
-          <DiskStat guest={ref} lxcDisk={lxcDisk} />
+          <GuestDiskStat guest={ref} lxcDisk={lxcDisk} />
         </Suspense>
         <StatCard
           title="IO pressure"

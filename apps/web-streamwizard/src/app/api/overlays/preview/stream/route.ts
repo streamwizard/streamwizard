@@ -2,8 +2,9 @@ import { createClient } from "@repo/supabase/next/server";
 import { NextRequest, NextResponse } from "next/server";
 import { reportError } from "@repo/sentry";
 import { TtlCache } from "@repo/ttl-cache";
-import { GetClipDownloadURL } from "@/actions/twitch/clips";
-import { isTwitchClipId, parseClipVideoUrl } from "@/lib/clip-stream";
+import { getClipDownloadUrl } from "@/server/twitch/clip-download";
+import { parseClipVideoUrl } from "@/lib/clips/clip-stream";
+import { isTwitchClipId } from "@repo/schemas/ids";
 
 // A <video> element makes several range requests per clip; resolve the signed
 // URL once per user and clip instead of calling Helix on each one. Twitch signs
@@ -12,7 +13,7 @@ const signedUrls = new TtlCache<string>({ ttlMs: 10 * 60_000, negativeTtlMs: 30_
 
 async function resolveSignedUrl(userId: string, clipId: string): Promise<URL | null> {
   const raw = await signedUrls.fetch(`${userId}:${clipId}`, async () => {
-    const result = await GetClipDownloadURL(clipId, userId);
+    const result = await getClipDownloadUrl(clipId, userId);
     return (result.success && result.data?.data?.[0]?.landscape_download_url) || null;
   });
   return parseClipVideoUrl(raw);
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest) {
     const upstream = await fetch(target, { headers });
 
     if (!upstream.ok && upstream.status !== 206) {
-      console.error("Failed to fetch video:", upstream.status);
+      console.warn(`[preview-stream] clip video answered ${upstream.status}`);
       return NextResponse.json({ error: "Failed to fetch video" }, { status: 502 });
     }
 

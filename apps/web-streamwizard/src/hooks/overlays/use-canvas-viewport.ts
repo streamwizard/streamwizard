@@ -7,7 +7,7 @@ import {
   clampPan,
   wheelZoom,
   zoomAboutPoint,
-} from "@/components/overlays/editor/canvas-zoom";
+} from "@/components/overlays/editor/canvas/canvas-zoom";
 
 interface CanvasViewportOptions {
   /** The pane the canvas floats in. Wheel events bind here; pan is measured against it. */

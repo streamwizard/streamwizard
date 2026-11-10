@@ -1,6 +1,6 @@
 import type { APIEmbedField } from "discord.js";
-import type { DiscordChannelRef, DiscordRoleRef, DiscordUserRef } from "@repo/types";
-import type { PlatformEvent } from "@repo/supabase/queries/platform-events";
+import type { DiscordChannelRef, DiscordRoleRef, DiscordUserRef } from "@repo/types/platform-events";
+import type { PlatformEvent } from "@repo/supabase/queries/platform/events";
 import {
   DESCRIPTION_MAX,
   FIELD_MAX,

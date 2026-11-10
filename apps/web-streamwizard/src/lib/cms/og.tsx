@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 import type { ContentType } from "@repo/cms";
-import { OG_SIZE, renderOgImage } from "@/lib/og-image";
+import { OG_SIZE, renderOgImage } from "@/lib/seo/og-image";
 import { cmsImageUrl } from "./images";
 import { getPublishedPost } from "./public";
 import { DIFFICULTY_LABELS, shareImage, splitTitle } from "./published";

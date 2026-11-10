@@ -1,34 +1,37 @@
 import { notFound } from "next/navigation";
-import { getDiscordUserIdForUser, getLinkedStreamWizardAccount } from "@repo/supabase/queries/discord";
+import { getDiscordUserIdForUser, getLinkedStreamWizardAccount } from "@repo/supabase/queries/discord/discord";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { formatTicketNumber, getTicketByNumber } from "@repo/supabase/queries/tickets";
+import { formatTicketNumber, getTicketByNumber } from "@repo/supabase/queries/tickets/tickets";
 import {
   isActiveCategory,
   listTicketAnswers,
   listTicketCategories,
   listTicketProducts,
-} from "@repo/supabase/queries/ticket-config";
-import { listTicketTags } from "@repo/supabase/queries/ticket-tags";
-import { TicketPage } from "@/components/discord/ticket-page/ticket-page";
-import { assertAdmin } from "@/lib/assert-admin";
+} from "@repo/supabase/queries/tickets/config";
+import { listTicketTags } from "@repo/supabase/queries/tickets/tags";
+import { TicketPage } from "@/components/discord/tickets/detail/ticket-page";
+import { assertAdmin } from "@/lib/auth/assert-admin";
 import { requireDiscordContext } from "@/lib/discord/api";
-import { buildTicketSnapshot } from "@/lib/discord/ticket-snapshot";
-import { PageCrumb } from "@/lib/crumbs";
+import { buildTicketSnapshot } from "@/lib/discord/tickets/ticket-snapshot";
+import { PageCrumb } from "@/lib/nav/crumbs";
 
 export const dynamic = "force-dynamic";
 
 // Reads once, then hands off: the client page follows the ticket's rows over
 // Supabase Realtime, so nothing here runs again while it's open.
 export default async function DiscordTicketPage({ params }: { params: Promise<{ number: string }> }) {
+  // Admin first: looking the ticket up before this told anyone who reached
+  // the page whether a ticket number exists.
+  const adminUserId = await assertAdmin();
+
+  // Digits only. parseInt would read "12.css" as ticket 12.
   const { number } = await params;
-  const ticketNumber = Number.parseInt(number, 10);
-  if (!Number.isInteger(ticketNumber)) notFound();
+  if (!/^\d+$/.test(number)) notFound();
+  const ticketNumber = Number(number);
 
   const { guildId } = requireDiscordContext();
   const ticket = await getTicketByNumber(supabaseAdmin, guildId, ticketNumber);
   if (!ticket) notFound();
-
-  const adminUserId = await assertAdmin();
   const [snapshot, linkedAccount, adminDiscordId, categories, products, answers, tags] = await Promise.all([
     buildTicketSnapshot(ticket),
     getLinkedStreamWizardAccount(supabaseAdmin, ticket.opener_discord_user_id, ticket.opener_user_id),

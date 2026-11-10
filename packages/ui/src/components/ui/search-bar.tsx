@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef, Dispatch, SetStateAction } from "react";
 import { useDebounce } from "@uidotdev/usehooks";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion } from "motion/react";
 import ClickAwayListener from "react-click-away-listener";
 import Image from "next/image";
 import LoadingSpinner from "./loading";

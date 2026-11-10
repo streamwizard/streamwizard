@@ -1,10 +1,10 @@
 "use server";
 
 import { reportError } from "@repo/sentry";
-import { exportUserData } from "@repo/supabase/queries/data-export";
+import { exportUserData } from "@repo/supabase/queries/users/data-export";
 
 import { tryAuthContext } from "@/lib/auth";
-import { track } from "@/lib/track";
+import { track } from "@/lib/tracking/track";
 
 export async function requestUserData() {
   const ctx = await tryAuthContext();

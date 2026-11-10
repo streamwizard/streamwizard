@@ -1,5 +1,5 @@
 import type { WidgetBaseDefinition } from "../../widget-definition";
-import { DEFAULT_TEXT_WIDGET_ITEM_CONFIG, normalizeTextWidgetConfig } from "../../types";
+import { DEFAULT_TEXT_WIDGET_ITEM_CONFIG, normalizeTextWidgetConfig } from "../../types/widgets";
 import { TextWidgetRenderer } from "./TextWidgetRenderer";
 
 export const TEXT_WIDGET_DEFAULT_SIZE = { w: 320, h: 120 } as const;

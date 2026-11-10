@@ -1,13 +1,13 @@
 "use client";
 
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuLabel, ContextMenuSeparator, ContextMenuTrigger } from "@repo/ui";
-import { getEventActions, type EventActionHelpers } from "@/lib/utils/event-actions";
-import { getStreamEventDisplayInfo } from "@/lib/utils/stream-events";
+import { getEventActions, type EventActionHelpers } from "@/lib/stream-events/event-actions";
+import { getStreamEventDisplayInfo } from "@/lib/stream-events/stream-events";
 import { useClipFolders } from "@/providers/clips-provider";
 import { useModal } from "@/providers/modal-provider";
 import { useVideoPlayerStore } from "@/stores/video-dialog-store";
 import { Clip, StreamEvent } from "@/types/stream-events";
-import { formatDuration } from "@/types/twitch-video";
+import { formatDuration } from "@/lib/format";
 import type { ReactNode } from "react";
 import { ClipContextMenu } from "./clip-context-menu";
 

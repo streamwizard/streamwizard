@@ -11,9 +11,9 @@ import {
 } from "@repo/metrics";
 import type { ObsInstanceMetricPoint, IngestSignalMetricPoint } from "@repo/metrics";
 import { NextResponse } from "next/server";
-import { getInstanceByIdWithOwner } from "@repo/supabase/queries/obs-nodes";
+import { getInstanceByIdWithOwner } from "@repo/supabase/queries/obs-nodes/instance-details";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { assertAdmin } from "@/lib/assert-admin";
+import { assertAdmin } from "@/lib/auth/assert-admin";
 import { settled } from "@/lib/settled";
 
 export const dynamic = "force-dynamic";

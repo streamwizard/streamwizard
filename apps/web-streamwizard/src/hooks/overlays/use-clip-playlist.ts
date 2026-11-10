@@ -1,10 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import type { PreviewClip } from "@/actions/overlays-preview";
-import { getPreviewClips } from "@/actions/overlays-preview";
-import { DEFAULT_CLIPS_WIDGET_CONFIG, type ClipsWidgetConfig } from "@/types/overlays";
-import { createPlaybackOrder } from "@/lib/clip-playback-order";
+import type { PreviewClip } from "@/types/clips";
+import { getPreviewClips } from "@/actions/overlays/preview-clips";
+import {
+  DEFAULT_CLIPS_WIDGET_CONFIG,
+  type ClipsWidgetConfig,
+} from "@repo/ui/components/overlay/types/clips";
+import { createPlaybackOrder } from "@/lib/clips/clip-playback-order";
 import type { EditorClipPlaybackControls } from "@/components/overlays/registry/overlay-widget-registry.types";
 
 interface ResolvedClip extends PreviewClip {

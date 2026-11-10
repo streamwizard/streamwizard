@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@repo/ui";
 import { Loader2 } from "lucide-react";
-import { searchTwitchChannels } from "@/actions/twitch/twitch-api";
+import { searchTwitchChannels } from "@/actions/twitch/search";
 import type { ChannelSearchResult } from "@repo/twitch-api";
 
 /**

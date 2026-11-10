@@ -4,13 +4,13 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui";
-import { StatusIndicator } from "@/components/widgets/status-indicator";
+import { StatusIndicator } from "@/components/shared/status-indicator";
 import { cn } from "@/lib/utils";
 import {
   saveNotificationConfig,
   sendTestNotification,
-  type TestSendResult,
-} from "@/actions/alert-notifications";
+} from "@/actions/alerts/notifications";
+import type { TestSendResult } from "@/types/alerts";
 
 type EnvName = "prod" | "staging" | "dev";
 type SeverityGate = "off" | "warn" | "crit";
@@ -90,20 +90,20 @@ function EnvCard({ view, tokens, isHome }: { view: EnvNotifyView; tokens: TokenS
   const save = () =>
     startTransition(async () => {
       setError(null);
-      try {
-        await saveNotificationConfig({
-          env: view.env,
-          discordChannelId: discordId.trim() || null,
-          discordTarget,
-          discordSeverity,
-          telegramChatId: telegramId.trim() || null,
-          telegramSeverity,
-        });
-        router.refresh();
-        toast.success(`Saved ${view.env} notifications`);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Couldn't save");
+      const { error } = await saveNotificationConfig({
+        env: view.env,
+        discordChannelId: discordId.trim() || null,
+        discordTarget,
+        discordSeverity,
+        telegramChatId: telegramId.trim() || null,
+        telegramSeverity,
+      });
+      if (error) {
+        setError(error);
+        return;
       }
+      router.refresh();
+      toast.success(`Saved ${view.env} notifications`);
     });
 
   // One tap sends a real message, so the answer has to be impossible to miss:

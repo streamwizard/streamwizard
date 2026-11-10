@@ -1,6 +1,6 @@
 import { beforeEach, expect, test } from "bun:test";
 import { useOverlayStore } from "./overlay-editor-store";
-import type { OverlayItem, OverlaySceneWithItems } from "@/types/overlays";
+import type { OverlayItem, OverlaySceneWithItems } from "@repo/ui/components/overlay/types/item";
 import { resolveAnchoredPosition } from "@repo/ui/overlay";
 
 function makeItem(id: string, config: Record<string, unknown>): OverlayItem {

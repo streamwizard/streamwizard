@@ -1,9 +1,6 @@
-import {
-  DEFAULT_GOOGLE_FONT_FAMILY,
-  resolvedTextWidgetFontFamily,
-  type GoogleFontFamily,
-  type OverlayItemConfig,
-} from "../../types";
+import { DEFAULT_GOOGLE_FONT_FAMILY, type GoogleFontFamily } from "../../types/base";
+import { resolvedTextWidgetFontFamily } from "../../types/widgets";
+import type { OverlayItemConfig } from "../../types/item";
 
 export const HYPE_TRAIN_WIDGET_TYPE = "hype_train_widget" as const;
 export type HypeTrainWidgetType = typeof HYPE_TRAIN_WIDGET_TYPE;

@@ -1,4 +1,4 @@
-import type { TicketTag } from "@repo/supabase/queries/ticket-tags";
+import type { TicketTag } from "@repo/supabase/queries/tickets/tags";
 
 // Which tags a message triggers. Plain substring matching on lowercased
 // text, never a regex built from what an admin typed: no ReDoS, no surprises

@@ -1,28 +1,33 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { track } from "@/lib/track";
+import { reportError } from "@repo/sentry";
+import { track } from "@/lib/tracking/track";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 
-import { createClient } from "@repo/supabase/next/server";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { deleteDiscordIntegration, getDiscordIntegrationByUserId } from "@repo/supabase/queries/user";
-import { getGuildSettings } from "@repo/supabase/queries/discord";
-import { assignRole, DiscordMemberNotFoundError, removeRole } from "@/server/discord/roles";
+import { deleteDiscordIntegration, getDiscordIntegrationByUserId } from "@repo/supabase/queries/users/user";
+import { getGuildSettings } from "@repo/supabase/queries/discord/discord";
+import { assignRole, DiscordMemberNotFoundError, revokeVerifiedRole } from "@/server/discord/roles";
 import { env } from "@/lib/env";
 import { reportAndRedirect } from "@/lib/report-redirect";
 import { safeNextPath } from "@/lib/safe-next-path";
+import { tryAuthContext } from "@/lib/auth";
+import { nextPathSchema } from "@/schemas/auth";
 
 export async function linkDiscord(next?: string) {
-  const supabase = await createClient();
+  const ctx = await tryAuthContext();
+  if (!ctx) redirect("/login");
+  const { supabase } = ctx;
+  const parsedNext = nextPathSchema.safeParse(next);
 
   const headersList = await headers();
   const origin = headersList.get("origin");
   // Only relative, same-origin paths are allowed through — the callback
   // route re-validates this too, but reject early so we never embed an
   // attacker-controlled absolute/protocol-relative URL in the redirect chain.
-  const safeNext = safeNextPath(next);
+  const safeNext = parsedNext.success ? safeNextPath(parsedNext.data) : null;
   const redirectTo = `${origin}/auth/callback/discord${safeNext ? `?next=${encodeURIComponent(safeNext)}` : ""}`;
 
   const { error, data } = await supabase.auth.linkIdentity({
@@ -47,22 +52,21 @@ export async function linkDiscord(next?: string) {
 // it was removed manually or never landed (no OAuth needed — the role is
 // assigned directly via the bot, see server/discord/roles.ts).
 export async function reassignDiscordRole() {
-  const supabase = await createClient();
+  const ctx = await tryAuthContext();
+  if (!ctx) redirect("/login");
+  const { supabase, user } = ctx;
 
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError || !userData.user) {
-    reportAndRedirect(userError ?? new Error("reassignDiscordRole: no user session"), "/error");
-  }
-
-  const { data: integration, error: integrationError } = await getDiscordIntegrationByUserId(
-    supabase,
-    userData.user.id
-  );
+  const { data: integration, error: integrationError } = await getDiscordIntegrationByUserId(supabase, user.id);
   if (integrationError || !integration?.discord_user_id) {
     reportAndRedirect(integrationError ?? new Error("reassignDiscordRole: no linked Discord integration"), "/error");
   }
 
-  const settings = await getGuildSettings(supabaseAdmin, env.DISCORD_GUILD_ID);
+  let settings: Awaited<ReturnType<typeof getGuildSettings>>;
+  try {
+    settings = await getGuildSettings(supabaseAdmin, env.DISCORD_GUILD_ID);
+  } catch (error) {
+    reportAndRedirect(error, "/error");
+  }
   if (settings?.verified_role_id) {
     try {
       await assignRole(integration.discord_user_id, settings.verified_role_id);
@@ -70,8 +74,7 @@ export async function reassignDiscordRole() {
       if (roleErr instanceof DiscordMemberNotFoundError) {
         redirect("/dashboard/settings/integrations?discordRole=pending_membership");
       }
-      const { captureException } = await import("@sentry/nextjs");
-      captureException(roleErr);
+      reportError(roleErr, "discord-link.reassign-role");
       redirect("/dashboard/settings/integrations?discordRole=failed");
     }
   } else {
@@ -82,12 +85,9 @@ export async function reassignDiscordRole() {
 }
 
 export async function unlinkDiscord() {
-  const supabase = await createClient();
-
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError || !userData.user) {
-    reportAndRedirect(userError ?? new Error("unlinkDiscord: no user session"), "/error");
-  }
+  const ctx = await tryAuthContext();
+  if (!ctx) redirect("/login");
+  const { supabase, user } = ctx;
 
   const { data: identitiesData, error: identitiesError } = await supabase.auth.getUserIdentities();
   if (identitiesError) {
@@ -110,23 +110,15 @@ export async function unlinkDiscord() {
     }
   }
 
-  // Best-effort: revoke the Verified Member role directly via the bot. A
-  // failure here must not block the disconnect itself.
-  try {
-    const { data: integration } = await getDiscordIntegrationByUserId(supabase, userData.user.id);
-    const settings = await getGuildSettings(supabaseAdmin, env.DISCORD_GUILD_ID);
-    if (integration?.discord_user_id && settings?.verified_role_id) {
-      await removeRole(integration.discord_user_id, settings.verified_role_id);
-    } else {
-      console.log(`[discord/unlink] No verified_role_id configured for guild ${env.DISCORD_GUILD_ID}, skipping role removal.`);
-    }
-  } catch (revokeErr) {
-    const { captureException } = await import("@sentry/nextjs");
-    captureException(revokeErr);
-  }
+  // Best-effort: a failure here must not block the disconnect itself.
+  await revokeVerifiedRole(supabase, user.id);
 
-  await deleteDiscordIntegration(supabase, userData.user.id);
-  await track("discord_unlinked", {}, userData.user);
+  try {
+    await deleteDiscordIntegration(supabase, user.id);
+  } catch (error) {
+    reportAndRedirect(error, "/error");
+  }
+  await track("discord_unlinked", {}, user);
 
   revalidatePath("/dashboard/settings/integrations");
 }

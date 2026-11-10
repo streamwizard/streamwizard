@@ -2,6 +2,9 @@ import { z } from "zod";
 
 const schema = z.object({
   NODE_ENV: z.enum(["development", "staging", "production"]).default("development"),
+  // Read by @repo/sentry (and @repo/posthog/server) as the environment name,
+  // before NODE_ENV. Usually unset on the Bun services.
+  APP_ENV: z.string().optional(),
 
   // Supabase
   SUPABASE_URL: z.string().url(),

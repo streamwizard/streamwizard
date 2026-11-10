@@ -1,9 +1,6 @@
-import {
-  DEFAULT_GOOGLE_FONT_FAMILY,
-  resolvedTextWidgetFontFamily,
-  type GoogleFontFamily,
-  type OverlayItemConfig,
-} from "../../types";
+import { DEFAULT_GOOGLE_FONT_FAMILY, type GoogleFontFamily } from "../../types/base";
+import { resolvedTextWidgetFontFamily } from "../../types/widgets";
+import type { OverlayItemConfig } from "../../types/item";
 import type { ThirdPartyProvider } from "../../../chat/types";
 import {
   DEFAULT_EMOTE_WIDGET_HIDDEN_USERS,

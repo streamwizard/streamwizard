@@ -1,5 +1,5 @@
 import { ComponentPropsWithoutRef, ReactNode } from "react"
-import { ArrowRightIcon } from "@radix-ui/react-icons"
+import { ArrowRight } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "./button"
@@ -78,7 +78,7 @@ const BentoCard = ({
         >
           <a href={href}>
             {cta}
-            <ArrowRightIcon className="ms-2 h-4 w-4 rtl:rotate-180" />
+            <ArrowRight className="ms-2 h-4 w-4 rtl:rotate-180" />
           </a>
         </Button>
       </div>
@@ -97,7 +97,7 @@ const BentoCard = ({
       >
         <a href={href}>
           {cta}
-          <ArrowRightIcon className="ms-2 h-4 w-4 rtl:rotate-180" />
+          <ArrowRight className="ms-2 h-4 w-4 rtl:rotate-180" />
         </a>
       </Button>
     </div>

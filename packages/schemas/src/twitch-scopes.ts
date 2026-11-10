@@ -57,7 +57,7 @@ export const TWITCH_SCOPE_SETS = {
     "channel:manage:videos",
   ],
   // The cloud OBS instance goes live with the user's own key (rest-api
-  // GET /api/nodes/users/:id/stream-key). Only accounts holding the cloud_obs
+  // GET /api/obs-nodes/users/:id/stream-key). Only accounts holding the cloud_obs
   // product can use it, so only they are asked for it.
   cloud_obs: ["channel:read:stream_key"],
   // Alert box events that need one more permission each, asked for only when

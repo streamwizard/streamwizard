@@ -3,14 +3,10 @@
 import { useMemo } from "react";
 import { Circle, Diamond, Minus, Square, Star, Triangle, type LucideIcon } from "lucide-react";
 import { ColorPicker, Label, cn } from "@repo/ui";
-import {
-  InspectorReveal,
-  InspectorSection,
-  SegmentedField,
-  SliderField,
-  SwitchField,
-  type SegmentedOption,
-} from "@/components/overlays/inspector-fields";
+import { InspectorReveal, InspectorSection } from "@/components/shared/inspector-section";
+import { SegmentedField, type SegmentedOption } from "@/components/overlays/inspector-fields/segmented-field";
+import { SliderField } from "@/components/overlays/inspector-fields/slider-field";
+import { SwitchField } from "@/components/overlays/inspector-fields/switch-field";
 import {
   SHAPE_WIDGET_FRAME_STROKE_WIDTH,
   SHAPE_WIDGET_LIMITS,

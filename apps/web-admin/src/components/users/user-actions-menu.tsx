@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@repo/ui";
-import type { UserRow } from "@/components/subscriptions/types";
+import type { UserRow } from "@/components/users/subscriptions/types";
 import { cn } from "@/lib/utils";
 import { useGrantAccess } from "./grant-access";
 import { BanUserDialog, DeleteUserDialog, UnbanDialog } from "./moderation";

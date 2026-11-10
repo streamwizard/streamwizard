@@ -8,7 +8,7 @@ import {
   type AlertEventInsert,
   type AlertState,
   type AlertStateUpsert,
-} from "@repo/supabase/queries/alerts";
+} from "@repo/supabase/queries/alerts/alerts";
 import { alertConfig } from "./config";
 import { homeEnv } from "./home-env";
 import { queryLatestObsNodeFields, queryLatestHostSystemFields } from "@repo/metrics";

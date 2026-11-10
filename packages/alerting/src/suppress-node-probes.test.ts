@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { suppressRedundantNodeProbes } from "./engine";
-import type { AlertState } from "@repo/supabase/queries/alerts";
+import type { AlertState } from "@repo/supabase/queries/alerts/alerts";
 import type { Breach, Registry, RegistryNode } from "./types";
 
 // A fully-down node trips both its *_silent absence rule (crit) and

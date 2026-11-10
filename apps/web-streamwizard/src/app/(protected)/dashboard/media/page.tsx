@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@repo/supabase/next/server";
-import { listAssets } from "@/actions/assets";
+import { listAssets } from "@/actions/media/assets";
 import { MediaLibrary } from "@/components/media/media-library";
 
 export default async function MediaPage() {

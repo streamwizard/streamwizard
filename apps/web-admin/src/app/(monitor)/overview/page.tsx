@@ -1,14 +1,14 @@
 import { TriangleAlert } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@repo/ui";
+import { Alert, AlertDescription, AlertTitle } from "@repo/ui/components/ui/alert";
 import { AttentionList } from "@/components/overview/attention-list";
 import { KeyNumbers } from "@/components/overview/key-numbers";
 import { LiveNow } from "@/components/overview/live-now";
 import { OverviewRefresh } from "@/components/overview/overview-refresh";
 import { Shortcuts } from "@/components/overview/shortcuts";
 import { StatusStrip } from "@/components/overview/status-strip";
-import { PageHeader } from "@/components/widgets/page-header";
-import { SectionHeading } from "@/components/widgets/section-heading";
-import { loadOverview } from "@/lib/overview-data";
+import { PageHeader } from "@/components/shared/page/page-header";
+import { SectionHeading } from "@/components/shared/page/section-heading";
+import { loadOverview } from "@/lib/overview/overview-data";
 
 export const dynamic = "force-dynamic";
 

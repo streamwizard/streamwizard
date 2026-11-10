@@ -42,7 +42,7 @@ import {
   truncateAlertName,
   type AlertEventType,
 } from "./alert-widget-config";
-import { buildWidgetTestEvent } from "@repo/schemas";
+import { buildWidgetTestEvent } from "@repo/schemas/widgets/test-events";
 import {
   ALERT_ENTER_ANIMATIONS,
   ALERT_EXIT_ANIMATIONS,

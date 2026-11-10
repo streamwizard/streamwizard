@@ -9,9 +9,10 @@ import {
   resolveLabel,
   type LabelSnapshot,
   type ResolvedLabel,
-} from "@repo/schemas";
+} from "@repo/schemas/widgets/stream-labels";
 import { useGoogleFont } from "../../hooks/use-google-font";
-import type { OverlayItem, OverlayScene } from "../../types";
+import { FitText } from "../goal/presets/shared";
+import type { OverlayItem, OverlayScene } from "../../types/item";
 import {
   applyLabelEventKinds,
   LABEL_ANIMATE_PREVIEW_EVENT,
@@ -167,21 +168,26 @@ export function LabelWidgetRenderer({ item, scene, isEditor = false }: LabelWidg
   const enter = (line: string): CSSProperties =>
     tick > 0 ? { display: "inline-block", animation: enterAnimation(cfg, line), ["--sw-label-glow" as string]: cfg.prefixColor } : { display: "inline-block" };
 
+  // Long values (a 25-character name after "Latest follower") shrink to fit
+  // the box instead of running past its edge.
+  const fit: CSSProperties = { flex: "0 1 auto", minWidth: 0 };
   let body;
   if (!isList) {
     body = (
-      <span key={tick} className="sw-label-enter" style={{ ...enter(lines[0] ?? ""), whiteSpace: "nowrap" }}>
-        {lines[0]}
-      </span>
+      <FitText align={cfg.align} style={fit}>
+        <span key={tick} className="sw-label-enter" style={{ ...enter(lines[0] ?? ""), whiteSpace: "nowrap" }}>
+          {lines[0]}
+        </span>
+      </FitText>
     );
   } else if (cfg.direction === "vertical") {
     body = (
-      <span style={{ display: "flex", flexDirection: "column", alignItems: cross, gap: Math.round(cfg.fontSize * 0.15) }}>
+      <span style={{ display: "flex", flexDirection: "column", alignItems: cross, gap: Math.round(cfg.fontSize * 0.15), minWidth: 0, maxWidth: "100%" }}>
         {lines.map((line, i) => (
           <span
             key={i === 0 ? `new:${tick}` : i}
             className={i === 0 ? "sw-label-enter" : undefined}
-            style={{ whiteSpace: "nowrap", ...(i === 0 ? enter(line) : null) }}
+            style={{ whiteSpace: "nowrap", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", ...(i === 0 ? enter(line) : null) }}
           >
             {line}
           </span>
@@ -224,7 +230,9 @@ export function LabelWidgetRenderer({ item, scene, isEditor = false }: LabelWidg
         </span>
       </span>
     ) : (
-      row
+      <FitText align={cfg.align} style={fit}>
+        {row}
+      </FitText>
     );
   }
 

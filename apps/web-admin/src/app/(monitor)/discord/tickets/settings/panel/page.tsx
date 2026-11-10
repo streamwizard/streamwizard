@@ -1,10 +1,10 @@
 import { parseTicketPanel } from "@repo/discord-message";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { getTicketSettings } from "@repo/supabase/queries/tickets";
-import { TicketPanelEditor } from "@/components/discord/ticket-panel-editor";
+import { getTicketSettings } from "@repo/supabase/queries/tickets/tickets";
+import { TicketPanelEditor } from "@/components/discord/tickets/settings/ticket-panel-editor";
 import { getBotProfile, getGuildChannels, requireDiscordContext } from "@/lib/discord/api";
-import { bannerUploadsEnabled } from "@/lib/discord/banner-storage";
-import { getBuilderThemes } from "@/lib/discord/theme-assets";
+import { bannerUploadsEnabled } from "@/lib/discord/messages/banner-storage";
+import { getBuilderThemes } from "@/lib/discord/messages/theme-assets";
 
 export const dynamic = "force-dynamic";
 

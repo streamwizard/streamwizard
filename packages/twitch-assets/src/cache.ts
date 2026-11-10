@@ -1,6 +1,6 @@
 import { supabase } from "@repo/supabase";
 import { TtlCache } from "@repo/ttl-cache";
-import { selectCachedAsset, upsertCachedAsset } from "@repo/supabase/queries/asset-cache";
+import { selectCachedAsset, upsertCachedAsset } from "@repo/supabase/queries/assets/cache";
 
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;
@@ -72,7 +72,7 @@ export async function setCached(key: string, payload: unknown, ttlMs: number): P
 
   // Same reasoning as above: the memory layer already has it, so a failed
   // write costs an extra fetch later, not a broken response now.
-  if (error) console.error("[twitch-assets] cache write failed", key, error.message);
+  if (error) console.warn("[twitch-assets] cache write failed", key, error.message);
 }
 
 /** Cache-only read. Never touches Supabase or Helix — used by the hot path. */

@@ -1,7 +1,7 @@
 "use client";
 
 import { StreamEventType } from "@/types/stream-events";
-import { getEventTypeInfo } from "@/lib/utils/stream-events";
+import { getEventTypeInfo } from "@/lib/stream-events/stream-events";
 import { useVideoPlayerStore } from "@/stores/video-dialog-store";
 import { SEGMENT_STYLES } from "./timeline-segments";
 import type { TimelineEvent } from "./types";

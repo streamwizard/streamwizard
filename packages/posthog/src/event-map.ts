@@ -56,7 +56,8 @@ export interface EventMap {
   overlay_duplicated: { overlay_id: string; source_overlay_id: string; item_count: number };
   overlay_imported: { overlay_id: string; item_count: number; custom_widget_count: number };
   overlay_exported: { overlay_id: string; item_count: number; custom_widget_count: number };
-  overlay_key_reset: { overlay_id: string };
+  /** New URL + subscriber token. legacy_slug: the old URL had the short pre-SW-476 suffix. */
+  overlay_url_reset: { overlay_id: string; legacy_slug: boolean };
   overlay_favourite_toggled: { overlay_id: string; favourite: boolean };
   overlay_active_toggled: { overlay_id: string; active: boolean };
   // What one Save in the editor changed. The type lists hold each type once;
@@ -115,7 +116,7 @@ export interface EventMap {
 
   // Dashboard actions no server action sees. The browser reports them through
   // POST /api/activity and they arrive with `relayed: true`.
-  overlay_url_copied: { overlay_id: string; location: "create_dialog" | "card" | "editor" };
+  overlay_url_copied: { overlay_id: string; location: "create_dialog" | "card" | "editor" | "url_reset_dialog" };
   cloud_obs_started: { location: "dashboard" | "deck" };
   cloud_obs_stopped: { location: "dashboard" | "deck" };
   clip_played: NoProps;

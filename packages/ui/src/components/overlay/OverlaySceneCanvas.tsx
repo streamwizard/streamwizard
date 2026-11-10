@@ -2,7 +2,7 @@
 
 import type { ComponentType } from "react";
 import { useMemo, type ReactNode } from "react";
-import type { OverlayItem, OverlayScene } from "./types";
+import type { OverlayItem, OverlayScene } from "./types/item";
 import { resolveAnchoredPosition } from "./lib/item-anchor";
 import { itemTransform } from "./lib/item-flip";
 import { useGoogleFonts } from "./hooks/use-google-font";
@@ -45,7 +45,7 @@ import { CreditsWidgetRenderer } from "./widgets/credits/CreditsWidgetRenderer";
 import { ImageWidgetRenderer, VideoWidgetRenderer } from "./widgets/media/MediaWidgetRenderer";
 import { ShapeWidgetRenderer } from "./widgets/shape/ShapeWidgetRenderer";
 import { SlideshowWidgetRenderer } from "./widgets/slideshow/SlideshowWidgetRenderer";
-import { IRL_FIELD_WIDGET_TYPES } from "./types";
+import { IRL_FIELD_WIDGET_TYPES } from "./types/base";
 
 export type OverlayWidgetProps = {
   item: OverlayItem;

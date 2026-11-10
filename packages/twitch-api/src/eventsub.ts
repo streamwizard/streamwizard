@@ -1,3 +1,4 @@
+import { describeError } from "@repo/sentry/safe-error";
 import { TwitchApiBaseClient } from "./base-client";
 
 export type TransportMethod = "webhook" | "websocket" | "conduit";
@@ -173,7 +174,7 @@ export class TwitchEventSubClient extends TwitchApiBaseClient {
         shards: shardsResponse,
       };
     } catch (error) {
-      console.error(`❌ Failed to get conduit ${conduitId} with shards:`, error);
+      console.error(`[twitch-api] get conduit ${conduitId} with shards failed: ${describeError(error)}`);
       return null;
     }
   }

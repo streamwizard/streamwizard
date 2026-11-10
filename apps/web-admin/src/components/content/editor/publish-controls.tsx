@@ -30,7 +30,7 @@ import {
   unarchiveContentAction,
   unpublishContentAction,
   unscheduleContentAction,
-} from "@/actions/cms-publish";
+} from "@/actions/cms/publish";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
@@ -38,9 +38,9 @@ import {
   ResponsiveDialogFooter,
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
-} from "@/components/widgets/responsive-dialog";
-import type { ReadinessItem } from "@/lib/cms/readiness";
-import { defaultScheduleTime, fromLocalInputValue, toLocalInputValue } from "@/lib/cms/schedule-time";
+} from "@/components/shared/responsive-dialog";
+import type { ReadinessItem } from "@/lib/cms/publish/readiness";
+import { defaultScheduleTime, fromLocalInputValue, toLocalInputValue } from "@/lib/cms/publish/schedule-time";
 import type { ContentStatus } from "./content-editor";
 
 const SCHEDULE_FORMAT = new Intl.DateTimeFormat("en-GB", {

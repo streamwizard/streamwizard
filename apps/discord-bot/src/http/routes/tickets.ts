@@ -2,8 +2,8 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { ChannelType, EmbedBuilder, type Guild, type GuildMember, type TextChannel } from "discord.js";
 import { supabase } from "@repo/supabase";
-import { TICKET_PRIORITIES } from "@repo/supabase/queries/ticket-lifecycle";
-import { getTicketByChannelId, getTicketSettings } from "@repo/supabase/queries/tickets";
+import { TICKET_PRIORITIES } from "@repo/supabase/queries/tickets/lifecycle";
+import { getTicketByChannelId, getTicketSettings } from "@repo/supabase/queries/tickets/tickets";
 import { TWITCH_PURPLE } from "../../lib/branding";
 import { replaceVariables } from "@repo/discord-message";
 import { BuiltMessageError, BuiltMessageSendError, guildVariableValues } from "../../lib/built-message";
@@ -86,11 +86,17 @@ ticketRoutes.post("/ticket-panel", async (c) => {
 // Discord account. web-admin has already checked they're an admin.
 const ticketAction = z.object({ discordUserId: snowflake });
 
-async function resolveTicketActor(guild: Guild, channelId: string, body: unknown) {
+// A channel id that isn't a snowflake can't be a ticket channel: the same 404
+// as a deleted one, and no Discord call.
+const NO_TICKET_CHANNEL = { error: "The ticket channel is gone", status: 404 as const };
+
+async function resolveTicketActor(guild: Guild, rawChannelId: string | undefined, body: unknown) {
+  const channelId = snowflake.safeParse(rawChannelId);
+  if (!channelId.success) return NO_TICKET_CHANNEL;
   const parsed = ticketAction.safeParse(body);
   if (!parsed.success) return { error: "Invalid body", status: 400 as const };
-  const channel = await guild.channels.fetch(channelId).catch(() => null);
-  if (channel?.type !== ChannelType.GuildText) return { error: "The ticket channel is gone", status: 404 as const };
+  const channel = await guild.channels.fetch(channelId.data).catch(() => null);
+  if (channel?.type !== ChannelType.GuildText) return NO_TICKET_CHANNEL;
   const member = await guild.members.fetch(parsed.data.discordUserId).catch(() => null);
   if (!member) return { error: "Your Discord account isn't in the server", status: 403 as const };
   return { channel, member };
@@ -191,16 +197,18 @@ ticketActionRoute("transfer", { targetDiscordUserId: snowflake }, async (channel
 // user, so the bot posts it with the sender's name and avatar as credit.
 const ticketMessage = z.object({
   authorName: z.string().min(1).max(80),
-  authorAvatarUrl: z.string().url().nullable(),
+  authorAvatarUrl: z.url().max(2048).nullable(),
   content: z.string().trim().min(1).max(2000),
 });
 
 ticketRoutes.post("/tickets/:channelId/message", async (c) => {
+  const channelId = snowflake.safeParse(c.req.param("channelId"));
+  if (!channelId.success) return c.json({ error: NO_TICKET_CHANNEL.error }, 404);
   const body = ticketMessage.safeParse(await readJson(c));
   if (!body.success) return c.json({ error: "Invalid message" }, 400);
 
   const guild = c.get("guild");
-  const channel = await guild.channels.fetch(c.req.param("channelId")).catch(() => null);
+  const channel = await guild.channels.fetch(channelId.data).catch(() => null);
   if (channel?.type !== ChannelType.GuildText) return c.json({ error: "The ticket channel is gone" }, 404);
   const ticket = await getTicketByChannelId(supabase, channel.id);
   if (!ticket || ticket.status !== "open") return c.json({ error: "That channel isn't an open ticket" }, 404);

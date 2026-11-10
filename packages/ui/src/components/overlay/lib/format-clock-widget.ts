@@ -1,5 +1,5 @@
-import type { ClockWidgetItemConfig } from "../types";
-import { normalizeClockWidgetConfig } from "../types";
+import type { ClockWidgetItemConfig } from "../types/widgets";
+import { normalizeClockWidgetConfig } from "../types/widgets";
 
 function resolvedTimeZone(raw: string): string | undefined {
   const t = raw.trim();

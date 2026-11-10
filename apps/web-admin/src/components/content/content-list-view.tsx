@@ -20,22 +20,22 @@ import {
   NativeSelect,
   NativeSelectOption,
 } from "@repo/ui";
-import { createContentAction, untrashContentAction } from "@/actions/cms-content";
-import { TicketFiltersForm } from "@/components/discord/ticket-filters-form";
-import { DataList, type DataColumn } from "@/components/widgets/data-list";
-import { FilterPanel } from "@/components/widgets/filter-panel";
-import { PageHeader } from "@/components/widgets/page-header";
-import { formatDateTime, formatRelativeTime } from "@/lib/discord/tickets";
+import { createContentAction, untrashContentAction } from "@/actions/cms/content";
+import { TicketFiltersForm } from "@/components/shared/ticket-filters-form";
+import { DataList, type DataColumn } from "@/components/shared/data-list";
+import { FilterPanel } from "@/components/shared/filter-panel";
+import { PageHeader } from "@/components/shared/page/page-header";
+import { formatDateTime, formatRelativeTime } from "@/lib/discord/tickets/tickets";
 import type { ContentType } from "@/lib/cms/draft";
 import { REVIEW_BADGE, REVIEW_FILTER_STATES, REVIEW_LABELS, type ReviewState } from "@/lib/cms/review";
-import { templatesFor } from "@/lib/cms/templates";
+import { templatesFor } from "@/lib/cms/editor/templates";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
   ResponsiveDialogDescription,
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
-} from "@/components/widgets/responsive-dialog";
+} from "@/components/shared/responsive-dialog";
 import type { PickerOption } from "./editor/chip-picker";
 
 /** What a new post starts from. Blank is a template like any other. */

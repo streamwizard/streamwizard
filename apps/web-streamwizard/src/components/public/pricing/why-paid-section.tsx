@@ -1,6 +1,6 @@
 import { Feather, Radio, Server } from "lucide-react";
 import { SectionView } from "@/components/public/analytics/section-view";
-import { Reveal, RevealGroup } from "@/components/public/home/reveal";
+import { Reveal, RevealGroup } from "@/components/public/common/reveal";
 
 /*
  * The reasoning behind the split, so "why is this one paid" is answered on

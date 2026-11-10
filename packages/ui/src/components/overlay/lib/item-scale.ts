@@ -1,4 +1,4 @@
-import type { OverlayItem } from "../types";
+import type { OverlayItem } from "../types/item";
 
 /**
  * Widgets are authored at an intrinsic "design size" (`design_w` x `design_h`).

@@ -1,26 +1,33 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { Activity, Clapperboard, Radio, Users } from "lucide-react";
-import { Skeleton } from "@repo/ui";
 import { createClient } from "@repo/supabase/next/server";
 import {
   getLatestStreamForBroadcaster,
   getBroadcasterProfile,
-  getVodByStreamId,
-} from "@repo/supabase/queries/stream-analytics";
-import { getUserPreferences } from "@repo/supabase/queries/user";
+  getStreamVideoId,
+} from "@repo/supabase/queries/stream/analytics";
+import { getUserPreferences } from "@repo/supabase/queries/users/user";
 import { ClipDialogProvider } from "@/providers/clip-dialog-provider";
 import { resolveBroadcasterId } from "@/lib/auth";
-import { BroadcasterProfileStrip } from "@/components/stream-analytics/broadcaster-profile-strip";
-import { StatsRow } from "@/components/stream/StatsRow";
-import { RecentClipsSection } from "@/components/stream/RecentClipsSection";
-import { ViewerChartSection } from "@/components/stream/ViewerChartSection";
-import { HourlyStatsSection } from "@/components/stream/HourlyStatsSection";
-import { CategoryStatsSection } from "@/components/stream/CategoryStatsSection";
-import { ActivityFeedSection } from "@/components/stream/ActivityFeed";
-import { RecentStreams } from "@/components/stream/RecentStreams";
-import { StreamInfoPanel } from "@/components/stream/StreamInfoPanel";
-import type { BroadcasterProfile } from "@/actions/supabase/analytics/stream-analytics";
+import { BroadcasterProfileStrip } from "@/components/stream/broadcaster-profile-strip";
+import { StatsRow } from "@/components/stream/stats-row";
+import { RecentClipsSection } from "@/components/stream/recent-clips-section";
+import { ViewerChartSection } from "@/components/stream/viewer-chart-section";
+import { HourlyStatsSection } from "@/components/stream/hourly-stats-section";
+import { CategoryStatsSection } from "@/components/stream/category-stats-section";
+import { ActivityFeedSection } from "@/components/stream/activity-feed-section";
+import { RecentStreams } from "@/components/stream/recent-streams";
+import { StreamInfoPanel } from "@/components/stream/stream-info-panel";
+import {
+  StatsRowSkeleton,
+  ChartSkeleton,
+  HourlyStatsSkeleton,
+  CategoryStatsSkeleton,
+  FeedSkeleton,
+  ListSkeleton,
+} from "@/components/stream/dashboard-skeletons";
+import type { BroadcasterProfile } from "@/types/stream-analytics";
 
 export const dynamic = "force-dynamic";
 
@@ -28,36 +35,6 @@ export const metadata = {
   title: "Dashboard — Stream Analytics",
   description: "Your stream, broken down. Viewers, clips, activity — all of it.",
 };
-
-function StatsRowSkeleton() {
-  return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <Skeleton key={i} className="h-24 rounded-xl" />
-      ))}
-    </div>
-  );
-}
-
-function ChartSkeleton() {
-  return <Skeleton className="h-72 w-full rounded-xl" />;
-}
-
-function HourlyStatsSkeleton() {
-  return <Skeleton className="h-72 w-full rounded-xl" />;
-}
-
-function CategoryStatsSkeleton() {
-  return <Skeleton className="h-64 w-full rounded-xl" />;
-}
-
-function FeedSkeleton() {
-  return <Skeleton className="h-96 w-full rounded-xl" />;
-}
-
-function ListSkeleton() {
-  return <Skeleton className="h-56 w-full rounded-xl" />;
-}
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -123,9 +100,9 @@ export default async function DashboardPage() {
     );
   }
 
-  const [profile, vod] = await Promise.all([
+  const [profile, videoId] = await Promise.all([
     getBroadcasterProfile(supabase),
-    getVodByStreamId(supabase, stream.stream_id),
+    getStreamVideoId(supabase, stream.stream_id),
   ]);
 
   const broadcasterProfile: BroadcasterProfile | null = profile
@@ -136,7 +113,7 @@ export default async function DashboardPage() {
       }
     : null;
 
-  const hasVod = !!vod?.video_id;
+  const hasVod = !!videoId;
   const isLive = stream.is_live;
   const showStats = prefs?.show_stream_stats ?? true;
 
@@ -217,7 +194,6 @@ export default async function DashboardPage() {
 
         <div className="flex min-w-0 flex-col gap-4">
           <StreamInfoPanel
-            broadcasterId={broadcasterId}
             currentTitle={stream.title}
             currentCategory={stream.category_name}
             currentGameId={stream.category_id}

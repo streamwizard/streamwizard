@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { TwitchVideo } from "@/types/twitch";
+import type { TwitchVideo } from "@/types/twitch-video";
 import {
     AlertDialog,
     AlertDialogAction,

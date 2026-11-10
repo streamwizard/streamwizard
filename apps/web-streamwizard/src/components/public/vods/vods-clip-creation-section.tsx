@@ -1,5 +1,5 @@
 import { SectionView } from "../analytics/section-view";
-import { Reveal } from "../home/reveal";
+import { Reveal } from "@/components/public/common/reveal";
 import { ClipCreationDemo } from "./clip-creation-demo";
 
 /*

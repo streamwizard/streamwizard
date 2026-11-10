@@ -3,13 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Button, Input, cn } from "@repo/ui";
 import { Check, Loader2, Search, X } from "lucide-react";
-import { searchTwitchCategories } from "@/actions/twitch/twitch-api";
-import type { TwitchCategory } from "@/types/twitch";
+import { searchTwitchCategories } from "@/actions/twitch/search";
+import type { TwitchCategory } from "@repo/twitch-api";
 
 /**
  * Category search for the deck.
  *
- * The dashboard has its own picker (`components/search-bars/twitch-category-search`),
+ * The dashboard has its own picker (`components/shared/twitch/twitch-category-search`),
  * but it is built around a fixed-height desktop dropdown with small controls;
  * this one is full-width rows at deck touch size, and shows the current pick as
  * a card rather than a line of text.
@@ -24,13 +24,12 @@ function boxArt(url: string) {
 }
 
 interface CategoryPickerProps {
-  broadcasterId: string;
   value: { id: string; name: string; boxArtUrl?: string } | null;
   onChange: (category: { id: string; name: string; boxArtUrl?: string }) => void;
   disabled?: boolean;
 }
 
-export function CategoryPicker({ broadcasterId, value, onChange, disabled }: CategoryPickerProps) {
+export function CategoryPicker({ value, onChange, disabled }: CategoryPickerProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   // Results carry the term they belong to, so a stale set is simply not shown
@@ -50,7 +49,7 @@ export function CategoryPicker({ broadcasterId, value, onChange, disabled }: Cat
     const requestId = ++requestRef.current;
     const timer = setTimeout(async () => {
       try {
-        const found = await searchTwitchCategories(broadcasterId, term, 12);
+        const found = await searchTwitchCategories(term, 12);
         if (requestRef.current !== requestId) return;
         // Twitch ranks loosely; an exact name match belongs first.
         const lowered = term.toLowerCase();
@@ -66,7 +65,7 @@ export function CategoryPicker({ broadcasterId, value, onChange, disabled }: Cat
     }, DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
-  }, [term, open, broadcasterId]);
+  }, [term, open]);
 
   const searching = term.length >= 2 && results.term !== term;
 

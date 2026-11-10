@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { Activity, Cpu, MemoryStick, Network, RotateCcw, Timer } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
 import { assertAppName, isAppEnv } from "@repo/metrics";
 import {
   CPU_HINT,
@@ -15,22 +15,22 @@ import {
   formatMs,
   formatPerSec,
   healthDisplay,
-} from "@/components/apps/app-format";
+} from "@/lib/apps/app-format";
 import { AppsNotice, MissingData } from "@/components/apps/apps-notice";
 import { ContainerList } from "@/components/apps/container-list";
-import { relative } from "@/components/backups/backup-format";
-import { When } from "@/components/backups/hint-popover";
-import { NodeMetricChart } from "@/components/charts/node-metric-chart";
+import { relative } from "@/lib/backups/backup-format";
+import { When } from "@/components/shared/hint-popover";
+import { NodeMetricChart } from "@/components/shared/charts/node-metric-chart";
 import { AutoRefresh } from "@/components/vms/auto-refresh";
 import { ChartSection } from "@/components/vms/chart-section";
-import { Rate } from "@/components/vms/rate";
-import { PageHeader } from "@/components/widgets/page-header";
-import { StatCard } from "@/components/widgets/stat-card";
-import { StatGrid } from "@/components/widgets/stat-grid";
-import { StatusIndicator } from "@/components/widgets/status-indicator";
-import { fetchAppSeries, getApp } from "@/lib/apps";
-import { ENV_LABEL } from "@/lib/apps-model";
-import { PageCrumb } from "@/lib/crumbs";
+import { Rate } from "@/components/shared/charts/rate";
+import { PageHeader } from "@/components/shared/page/page-header";
+import { StatCard } from "@/components/shared/stat-card";
+import { StatGrid } from "@/components/shared/stat-grid";
+import { StatusIndicator } from "@/components/shared/status-indicator";
+import { fetchAppSeries, getApp } from "@/lib/apps/apps";
+import { ENV_LABEL } from "@/lib/apps/apps-model";
+import { PageCrumb } from "@/lib/nav/crumbs";
 import { formatBytes } from "@/lib/format";
 
 export const dynamic = "force-dynamic";

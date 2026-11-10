@@ -1,7 +1,4 @@
-import type {
-    EventSubSubscriptionType,
-    WebSocketNotificationMessage,
-} from '@repo/types';
+import type { EventSubSubscriptionType, WebSocketNotificationMessage } from '@repo/types/eventsub';
 import type { TwitchApi } from "@repo/twitch-api";
 
 // ==============================================================================

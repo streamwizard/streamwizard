@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@repo/ui";
-import type { UserAsset } from "@/actions/assets";
+import type { UserAsset } from "@/types/media";
 import { formatBytes } from "@/lib/format";
 import { uploadedFontRef } from "@repo/ui/overlay";
 import { useGoogleFont } from "@/hooks/use-google-font";

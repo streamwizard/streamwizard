@@ -1,7 +1,13 @@
 import { z } from "zod"
+import { isServiceSigningJwk, SERVICE_SIGNING_JWK_ERROR } from "@repo/service-token/signing-jwk"
 
 const schema = z.object({
   NODE_ENV: z.enum(["development", "staging", "production"]).default("development"),
+  // Read by @repo/sentry (and @repo/posthog/server) as the environment name,
+  // before NODE_ENV. Usually unset on the Bun services.
+  APP_ENV: z.string().optional(),
+  // /health (docker healthcheck).
+  PORT: z.coerce.number().int().positive().default(8030),
 
   // Supabase
   SUPABASE_URL: z.string().url(),
@@ -20,6 +26,19 @@ const schema = z.object({
 
   // Internal
   WS_SERVER_URL: z.string().url(),
+  // Ed25519 private JWK this service signs its ws-server tokens with
+  // (@repo/service-token reads it). Secret. Optional: without it every
+  // ws-server call is skipped as unconfigured; a malformed one stops boot.
+  WS_SERVICE_SIGNING_JWK: z
+    .string()
+    .min(1)
+    .refine(isServiceSigningJwk, SERVICE_SIGNING_JWK_ERROR)
+    .optional(),
+
+  // InfluxDB (@repo/metrics). Metrics are off unless all three are set.
+  INFLUXDB_URL: z.string().url().optional(),
+  INFLUXDB_TOKEN: z.string().min(1).optional(),
+  INFLUXDB_ORG: z.string().min(1).optional(),
 
   // Sentry
   SENTRY_DSN: z.string().url().optional(),

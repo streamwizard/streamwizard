@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GetClipDownloadURL } from "@/actions/twitch/clips";
+import { getClipDownloadUrl } from "@/server/twitch/clip-download";
 import { createClient } from "@repo/supabase/next/server";
 import { reportError } from "@repo/sentry";
-import { track } from "@/lib/track";
+import { track } from "@/lib/tracking/track";
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the download URL
-    const urlResult = await GetClipDownloadURL(clipId, user.id);
+    const urlResult = await getClipDownloadUrl(clipId, user.id);
     if (!urlResult.success || !urlResult.data) {
       return NextResponse.json(
         { error: urlResult.message },
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     reportError(error, "api/twitch/download-clip");
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal server error" },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

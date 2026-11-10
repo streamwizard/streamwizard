@@ -1,4 +1,4 @@
-import { SUB_EVENT_TYPES } from "@/lib/utils/stream-events";
+import { SUB_EVENT_TYPES } from "@/lib/stream-events/stream-events";
 
 const FOLLOW_TYPE = "channel.follow";
 const CHEER_TYPE = "channel.cheer";

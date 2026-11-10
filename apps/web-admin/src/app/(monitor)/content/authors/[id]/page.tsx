@@ -1,19 +1,19 @@
 import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { listUsers } from "@repo/supabase/queries/admin-users";
+import { listUsers } from "@repo/supabase/queries/users/admin-users";
 import { getCmsAuthor } from "@repo/supabase/queries/cms/authors";
 import { AuthorEditor } from "@/components/content/author-editor";
 import type { SocialLinks } from "@/lib/cms/authors";
-import { cmsAssetUrl } from "@/lib/cms/storage";
-import { userAvatarUrl, userDisplayName } from "@/lib/users";
+import { cmsAssetUrl } from "@/lib/cms/media/storage";
+import { userAvatarUrl, userDisplayName } from "@/lib/users/users";
+import { isGuid } from "@repo/schemas/ids";
 
 export const dynamic = "force-dynamic";
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function AuthorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  if (!UUID.test(id)) notFound();
+  if (!isGuid(id)) notFound();
   const { data: author, error } = await getCmsAuthor(supabaseAdmin, id);
   if (error) throw error;
   if (!author) notFound();

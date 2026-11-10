@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Label, Switch } from "@repo/ui";
-import { setVmAlerts } from "@/actions/vm-alerts";
+import { setVmAlerts } from "@/actions/vms/alerts";
 
 interface VmAlertRuleOption {
   id: string;

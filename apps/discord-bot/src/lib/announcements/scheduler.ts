@@ -9,7 +9,7 @@ import {
   markAnnouncementFailed,
   recordAnnouncementPosted,
   type DiscordAnnouncement,
-} from "@repo/supabase/queries/discord-announcements";
+} from "@repo/supabase/queries/discord/announcements";
 import { guildVariableValues } from "../built-message";
 import { AnnouncementError, checkAnnouncementChannel, postAnnouncement, withAnnouncementLock } from "./post";
 

@@ -1,45 +1,19 @@
 "use client";
 
-import type { OverlayItem } from "@/types/overlays";
+import type { OverlayItem } from "@repo/ui/components/overlay/types/item";
 import { CHAT_WIDGET_DEFAULT_SIZE, createDefaultChatWidgetConfig } from "@repo/ui/overlay";
-import type { CreateRootItemContext } from "../../registry/overlay-widget-registry.types";
+import type { CreateRootItemContext } from "@/components/overlays/registry/overlay-widget-registry.types";
+import { createCenteredRootItem } from "@/components/overlays/registry/create-root-item";
 
 export { CHAT_WIDGET_DEFAULT_SIZE } from "@repo/ui/overlay";
 
-export function createChatWidgetRootItems(
-  ctx: CreateRootItemContext
-): OverlayItem[] {
-  const id = ctx.nextId();
-  const { w, h } = CHAT_WIDGET_DEFAULT_SIZE;
-  const n =
-    ctx.scene.items.filter((i) => i.type === "chat_widget").length + 1;
+export function createChatWidgetRootItems(ctx: CreateRootItemContext): OverlayItem[] {
   return [
-    {
-      id,
-      scene_id: ctx.scene.id,
+    createCenteredRootItem(ctx, {
       type: "chat_widget",
-      x: Math.round(ctx.scene.width / 2 - w / 2),
-      y: Math.round(ctx.scene.height / 2 - h / 2),
-      w,
-      h,
-      // New widgets are authored at their default size, so they start at scale 1.
-      design_w: w,
-      design_h: h,
-      crop_top: 0,
-      crop_right: 0,
-      crop_bottom: 0,
-      crop_left: 0,
-      anchor_x: "left",
-      anchor_y: "top",
-      z_index: ctx.maxZ + 1,
-      rotation: 0,
-      flip_h: false,
-      flip_v: false,
-      opacity: 1,
-      is_visible: true,
-      is_locked: false,
-      label: `Chat ${n}`,
+      size: CHAT_WIDGET_DEFAULT_SIZE,
+      label: "Chat",
       config: createDefaultChatWidgetConfig(),
-    },
+    }),
   ];
 }

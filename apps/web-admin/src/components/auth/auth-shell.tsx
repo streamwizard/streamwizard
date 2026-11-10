@@ -1,4 +1,4 @@
-import { signOut } from "@/lib/auth-actions";
+import { signOut } from "@/actions/auth/sign-out";
 
 /**
  * Centred card used by the pre-dashboard pages (/login, /no-access,

@@ -21,13 +21,11 @@ import {
   type AlertVariantConfig,
   type AlertWidgetItemConfig,
 } from "@repo/ui/overlay";
-import {
-  InspectorSection,
-  SectionTitle,
-  SliderField,
-  SwitchField,
-} from "@/components/overlays/inspector-fields";
-import type { FireMode } from "@/components/demo/demo-fire";
+import { InspectorSection } from "@/components/shared/inspector-section";
+import { SectionTitle } from "@/components/overlays/inspector-fields/panel-labels";
+import { SliderField } from "@/components/overlays/inspector-fields/slider-field";
+import { SwitchField } from "@/components/overlays/inspector-fields/switch-field";
+import type { FireMode } from "@/components/shared/demo/demo-fire";
 
 export interface AlertListProps {
   /** Scopes the row ids, so two alert boxes never share one. */

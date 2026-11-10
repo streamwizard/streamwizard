@@ -1,4 +1,4 @@
-import type { ChannelChatMessageEvent, ChannelChatNotificationEvent } from "@repo/schemas";
+import type { ChannelChatMessageEvent, ChannelChatNotificationEvent } from "@repo/schemas/eventsub/chat";
 import { chatNoticeKind, type ChatWidgetItemConfig } from "./chat-widget-config";
 
 /**

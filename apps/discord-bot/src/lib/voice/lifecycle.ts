@@ -9,7 +9,7 @@ import {
   type VoiceBasedChannel,
   type VoiceState,
 } from "discord.js";
-import type { VoiceHub } from "@repo/supabase/queries/discord-voice";
+import type { VoiceHub } from "@repo/supabase/queries/discord/voice";
 import { reportError } from "@repo/sentry";
 import {
   applyTempPermissions,

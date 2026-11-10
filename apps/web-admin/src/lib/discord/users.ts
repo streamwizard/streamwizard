@@ -8,6 +8,7 @@ import { getDiscordContext } from "./api";
 // saw). Stored names always win; the raw id is the last resort.
 
 import { displayName as displayNameFromRecord, type DiscordProfile } from "./profile-names";
+import { isSnowflake } from "@repo/schemas/ids";
 
 export type { DiscordProfile };
 
@@ -75,8 +76,8 @@ const lookup = cache(async (userId: string): Promise<DiscordProfile | null> => {
       // The client already waited out short limits; a long one isn't worth a
       // Sentry issue, the page falls back to the stored name or id. Keep the
       // stale profile if there is one rather than showing a raw id.
-      if (error instanceof DiscordRateLimitError) console.warn(`[web-admin discord: user lookup] ${error.message}`);
-      else reportError(error, "web-admin discord: user lookup", { userId });
+      if (error instanceof DiscordRateLimitError) console.warn(`[discord.user-lookup] ${error.message}`);
+      else reportError(error, "discord.user-lookup", { userId });
       return hit?.profile ?? null;
     })
     .finally(() => inflight.delete(userId));
@@ -84,11 +85,10 @@ const lookup = cache(async (userId: string): Promise<DiscordProfile | null> => {
   return job;
 });
 
-const SNOWFLAKE = /^\d{17,20}$/;
 
 /** Profiles for the given ids; ids that can't be resolved are left out. */
 export async function resolveDiscordProfiles(ids: (string | null | undefined)[]): Promise<Map<string, DiscordProfile>> {
-  const unique = [...new Set(ids.filter((id): id is string => !!id && SNOWFLAKE.test(id)))];
+  const unique = [...new Set(ids.filter(isSnowflake))];
   const profiles = await Promise.all(unique.map(async (id) => [id, await lookup(id)] as const));
   return new Map(profiles.filter((entry): entry is readonly [string, DiscordProfile] => entry[1] !== null));
 }

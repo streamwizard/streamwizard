@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowUpRight, MoreHorizontal, Plus } from "lucide-react";
 import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@repo/ui";
-import type { UserRow } from "@/components/subscriptions/types";
+import type { UserRow } from "@/components/users/subscriptions/types";
 import { useGrantAccess } from "./grant-access";
 
 // Menu rows tall enough to hit with a thumb.

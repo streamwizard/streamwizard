@@ -1,4 +1,4 @@
-import { OG_CONTENT_TYPE, OG_SIZE, renderOgImage, VOD_AMBER } from "@/lib/og-image";
+import { OG_CONTENT_TYPE, OG_SIZE, renderOgImage, VOD_AMBER } from "@/lib/seo/og-image";
 
 export const alt = "Clip from your Twitch VODs – StreamWizard";
 export const size = OG_SIZE;

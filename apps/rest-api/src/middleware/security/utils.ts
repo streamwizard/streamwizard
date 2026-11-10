@@ -1,19 +1,15 @@
 // middleware/security/utils.ts
-import { Context, Next } from "hono";
+import type { Context, Next } from "hono";
 import { createHash } from "crypto";
 import { supabase } from "@repo/supabase";
-import { Sentry } from "../../sentry";
 
 /**
  * Security Event Metadata Interface
  */
 export interface SecurityEventMetadata {
   ip?: string;
-  api_key_id?: string;
   client_ip?: string;
-  allowed_ips?: string[];
   origin?: string;
-  allowed_origins?: string[];
   attempts?: number;
   blocked_until?: string;
   endpoint?: string;
@@ -66,53 +62,5 @@ export function requestId() {
     c.header("X-Request-ID", reqId);
 
     await next();
-  };
-}
-
-/**
- * Safe Error Handler Middleware
- *
- * Provides secure error handling that doesn't leak sensitive information
- * in production while providing detailed error information in development.
- */
-export function safeErrorHandler() {
-  return async (c: Context, next: Next) => {
-    try {
-      await next();
-    } catch (error: any) {
-      const requestId = c.get("requestId") || "unknown";
-      const isDevelopment = process.env.NODE_ENV === "development";
-
-      // Log the full error internally
-      console.error("API Error:", {
-        requestId,
-        error: error.message,
-        stack: error.stack,
-        path: c.req.path,
-        method: c.req.method,
-      });
-
-      Sentry.captureException(error, { extra: { requestId, path: c.req.path, method: c.req.method } });
-
-      // Log to audit logs
-      await logSecurityEvent("api_error", {
-        request_id: requestId,
-        error_message: error.message,
-        endpoint: c.req.path,
-        method: c.req.method,
-      });
-
-      // Return safe error to client
-      return c.json(
-        {
-          error: "Internal server error",
-          message: isDevelopment
-            ? error.message // Show details in dev
-            : "An unexpected error occurred. Please try again later.",
-          requestId, // Always include for support
-        },
-        500,
-      );
-    }
   };
 }

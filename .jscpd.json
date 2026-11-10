@@ -1,0 +1,18 @@
+{
+  "path": ["apps", "packages"],
+  "format": ["typescript", "tsx"],
+  "minTokens": 70,
+  "threshold": 1.0,
+  "ignore": [
+    "**/node_modules/**",
+    "**/.next/**",
+    "**/.turbo/**",
+    "**/dist/**",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/types/supabase.ts"
+  ],
+  "reporters": ["console"],
+  "absolute": false,
+  "gitignore": true
+}

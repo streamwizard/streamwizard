@@ -1,22 +1,13 @@
 import Link from "next/link";
 import { ArrowLeft, Check } from "lucide-react";
-import {
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@repo/ui";
-import { PageHeader } from "@/components/widgets/page-header";
-import type { DiffLine } from "@/lib/cms/revision-diff";
-import { REVISION_KIND_LABELS } from "@/lib/cms/revision-kinds";
-import { PageCrumb } from "@/lib/crumbs";
-import { formatDateTime, formatRelativeTime } from "@/lib/discord/tickets";
+import { Button } from "@repo/ui/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@repo/ui/components/ui/empty";
+import { PageHeader } from "@/components/shared/page/page-header";
+import type { DiffLine } from "@/lib/cms/revisions/revision-diff";
+import { REVISION_KIND_LABELS } from "@/lib/cms/revisions/revision-kinds";
+import { PageCrumb } from "@/lib/nav/crumbs";
+import { formatDateTime, formatRelativeTime } from "@/lib/discord/tickets/tickets";
 import { cn } from "@/lib/utils";
 import { RestoreButton, type RevisionRow } from "./revision-list";
 

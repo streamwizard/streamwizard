@@ -1,5 +1,12 @@
 import { TwitchApiBaseClient } from "./base-client";
-import { Helix } from "@repo/types";
+import type {
+  CreateClipFromVodParams,
+  CreateClipFromVodResponse,
+  CreateClipParams,
+  CreateClipResponse,
+  GetClipsParams,
+  GetClipsResponse,
+} from "@repo/types/helix";
 
 export interface ClipDownloadUrl {
   clip_id: string;
@@ -13,34 +20,34 @@ export class TwitchClipsClient extends TwitchApiBaseClient {
   }
 
   /** Retrieve clips for a broadcaster, game, or by clip ID. */
-  async getClips(options: Helix.GetClipsParams): Promise<Helix.GetClipsResponse> {
-    const response = await this.appApi().get<Helix.GetClipsResponse>("/clips", {
+  async getClips(options: GetClipsParams): Promise<GetClipsResponse> {
+    const response = await this.appApi().get<GetClipsResponse>("/clips", {
       params: options,
     });
     return response.data;
   }
 
   /** Create a clip from the broadcaster's live stream. Requires `clips:edit` scope. */
-  async createClip(params: Omit<Helix.CreateClipParams, "broadcaster_id"> = {}): Promise<Helix.CreateClipResponse> {
-    const response = await this.clientApi().post<Helix.CreateClipResponse>("/clips", null, {
+  async createClip(params: Omit<CreateClipParams, "broadcaster_id"> = {}): Promise<CreateClipResponse> {
+    const response = await this.clientApi().post<CreateClipResponse>("/clips", null, {
       params: {
         broadcaster_id: this.broadcaster_id,
         ...params,
-      } as Helix.CreateClipParams,
+      } as CreateClipParams,
     });
     return response.data;
   }
 
   /** Create a clip from a VOD segment. Requires `clips:edit` scope. */
   async createClipFromVod(
-    params: Omit<Helix.CreateClipFromVodParams, "broadcaster_id" | "editor_id">
-  ): Promise<Helix.CreateClipFromVodResponse> {
-    const response = await this.clientApi().post<Helix.CreateClipFromVodResponse>("/videos/clips", null, {
+    params: Omit<CreateClipFromVodParams, "broadcaster_id" | "editor_id">
+  ): Promise<CreateClipFromVodResponse> {
+    const response = await this.clientApi().post<CreateClipFromVodResponse>("/videos/clips", null, {
       params: {
         editor_id: this.broadcaster_id,
         broadcaster_id: this.broadcaster_id,
         ...params,
-      } as Helix.CreateClipFromVodParams,
+      } as CreateClipFromVodParams,
     });
     return response.data;
   }

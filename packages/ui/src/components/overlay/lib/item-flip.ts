@@ -1,4 +1,4 @@
-import type { OverlayItem } from "../types";
+import type { OverlayItem } from "../types/item";
 
 /**
  * Mirroring an item across its own axes.

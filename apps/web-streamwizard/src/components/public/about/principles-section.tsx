@@ -1,6 +1,6 @@
 import { MapPin, ShieldCheck, Wrench } from "lucide-react";
 import { SectionView } from "@/components/public/analytics/section-view";
-import { RevealGroup } from "@/components/public/home/reveal";
+import { RevealGroup } from "@/components/public/common/reveal";
 
 /*
  * How the thing gets built, as three short rules. Static cards on a stagger;

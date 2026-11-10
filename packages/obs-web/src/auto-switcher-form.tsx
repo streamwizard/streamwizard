@@ -7,13 +7,15 @@ import { toast } from "sonner";
 import {
   AUTO_SWITCHER_PRESET_THRESHOLDS,
   PRESET_COPY,
+  type AutoSwitcherSensitivityPreset,
+} from "@repo/schemas/auto-switcher/constants";
+import {
   autoSwitcherFormSchema,
   defaultsFrom,
   type AutoSwitcherConfigRowLike,
   type AutoSwitcherFormValues,
-  type AutoSwitcherSensitivityPreset,
-  type AutoSwitcherThresholds,
-} from "@repo/schemas";
+} from "@repo/schemas/auto-switcher/form";
+import { type AutoSwitcherThresholds } from "@repo/schemas/auto-switcher/auto-switcher";
 import {
   Button,
   Card,

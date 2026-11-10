@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import type { AutoSwitcherStatus } from "@repo/schemas";
+import type { AutoSwitcherStatus } from "@repo/schemas/auto-switcher/auto-switcher";
 import { Button, Card, CardContent } from "@repo/ui";
 import { Hand, Loader2, Repeat } from "lucide-react";
 import { useAutoSwitcherStatus } from "@/hooks/obs/use-auto-switcher-status";
-import { clearSceneOverride } from "@/actions/supabase/auto-switcher";
+import { clearSceneOverride } from "@/actions/irl/auto-switcher";
 
 // A deck tap just wrote the override, so the engine's last status frame may
 // predate it. Frames arrive every ~5s; only trust the live status again after

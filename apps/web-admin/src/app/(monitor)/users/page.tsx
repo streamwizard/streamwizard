@@ -1,6 +1,6 @@
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { type UserListFilter, type UserListSort, getUserListStats, listUsers } from "@repo/supabase/queries/admin-users";
-import { listProductsWithPlans } from "@repo/supabase/queries/subscriptions";
+import { type UserListFilter, type UserListSort, getUserListStats, listUsers } from "@repo/supabase/queries/users/admin-users";
+import { listProductsWithPlans } from "@repo/supabase/queries/subscriptions/subscriptions";
 import { USER_FILTERS, USER_SORTS, UsersView } from "@/components/users/users-view";
 
 export const dynamic = "force-dynamic";

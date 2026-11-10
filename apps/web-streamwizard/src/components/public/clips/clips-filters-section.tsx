@@ -1,6 +1,6 @@
 import { CalendarRange, Gamepad2, Scissors, Search, Star, Tv } from "lucide-react";
 import { SectionView } from "../analytics/section-view";
-import { RevealGroup } from "../home/reveal";
+import { RevealGroup } from "@/components/public/common/reveal";
 
 /*
  * Plain inventory of the filter bar, one card per filter. The streamer card

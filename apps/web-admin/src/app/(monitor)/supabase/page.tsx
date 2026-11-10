@@ -1,4 +1,4 @@
-import { Activity, ChevronRight, Cpu, Gauge, KeyRound, ListOrdered, Sparkles } from "lucide-react";
+import { Activity, Cpu, Gauge, KeyRound, ListOrdered, Sparkles } from "lucide-react";
 import {
   querySupabaseAuthRoutes,
   querySupabaseDbSizes,
@@ -10,18 +10,20 @@ import {
   SUPABASE_DB_DISK_WARN_PCT,
 } from "@repo/alerting/thresholds";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { getQueryStats, type QueryStat } from "@repo/supabase/queries/query-stats";
-import { Card, CardContent, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui";
-import { PlatformMetricChart } from "@/components/charts/platform-metric-chart";
-import { PlatformMultiSeriesChart } from "@/components/charts/platform-multi-series-chart";
-import { HealthSection, SupabaseHealthBanner, SupabaseKpiTiles } from "@/components/charts/supabase-health";
-import { DataList } from "@/components/widgets/data-list";
-import { LiveIndicator } from "@/components/widgets/live-indicator";
-import { PageHeader } from "@/components/widgets/page-header";
-import { SectionHeading } from "@/components/widgets/section-heading";
-import { ChartGrid } from "@/components/widgets/stat-grid";
+import { getQueryStats, type QueryStat } from "@repo/supabase/queries/platform/query-stats";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/components/ui/table";
+import { PlatformMetricChart } from "@/components/shared/charts/platform-metric-chart";
+import { PlatformMultiSeriesChart } from "@/components/supabase/platform-multi-series-chart";
+import { HealthSection, SupabaseHealthBanner, SupabaseKpiTiles } from "@/components/supabase/supabase-health";
+import { QueryText } from "@/components/supabase/query-text";
+import { DataList } from "@/components/shared/data-list";
+import { LiveIndicator } from "@/components/shared/live-indicator";
+import { PageHeader } from "@/components/shared/page/page-header";
+import { SectionHeading } from "@/components/shared/page/section-heading";
+import { ChartGrid } from "@/components/shared/stat-grid";
 import { homeEnv } from "@/lib/home-env";
-import { EMPTY_SUPABASE_METRICS, fetchSupabaseMetrics, type SupabaseMetrics } from "@/lib/supabase-metrics";
+import { EMPTY_SUPABASE_METRICS, fetchSupabaseMetrics, type SupabaseMetrics } from "@/lib/supabase/supabase-metrics";
 
 export const dynamic = "force-dynamic";
 
@@ -32,20 +34,6 @@ function formatBytes(bytes: number): string {
 }
 
 const SECTION_ICON = "h-4 w-4";
-
-/** The query on one or two lines, the whole statement behind a tap: a title attribute never opens on a phone. */
-function QueryText({ query }: { query: string }) {
-  return (
-    <details className="group min-w-0 font-normal">
-      <summary className="flex min-h-11 cursor-pointer list-none items-start gap-1.5 rounded-sm py-1 sm:min-h-0 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
-        <ChevronRight className="mt-0.5 size-3.5 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" aria-hidden="true" />
-        <code className="line-clamp-2 font-mono text-xs break-all whitespace-normal group-open:hidden">{query.replace(/\s+/g, " ")}</code>
-        <span className="hidden text-xs text-muted-foreground group-open:inline">Full query</span>
-      </summary>
-      <pre className="mt-1 max-h-80 overflow-y-auto rounded-md bg-muted p-3 font-mono text-xs break-words whitespace-pre-wrap">{query}</pre>
-    </details>
-  );
-}
 
 export default async function SupabasePlatformPage() {
   let m: SupabaseMetrics = EMPTY_SUPABASE_METRICS;

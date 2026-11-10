@@ -6,6 +6,7 @@
 import { stampDoc } from "./doc-version";
 import { isEmbedProvider, isValidEmbedId } from "./embed";
 import { isValidSlug } from "./slug";
+import { isGuid } from "@repo/schemas/ids";
 
 export interface DocMark {
   type: string;
@@ -95,7 +96,6 @@ function cleanString(value: unknown, maxLength: number): string {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
 }
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CODE_LANGUAGE = /^[a-z0-9+#-]{1,20}$/;
 
 const NODE_SPECS: Record<string, NodeSpec> = {
@@ -136,7 +136,7 @@ const NODE_SPECS: Record<string, NodeSpec> = {
   image: {
     category: "block",
     attrs: (attrs) => {
-      if (typeof attrs.assetId !== "string" || !UUID.test(attrs.assetId)) return null;
+      if (typeof attrs.assetId !== "string" || !isGuid(attrs.assetId)) return null;
       const cleaned: Record<string, unknown> = {
         assetId: attrs.assetId.toLowerCase(),
         alt: cleanString(attrs.alt, MAX_ALT_LENGTH),

@@ -1,8 +1,8 @@
 import { ChevronDown } from "lucide-react";
-import type { UserActivityRow } from "@repo/supabase/queries/admin-users";
-import { PLATFORM_EVENT_LABELS } from "@repo/types";
-import { Badge } from "@repo/ui";
-import { formatDateTime, formatRelativeTime } from "@/lib/discord/tickets";
+import type { UserActivityRow } from "@repo/supabase/queries/users/admin-users";
+import { PLATFORM_EVENT_LABELS } from "@repo/schemas/platform-events";
+import { Badge } from "@repo/ui/components/ui/badge";
+import { formatDateTime, formatRelativeTime } from "@/lib/discord/tickets/tickets";
 import { cn } from "@/lib/utils";
 
 const BAD_STATUSES = new Set(["failed", "error"]);

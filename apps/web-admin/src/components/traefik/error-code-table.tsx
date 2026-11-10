@@ -2,12 +2,12 @@
 
 import useSWR from "swr";
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui";
-import { formatErrorPct } from "@/components/apps/app-format";
-import { DataList } from "@/components/widgets/data-list";
-import { ENV_LABEL } from "@/lib/apps-model";
-import { useRefreshInterval } from "@/lib/refresh-interval-context";
-import { useTimeRange } from "@/lib/time-range-context";
-import { statusMeaning, type ErrorRow } from "@/lib/traefik-model";
+import { formatErrorPct } from "@/lib/apps/app-format";
+import { DataList } from "@/components/shared/data-list";
+import { ENV_LABEL } from "@/lib/apps/apps-model";
+import { useRefreshInterval } from "@/providers/refresh-interval-context";
+import { useTimeRange } from "@/providers/time-range-context";
+import { statusMeaning, type ErrorRow } from "@/lib/traefik/traefik-model";
 import { fetcher } from "@/lib/utils";
 import { ERRORS_TABLE_HINT } from "./traefik-format";
 

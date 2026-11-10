@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
-import { getWidget } from "@/actions/widgets";
-import type { Widget } from "@/actions/widgets";
+import { getWidget } from "@/actions/widgets/widget-library";
+import type { Widget } from "@/types/widgets";
 
 /**
  * The canvas item and the inspector both need the same widget row, and a scene

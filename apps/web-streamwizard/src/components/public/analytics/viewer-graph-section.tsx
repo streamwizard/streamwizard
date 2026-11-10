@@ -1,6 +1,6 @@
 import { LineChart, Pin, PlayCircle } from "lucide-react";
 import { SectionView } from "./section-view";
-import { Reveal, RevealGroup } from "../home/reveal";
+import { Reveal, RevealGroup } from "@/components/public/common/reveal";
 import { ViewerEventsDemo } from "./viewer-events-demo";
 
 /*

@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, type ReactNode } from "react";
-import type { GeoPayload } from "../types";
+import type { GeoPayload } from "../types/base";
 
 // undefined = no IrlGeoProvider in the tree (OBS mode → use WebSocket)
 // null      = provider present but GPS not yet acquired (phone mode, waiting)

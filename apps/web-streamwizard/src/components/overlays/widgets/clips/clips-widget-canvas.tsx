@@ -3,12 +3,12 @@
 import type {
   ClipDisplayFieldLayout,
   DisplayFieldKey,
-} from "@/types/overlays";
+} from "@repo/ui/components/overlay/types/clips";
 import {
   asClipDisplayFieldConfig,
   buildCompositeClipsConfig,
   getClipDisplayChildren,
-} from "@/types/overlays";
+} from "@repo/ui/components/overlay/types/clips";
 import type { OverlayCanvasProps } from "../../registry/overlay-widget-registry.types";
 import { ClipVideoPreview } from "./clip-video-preview";
 

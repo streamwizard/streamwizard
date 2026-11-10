@@ -4,8 +4,8 @@ import {
   TICKET_TAG_CONTENT_MAX,
   TICKET_TAG_KEYWORDS_MAX,
   TICKET_TAG_NAME_MAX,
-} from "@repo/supabase/queries/ticket-tags";
-import { TicketTagsManager } from "@/components/discord/ticket-tags-manager";
+} from "@repo/supabase/queries/tickets/tags";
+import { TicketTagsManager } from "@/components/discord/tickets/settings/ticket-tags-manager";
 import { requireDiscordContext } from "@/lib/discord/api";
 
 export const dynamic = "force-dynamic";

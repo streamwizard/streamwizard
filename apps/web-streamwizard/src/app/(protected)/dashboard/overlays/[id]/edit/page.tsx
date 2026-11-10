@@ -1,10 +1,10 @@
 import { getOverlayScene } from "@/actions/overlays/scenes";
-import { getWidgetsByIds } from "@/actions/widgets";
+import { getWidgetsByIds } from "@/actions/widgets/widget-library";
 import { OverlayEditor } from "@/components/overlays/editor/overlay-editor";
 import { createClient } from "@repo/supabase/next/server";
 import { redirect } from "next/navigation";
-import { getClipFolders } from "@repo/supabase/queries/clips";
-import { asCustomWidgetConfig } from "@/types/overlays";
+import { getClipFolders } from "@repo/supabase/queries/clips/clips";
+import { asCustomWidgetConfig } from "@repo/ui/components/overlay/types/item";
 
 interface Props {
   params: Promise<{ id: string }>;

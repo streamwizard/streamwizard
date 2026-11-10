@@ -4,11 +4,11 @@ import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { getCmsContentForEditor, getCmsRevision } from "@repo/supabase/queries/cms/content";
 import { RevisionCompare } from "@/components/content/revision-compare";
 import { contentType, draftFromRow } from "@/lib/cms/draft-row";
-import { compareRevision, type ComparableFields } from "@/lib/cms/revision-diff";
+import { compareRevision, type ComparableFields } from "@/lib/cms/revisions/revision-diff";
+import { isGuid } from "@repo/schemas/ids";
 
 export const dynamic = "force-dynamic";
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const str = (value: unknown) => (typeof value === "string" ? value : "");
 
@@ -29,7 +29,7 @@ function fromSnapshot(snapshot: Record<string, unknown>): ComparableFields {
 
 export default async function RevisionComparePage({ params }: { params: Promise<{ id: string; revisionId: string }> }) {
   const { id, revisionId } = await params;
-  if (!UUID.test(id) || !UUID.test(revisionId)) notFound();
+  if (!isGuid(id) || !isGuid(revisionId)) notFound();
   const [{ data: row, error }, revision] = await Promise.all([
     getCmsContentForEditor(supabaseAdmin, id),
     getCmsRevision(supabaseAdmin, id, revisionId),

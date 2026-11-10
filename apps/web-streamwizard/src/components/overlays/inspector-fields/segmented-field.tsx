@@ -2,7 +2,7 @@
 
 import type { ComponentType, ReactNode } from "react";
 import { cn, Label, ToggleGroup, ToggleGroupItem } from "@repo/ui";
-import { InspectorHint } from "../editor/inspector-hint";
+import { InspectorHint } from "@/components/overlays/editor/inspector/inspector-hint";
 
 export interface SegmentedOption<T extends string> {
   value: T;

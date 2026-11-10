@@ -15,7 +15,7 @@ The dashboard streamers actually log into. Clips, folders, overlays, analytics �
 - **Mutations** — every write goes through a Server Action in `src/actions/`. No ad-hoc API layer.
 - **Database** — never queried directly. All `.from()` calls live in `@repo/supabase/queries/*`.
 
-See the root [`ARCHITECTURE.md`](../../ARCHITECTURE.md) for the full routing, server-action, and overlay-widget breakdown.
+See [`.claude/rules/architecture/web-apps.md`](../../.claude/rules/architecture/web-apps.md) for routing, server actions, page metadata, components and the overlay-widget breakdown.
 
 ## Development notes
 
@@ -30,3 +30,5 @@ bun dev --filter=@repo/web-streamwizard
 ```
 
 Then open [http://localhost:3000](http://localhost:3000).
+
+To open the dev server from another device (a phone on your network), set `DEV_ALLOWED_ORIGINS` to a comma-separated list of the hosts you use, for example your machine's LAN address. Next blocks dev requests and HMR from any other origin; `127.0.0.1` is always allowed.

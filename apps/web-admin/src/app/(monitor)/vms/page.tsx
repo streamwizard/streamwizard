@@ -1,44 +1,32 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
 import { STREAMWIZARD_VM_TAG, VM_ALERT_RULES } from "@repo/alerting/rules";
-import { PageHeader } from "@/components/widgets/page-header";
-import { getGuestNet } from "@/lib/pve";
+import { VmsMessage } from "@/components/vms/vms-message";
+import { VmsPageHeader } from "@/components/vms/vms-page-header";
+import { getGuestNet } from "@/lib/vms/pve";
 import { OtherVms } from "@/components/vms/other-vms";
 import { HostCard } from "@/components/vms/host-card";
 import { VmTable } from "@/components/vms/vm-table";
 import { AutoRefresh } from "@/components/vms/auto-refresh";
-import { getVmOverview, guestRef, splitVms, toTableRow, type VmOverview } from "@/lib/vms";
+import { getVmOverview, guestRef, splitVms, toTableRow, type VmOverview } from "@/lib/vms/vms";
 
 export const dynamic = "force-dynamic";
-
-const header = <PageHeader title="VMs" description="Proxmox hosts and guests: state, load, storage and IPs. Live from the metrics Proxmox pushes." />;
-
-function Message({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="space-y-6">
-      {header}
-      <Card>
-        <CardContent className="space-y-2 py-10 text-center text-sm text-muted-foreground">{children}</CardContent>
-      </Card>
-    </div>
-  );
-}
 
 export default async function VmsPage() {
   let overview: VmOverview;
   try {
     overview = await getVmOverview();
   } catch (error) {
-    return <Message>{(error as Error).message}</Message>;
+    return <VmsMessage>{(error as Error).message}</VmsMessage>;
   }
   const { hosts, vms } = overview;
   const { ours, others } = splitVms(vms);
 
   if (hosts.length === 0 && vms.length === 0) {
     return (
-      <Message>
+      <VmsMessage>
         <p className="font-medium text-foreground">No Proxmox hosts yet.</p>
         <p>Point the Proxmox metric server (Datacenter → Metric Server) at the proxmox bucket and they show up here.</p>
-      </Message>
+      </VmsMessage>
     );
   }
 
@@ -48,7 +36,7 @@ export default async function VmsPage() {
   return (
     <div className="space-y-6">
       <AutoRefresh />
-      {header}
+      <VmsPageHeader />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {hosts.map((host) => {

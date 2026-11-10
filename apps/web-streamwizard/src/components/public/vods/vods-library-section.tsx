@@ -1,6 +1,6 @@
 import { RefreshCw, Radio, Trash2 } from "lucide-react";
 import { SectionView } from "../analytics/section-view";
-import { Reveal } from "../home/reveal";
+import { Reveal } from "@/components/public/common/reveal";
 import { VodLibraryDemo } from "./vod-library-demo";
 
 /*

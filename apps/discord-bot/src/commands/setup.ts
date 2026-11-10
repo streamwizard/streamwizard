@@ -1,5 +1,5 @@
 import { InteractionContextType, MessageFlags, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
-import { startSetupWizard } from "../lib/setup-wizard";
+import { startSetupWizard } from "@/lib/setup/setup-wizard";
 import type { Command } from "../types/discord";
 
 export default {

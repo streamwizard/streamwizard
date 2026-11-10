@@ -1,0 +1,150 @@
+import { z } from "zod";
+import { isServiceSigningJwk, SERVICE_SIGNING_JWK_ERROR } from "@repo/service-token/signing-jwk";
+import { parseNodeTokenJwks } from "@/lib/node-token-jwks";
+
+export const envSchema = z.object({
+  NODE_ENV: z.enum(["development", "staging", "production"]).default("development"),
+  // Read by @repo/sentry (and @repo/posthog/server) as the environment name,
+  // before NODE_ENV. Usually unset on the Bun services.
+  APP_ENV: z.string().optional(),
+  PORT: z.coerce.number().int().positive().default(8080),
+
+  // Supabase
+  SUPABASE_URL: z.string().url(),
+  SUPABASE_PUBLIC_KEY: z.string().min(1),
+  SUPABASE_SECRET_KEY: z.string().min(1),
+  TOKEN_ENCRYPTION_KEY: z.string().min(1),
+
+  // Twitch
+  TWITCH_CLIENT_ID: z.string().min(1),
+  TWITCH_CLIENT_SECRET: z.string().min(1),
+  TWITCH_WEBHOOK_SECRET: z.string().min(1),
+
+  // Public URL returned to nodes during /claim so they know where to send requests
+  STREAMWIZARD_API_URL: z.string().url(),
+
+  // S3 BUCKET OBS
+  OBS_S3_ACCESS_KEY: z.string().min(1),
+  OBS_S3_BUCKET: z.string().min(1),
+  OBS_S3_ENDPOINT: z.url(),
+  OBS_S3_REGION: z.string().min(1),
+  OBS_S3_SECRET_KEY: z.string().min(1),
+
+  // Tailscale OAuth client, scoped to auth_keys for tag:ingest-node and
+  // tag:obs-node. Used by /api/ingest-nodes/claim and /api/obs-nodes/claim (via
+  // lib/tailscale.ts) to mint a fresh, single-use, tagged auth key per node
+  // instead of requiring an admin to paste one in by hand.
+  TAILSCALE_OAUTH_CLIENT_ID: z.string().min(1),
+  TAILSCALE_OAUTH_CLIENT_SECRET: z.string().min(1),
+
+  // Sentry. Staging and production share one Doppler config, so the DSN is
+  // namespaced per app; SENTRY_DSN is the fallback for the per-app dev configs.
+  SENTRY_DSN_REST_API: z.string().url().optional(),
+  SENTRY_DSN: z.string().url().optional(),
+  SENTRY_RELEASE: z.string().optional(),
+
+  // PostHog (server-side capture; analytics silently off when unset)
+  POSTHOG_KEY: z.string().min(1).optional(),
+  POSTHOG_HOST: z.string().url().optional(),
+  // Comma-separated account ids that objected; nothing is sent for them.
+  POSTHOG_OPT_OUT_USER_IDS: z.string().optional(),
+
+  // Shared CDN bucket, for removing a user's ticket attachments when Twitch
+  // revokes StreamWizard (user.authorization.revoke). Optional: without all
+  // four the account is still deleted and the skipped purge is reported.
+  R2_ACCOUNT_ID: z.string().min(1).optional(),
+  R2_ACCESS_KEY_ID: z.string().min(1).optional(),
+  R2_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+  R2_ASSETS_BUCKET: z.string().min(1).optional(),
+
+  // InfluxDB — one org per environment, buckets are fixed in @repo/metrics.
+  // INFLUXDB_TOKEN is the env's shared token (scripts/influx-setup.sh). The
+  // optional node tokens override it with one write-only on the obs-nodes /
+  // ingest-nodes bucket. Either way the token is relayed to nodes in the
+  // /claim response so they can report host + instance metrics without a
+  // manual .env edit per node. Optional: a claim still succeeds without
+  // these, it just omits them from the response (see modules/ingest-nodes/claim.ts /
+  // modules/obs-nodes/node/claim.ts), same as install.sh already tolerates a missing tailscale_authkey.
+  INFLUXDB_URL: z.string().url().optional(),
+  INFLUXDB_ORG: z.string().optional(),
+  INFLUXDB_TOKEN: z.string().optional(),
+  INFLUXDB_OBS_NODE_TOKEN: z.string().optional(),
+  INFLUXDB_INGEST_NODE_TOKEN: z.string().optional(),
+
+  // ws-server: broadcasts, revokes and the ingest session registry, each
+  // signed with WS_SERVICE_SIGNING_JWK (@repo/service-token).
+  WS_SERVER_URL: z.string().optional(),
+  // Ed25519 private JWK this service signs its ws-server tokens with
+  // (@repo/service-token reads it). Secret. Optional: without it every
+  // ws-server call is skipped as unconfigured; a malformed one stops boot.
+  WS_SERVICE_SIGNING_JWK: z
+    .string()
+    .min(1)
+    .refine(isServiceSigningJwk, SERVICE_SIGNING_JWK_ERROR)
+    .optional(),
+  // The ws-server address ingest nodes dial (POST /api/ingest-nodes/me/ws-token).
+  // Only needed when it differs from WS_SERVER_URL, e.g. rest-api reaches
+  // ws-server on an internal address the nodes can't, or a local Docker node
+  // needs host.docker.internal instead of localhost.
+  WS_SERVER_NODE_URL: z.string().optional(),
+
+  // Go-live posts in the StreamWizard Discord (SW-336): stream.online posts an
+  // embed in the guild's live channel through Discord REST, stream.offline
+  // edits it. Optional and paired: without both, the Discord step is skipped
+  // and everything else in the handlers runs as before.
+  DISCORD_BOT_TOKEN: z.string().min(1).optional(),
+  DISCORD_GUILD_ID: z.string().min(1).optional(),
+
+  // Proxmox backup monitoring. Prod only:
+  // without PBS_URL + PBS_NAMESPACE + both token vars the poller never starts.
+  // The token only holds DatastoreAudit, so it can read backup metadata but
+  // never change, restore or delete anything.
+  PBS_URL: z.string().url().optional(),
+  PBS_DATASTORE: z.string().min(1).default("nas-backups"),
+  PBS_NAMESPACE: z.string().min(1).optional(),
+  PBS_TOKEN_ID: z.string().min(1).optional(),
+  PBS_TOKEN_SECRET: z.string().min(1).optional(),
+  // JSON array of {name, url, tokenId, tokenSecret}, one per PVE host
+  // (PVEAuditor tokens). Parsed in modules/backups/config.ts.
+  PVE_HOSTS: z.string().optional(),
+  // Backups run once a day and webhooks report each run (plus a poll a
+  // minute later), so the scheduled poll is only the safety net: every 6 h.
+  // "Poll now" on /backups forces one.
+  BACKUP_POLL_SECONDS: z.coerce.number().int().min(60).default(6 * 60 * 60),
+  // Shared secret the Proxmox webhook targets send in X-Proxmox-Webhook-Token
+  // (stored as a notification secret on each host). Unset = receiver off.
+  BACKUP_WEBHOOK_SECRET: z.string().min(32).optional(),
+
+  // Bearer secret for /internal/* (server-to-server from web-admin). Unset =
+  // those routes answer 404.
+  REST_API_INTERNAL_SECRET: z.string().min(32).optional(),
+
+  // Blog and guides (jobs/cms-scheduler.ts). CMS_SITE_URL is
+  // web-streamwizard's origin; the scheduler POSTs {url}/api/revalidate with
+  // the secret it shares with web-streamwizard and web-admin. Optional and
+  // paired: without both, scheduled posts still go live on time and the
+  // site catches up within the hour.
+  CMS_SITE_URL: z.string().url().optional(),
+  CMS_REVALIDATE_SECRET: z.string().min(32).optional(),
+
+  // Public half of the node-token key pair (@repo/node-token) as a JWKS,
+  // {"keys":[...]}. Sent to OBS nodes in GET /api/obs-nodes/me so they can verify
+  // the 60-second tokens web-admin and web-streamwizard sign for them. Not a
+  // secret, and one value per environment, not per node. Several keys may be
+  // listed during a rotation. A private key here is refused at boot so it
+  // can never reach a node. Optional: without it /me sends null.
+  NODE_TOKEN_PUBLIC_JWKS: z
+    .string()
+    .optional()
+    .transform((raw, ctx) => {
+      if (!raw) return null;
+      const jwks = parseNodeTokenJwks(raw);
+      if (!jwks) {
+        ctx.addIssue({ code: "custom", message: "must be a JWKS of Ed25519 public keys, each with a kid" });
+        return z.NEVER;
+      }
+      return jwks;
+    }),
+});
+
+export type Env = z.infer<typeof envSchema>;

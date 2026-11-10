@@ -1,10 +1,12 @@
 import Link from "next/link";
-import { missingTwitchScopes } from "@repo/schemas";
-import type { AdminUserDetail, AdminUserUsage, UserActivityRow } from "@repo/supabase/queries/admin-users";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
-import { formatDateTime } from "@/lib/discord/tickets";
-import type { UserAuthState } from "@/lib/user-auth";
-import { LIVE_PLAN_STATUSES, PLAN_STATUS_LABELS, formatBytes, isPast, planStatusVariant, userAvatarUrl, userDisplayName } from "@/lib/users";
+import { missingTwitchScopes } from "@repo/schemas/twitch-scopes";
+import type { AdminUserDetail, AdminUserUsage, UserActivityRow } from "@repo/supabase/queries/users/admin-users";
+import { Badge } from "@repo/ui/components/ui/badge";
+import { Button } from "@repo/ui/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
+import { formatDateTime } from "@/lib/discord/tickets/tickets";
+import type { UserAuthState } from "@/lib/users/user-auth";
+import { LIVE_PLAN_STATUSES, PLAN_STATUS_LABELS, formatBytes, isPast, planStatusVariant, userAvatarUrl, userDisplayName } from "@/lib/users/users";
 import { ActivityList } from "./activity-list";
 import { Row, When } from "./detail";
 import { GrantAccessButton } from "./grant-access";

@@ -11,8 +11,8 @@ import {
   type DisplayFieldKey,
   resolvedDisplayFieldLocks,
   resolvedDisplayFieldOrder,
-} from "@/types/overlays";
-import { CLIP_NESTED_DISPLAY_FIELDS } from "./nested-fields";
+} from "@repo/ui/components/overlay/types/clips";
+import { CLIP_NESTED_DISPLAY_FIELDS } from "./nested-fields/registry";
 import type { EditorClipPlaybackControls } from "../../registry/overlay-widget-registry.types";
 
 interface ClipVideoPreviewProps {

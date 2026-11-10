@@ -1,11 +1,11 @@
 import Image from "next/image";
-import { TrackedLink } from "../analytics/tracked-link";
+import { TrackedLink } from "@/components/shared/tracked-link";
 import { FaDiscord } from "react-icons/fa";
 // Deep import: this is a server component, and pulling a client component
 // through the `@repo/ui` barrel put every client module in the kit (recharts,
 // cmdk, vaul...) into the home page bundle.
 import { BorderBeam } from "@repo/ui/components/ui/border-beam";
-import TwitchLogin from "@/components/buttons/twitch-login";
+import TwitchLogin from "@/components/shared/twitch/twitch-login";
 import { discordInviteLink } from "@/lib/constant";
 
 /*

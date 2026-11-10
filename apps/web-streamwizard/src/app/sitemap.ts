@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { contentIndexPath, contentPath } from "@repo/cms";
 import { reportError } from "@repo/sentry";
 import { listSitemapEntries } from "@/lib/cms/public";
-import { PUBLIC_ROUTES, absoluteUrl } from "@/lib/seo";
+import { PUBLIC_ROUTES, absoluteUrl } from "@/lib/seo/seo";
 
 // Rendered per request: the posts must not be frozen at build time. The post list itself is cached (lib/cms/public.ts), so this is cheap.
 export const dynamic = "force-dynamic";

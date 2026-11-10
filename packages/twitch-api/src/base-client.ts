@@ -4,12 +4,25 @@ import {
   getTwitchAppToken,
   updateChannelAccessToken,
   updateTwitchAppToken,
-  type RefreshTwitchTokenResponse,
-} from "@repo/supabase";
+} from "@repo/supabase/queries/twitch/tokens";
 import { trackTwitchApiRequest, normalizeEndpoint } from "@repo/metrics";
+import { describeError } from "@repo/sentry/safe-error";
 import type { AxiosError, AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import axios from "axios";
 import { logTokenRefreshFailure } from "./token-refresh-log";
+import { rateLimitMessage, rateLimitRetryDelay, ratelimitRemaining, warnRateLimited } from "./rate-limit";
+
+/** Body of Twitch's POST /oauth2/token refresh response. */
+type RefreshTwitchTokenResponse = {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  scope: string[];
+  token_type: string;
+};
+
+type RetryConfig = InternalAxiosRequestConfig & { __retryCount?: number; __rateLimitRetried?: boolean };
+type Headers = Record<string, unknown>;
 
 export abstract class TwitchApiBaseClient {
   private readonly MAX_RETRIES = 2;
@@ -66,12 +79,13 @@ export abstract class TwitchApiBaseClient {
             normalizeEndpoint(response.config.url || ""),
             String(response.status),
             "twitch-client",
+            ratelimitRemaining(response.headers as Headers),
           );
         } catch {}
         return response;
       },
       async (error: AxiosError) => {
-        const config = error.config as InternalAxiosRequestConfig & { __retryCount?: number };
+        const config = error.config as RetryConfig;
         if (!config) return Promise.reject(error);
 
         const statusCode = error.response?.status;
@@ -91,9 +105,13 @@ export abstract class TwitchApiBaseClient {
               normalizeEndpoint(config.url || ""),
               statusCode ? String(statusCode) : "ERROR",
               "twitch-client",
+              ratelimitRemaining(error.response?.headers as Headers | undefined),
             );
           } catch {}
         }
+
+        const rateLimitRetry = this.handleRateLimit(api, error, config, "twitch-client");
+        if (rateLimitRetry) return rateLimitRetry;
 
         if (statusCode === 401 && currentRetryCount < this.MAX_RETRIES) {
           config.__retryCount = currentRetryCount + 1;
@@ -111,7 +129,7 @@ export abstract class TwitchApiBaseClient {
             console.debug("✅ Token refreshed, retrying request");
             return api(config);
           } catch (refreshError) {
-            console.error("❌ Token refresh failed:", refreshError);
+            console.error(`[twitch-api] user token refresh failed: ${describeError(refreshError)}`);
             return Promise.reject(refreshError);
           }
         }
@@ -170,12 +188,13 @@ export abstract class TwitchApiBaseClient {
             normalizeEndpoint(response.config.url || ""),
             String(response.status),
             "twitch-app",
+            ratelimitRemaining(response.headers as Headers),
           );
         } catch {}
         return response;
       },
       async (error: AxiosError) => {
-        const config = error.config as InternalAxiosRequestConfig & { __retryCount?: number };
+        const config = error.config as RetryConfig;
         if (!config) return Promise.reject(error);
 
         const statusCode = error.response?.status;
@@ -189,9 +208,13 @@ export abstract class TwitchApiBaseClient {
               normalizeEndpoint(config.url || ""),
               statusCode ? String(statusCode) : "ERROR",
               "twitch-app",
+              ratelimitRemaining(error.response?.headers as Headers | undefined),
             );
           } catch {}
         }
+
+        const rateLimitRetry = this.handleRateLimit(api, error, config, "twitch-app");
+        if (rateLimitRetry) return rateLimitRetry;
 
         if (statusCode === 401 && currentRetryCount < this.MAX_RETRIES) {
           config.__retryCount = currentRetryCount + 1;
@@ -206,7 +229,7 @@ export abstract class TwitchApiBaseClient {
             console.debug("✅ Token refreshed, retrying request");
             return api(config);
           } catch (refreshError) {
-            console.error("❌ Token refresh failed:", refreshError);
+            console.error(`[twitch-api] app token refresh failed: ${describeError(refreshError)}`);
             return Promise.reject(refreshError);
           }
         }
@@ -214,6 +237,29 @@ export abstract class TwitchApiBaseClient {
         return Promise.reject(error);
       },
     );
+  }
+
+  /**
+   * A Helix 429 gets one retry after a short wait when it is the general
+   * bucket (see rate-limit.ts). Returns that retry, or null to let the caller
+   * reject; in that case the error's message now says it was the rate limit.
+   */
+  private handleRateLimit(
+    api: AxiosInstance,
+    error: AxiosError,
+    config: RetryConfig,
+    bucket: string,
+  ): Promise<AxiosResponse> | null {
+    if (error.response?.status !== 429) return null;
+    const headers = error.response.headers as Headers;
+
+    error.message = rateLimitMessage(config.method?.toUpperCase() || "UNKNOWN", normalizeEndpoint(config.url || ""), headers);
+    warnRateLimited(bucket, error.message);
+
+    const delay = config.__rateLimitRetried ? null : rateLimitRetryDelay(429, headers);
+    if (delay === null) return null;
+    config.__rateLimitRetried = true;
+    return new Promise((resolve) => setTimeout(resolve, delay)).then(() => api(config));
   }
 
   private checkTokenExpiry(updated_at: string, expires_in: number): boolean {
@@ -253,7 +299,7 @@ export abstract class TwitchApiBaseClient {
       await updateChannelAccessToken(response.data, broadcaster_id);
       return response.data.access_token;
     } catch (error) {
-      console.error("❌ Token refresh failed:", error);
+      console.error(`[twitch-api] user token refresh failed: ${describeError(error)}`);
       void logTokenRefreshFailure(broadcaster_id, error);
       throw error;
     }
@@ -282,7 +328,7 @@ export abstract class TwitchApiBaseClient {
 
       return response.data.access_token;
     } catch (error) {
-      console.error("❌ Token refresh failed:", error);
+      console.error(`[twitch-api] app token refresh failed: ${describeError(error)}`);
       throw error;
     }
   }

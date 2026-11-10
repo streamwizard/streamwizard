@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import type { BackupPollData } from "@repo/backups";
-import type { BackupEventInsert } from "@repo/supabase/queries/backups";
+import type { BackupEventInsert } from "@repo/supabase/queries/platform/backups";
 
 mock.module("@repo/sentry", () => ({ reportError: () => {} }));
 
-const { createProxmoxWebhookRoute, WEBHOOK_TOKEN_HEADER } = await import("./proxmox-webhook");
+const { createProxmoxWebhookRoute, WEBHOOK_TOKEN_HEADER } = await import("@/routes/proxmox-webhook");
 
 const SECRET = "s".repeat(40);
 const health = { okAt: null, attemptAt: null, error: null, failingSince: null };
@@ -81,6 +81,8 @@ describe("proxmox webhook receiver", () => {
     expect((await send("not json")).status).toBe(400);
     expect((await send({ ...vzdump, severity: "loud" })).status).toBe(400);
     expect((await send({ ...vzdump, source: "../etc" })).status).toBe(400);
+    // The caller learns it was rejected, not which schema rule failed.
+    expect(await (await send({ ...vzdump, severity: "loud" })).json()).toEqual({ error: "Invalid payload" });
   });
 
   it("stores our job with parsed guests and pokes the poller", async () => {

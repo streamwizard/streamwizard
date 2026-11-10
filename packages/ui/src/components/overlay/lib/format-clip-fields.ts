@@ -1,4 +1,4 @@
-import type { DisplayFieldKey } from "../types";
+import type { DisplayFieldKey } from "../types/clips";
 
 export interface ClipFieldData {
   title: string;

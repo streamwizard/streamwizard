@@ -1,16 +1,17 @@
 import type { AuditLogEvent, Guild, GuildAuditLogsEntry, Message, PartialMessage } from "discord.js";
-import type { PlatformEventPayloads, PlatformEventType } from "@repo/types";
+import type { PlatformEventType } from "@repo/schemas/platform-events";
+import type { PlatformEventPayloads } from "@repo/types/platform-events";
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
-import { getUserIdentity } from "@repo/supabase/queries/identity";
+import { getUserIdentity } from "@repo/supabase/queries/users/identity";
 import { TtlCache } from "@repo/ttl-cache";
 import {
   isLogRouteActive,
   logPlatformEvent,
   type EmitPlatformEventInput,
-} from "@repo/supabase/queries/platform-events";
+} from "@repo/supabase/queries/platform/events";
 import { getLogChannelIds, getLogRoutingFor } from "../log-channel/worker";
-import { isOpenTicketChannel } from "../ticket-activity";
+import { isOpenTicketChannel } from "@/lib/tickets/ticket-activity";
 import { findAuditEntry } from "./audit";
 import { channelScope, isIgnoredChannel, type ChannelScope } from "./refs";
 

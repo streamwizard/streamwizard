@@ -1,5 +1,5 @@
 import { describe, expect, it, mock } from "bun:test";
-import type { AlertState } from "@repo/supabase/queries/alerts";
+import type { AlertState } from "@repo/supabase/queries/alerts/alerts";
 
 // Point every backing service at a closed local port so any code path that
 // slips past the mocks fails fast instead of hanging on a real network call.
@@ -22,7 +22,7 @@ const persistCalls: {
   owner: string;
 }[] = [];
 
-mock.module("@repo/supabase/queries/alerts", () => ({
+mock.module("@repo/supabase/queries/alerts/alerts", () => ({
   fetchAlertTickSnapshot: async (_client: unknown, params: unknown) => {
     snapshotCalls.push(params);
     return snapshotResult();

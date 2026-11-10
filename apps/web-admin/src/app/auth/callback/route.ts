@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createRouteHandlerClient } from "@repo/supabase/next/server";
+import { reportError } from "@repo/sentry";
 
 // Relative Location headers are resolved by the browser against the origin it
 // is already on, so redirects stay same-origin by construction — no need to
@@ -17,12 +18,12 @@ export async function GET(request: NextRequest) {
   const providerError = searchParams.get("error_description") ?? searchParams.get("error");
 
   if (providerError) {
-    console.error("[web-admin] OAuth provider returned an error:", providerError);
+    console.warn("[web-admin] OAuth provider returned an error:", providerError);
     return redirectTo("/login?error=oauth_failed");
   }
 
   if (!code) {
-    console.error("[web-admin] Auth callback reached with no ?code param");
+    console.warn("[web-admin] Auth callback reached with no ?code param");
     return redirectTo("/login?error=oauth_failed");
   }
 
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
-    console.error("[web-admin] exchangeCodeForSession failed:", error.message);
+    reportError(error, "auth-callback: code exchange", { status: error.status, code: error.code });
     return redirectTo("/login?error=oauth_failed");
   }
 
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
   // is misconfigured (e.g. an empty NEXT_PUBLIC_SUPABASE_URL) — catch it here
   // so it doesn't look like a silent bounce off the dashboard layout.
   if (!data.session) {
-    console.error("[web-admin] Code exchanged but no session was returned");
+    reportError(new Error("Code exchanged but no session was returned"), "auth-callback: no session");
     return redirectTo("/login?error=session_failed");
   }
 

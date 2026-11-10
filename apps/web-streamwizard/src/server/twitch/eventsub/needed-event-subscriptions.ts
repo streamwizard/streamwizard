@@ -1,5 +1,4 @@
-import { buildNeededEventSubscriptions, eventSubWebhookCallback } from "@repo/types";
-import { CreateEventSubSubscriptionRequest } from "@/types/twitch";
+import { buildNeededEventSubscriptions, eventSubWebhookCallback, type NeededEventSubscription } from "@repo/twitch-eventsub/subscriptions";
 import { env } from "@/lib/env";
 
 /**
@@ -10,7 +9,7 @@ import { env } from "@/lib/env";
 export default async function NeededEventSubscriptions(
   twitchUserId: string,
   grantedScopes: readonly string[] | null,
-): Promise<CreateEventSubSubscriptionRequest[]> {
+): Promise<NeededEventSubscription[]> {
   const conduitId = env.TWITCH_CONDUIT_ID;
   const apiUrl = env.STREAMWIZARD_API_URL;
 

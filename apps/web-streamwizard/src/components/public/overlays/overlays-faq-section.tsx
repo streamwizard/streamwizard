@@ -1,7 +1,7 @@
 import { SectionView } from "../analytics/section-view";
-import { Reveal } from "../home/reveal";
+import { Reveal } from "@/components/public/common/reveal";
 import { FaqAccordion } from "../home/faq-accordion";
-import { FREE_MAX_FILE_MB, FREE_MEDIA_QUOTA_MB, PRICING_FAQ_LINK } from "@/lib/pricing";
+import { FREE_MAX_FILE_MB, FREE_MEDIA_QUOTA_MB, PRICING_FAQ_LINK } from "@/lib/public/pricing";
 
 /*
  * The page's FAQ, which is also where the setup story lives now: one browser
@@ -9,7 +9,7 @@ import { FREE_MAX_FILE_MB, FREE_MEDIA_QUOTA_MB, PRICING_FAQ_LINK } from "@/lib/p
  * own section id so the funnel dashboard can tell it apart from the home FAQ.
  * OVERLAY_FAQ_ITEMS also feeds the page's FAQPage JSON-LD, so answers must
  * stand on their own: AI answers quote them without the page around them.
- * The cost answer is one sentence with the quota from lib/pricing.ts and a
+ * The cost answer is one sentence with the quota from lib/public/pricing.ts and a
  * pointer at /pricing (SW-303).
  */
 

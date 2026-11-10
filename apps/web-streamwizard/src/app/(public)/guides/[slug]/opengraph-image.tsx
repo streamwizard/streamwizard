@@ -1,5 +1,5 @@
 import { renderContentOgImage } from "@/lib/cms/og";
-import { OG_CONTENT_TYPE, OG_SIZE } from "@/lib/og-image";
+import { OG_CONTENT_TYPE, OG_SIZE } from "@/lib/seo/og-image";
 
 export const alt = "A StreamWizard guide";
 export const size = OG_SIZE;

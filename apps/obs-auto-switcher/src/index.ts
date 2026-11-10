@@ -7,12 +7,9 @@ process.on("unhandledRejection", (reason) => {
 });
 
 import { flushSentry, reportFatal } from "@repo/sentry";
-import { env } from "./lib/env";
-import { ConfigStore } from "./config-store";
-import { StatsFeed } from "./stats-feed";
-import { StatusPublisher } from "./status-publisher";
-import { Engine } from "./engine/engine";
 import { initMetrics, BUCKETS } from "@repo/metrics";
+import { createApp } from "@/app";
+import { env } from "@/lib/env";
 
 // IRL auto scene-switcher. Consumes the 1 Hz ingest stats feed from
 // ws-server, runs a per-user threshold/streak state machine, and drives
@@ -23,15 +20,7 @@ import { initMetrics, BUCKETS } from "@repo/metrics";
 
 initMetrics(BUCKETS.autoSwitcher);
 
-const statusPublisher = new StatusPublisher(env.WS_SERVER_URL, env.SUPABASE_SECRET_KEY);
-const engine = new Engine(statusPublisher);
-const configStore = new ConfigStore((userId, config) => engine.onConfigChanged(userId, config));
-
-const statsFeed = new StatsFeed(env.WS_SERVER_URL, env.CONSUMER_SECRET, {
-  onIngestStats: (userId, payload) => engine.onStats(userId, payload),
-  onConfigPush: (userId, payload) => void configStore.applyPush(userId, payload),
-  onSessionEnded: (userId, payload) => engine.onSessionEnded(userId, payload),
-});
+const { engine, configStore, statsFeed, statusPublisher, fetch } = createApp();
 
 await configStore.start();
 statusPublisher.connect();
@@ -40,17 +29,7 @@ engine.start();
 
 console.log(`[obs-auto-switcher] running — ${configStore.size} enabled config(s) loaded`);
 
-// Liveness probe (docker healthcheck / alert-worker).
-Bun.serve({
-  port: Number(process.env.PORT ?? 8010),
-  fetch(req) {
-    const url = new URL(req.url);
-    if (url.pathname === "/health") {
-      return Response.json({ ok: true, monitors: engine.monitorCount });
-    }
-    return new Response("Not Found", { status: 404 });
-  },
-});
+Bun.serve({ port: env.PORT, fetch });
 
 const shutdown = async () => {
   console.log("[obs-auto-switcher] shutting down");

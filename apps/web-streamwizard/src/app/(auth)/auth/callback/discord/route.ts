@@ -1,22 +1,22 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@repo/supabase/next/server";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { linkDiscordIntegration } from "@repo/supabase/queries/user";
-import { getGuildSettings } from "@repo/supabase/queries/discord";
+import { linkDiscordIntegration } from "@repo/supabase/queries/users/user";
+import { getGuildSettings } from "@repo/supabase/queries/discord/discord";
 import { assignRole, DiscordMemberNotFoundError } from "@/server/discord/roles";
 import { env } from "@/lib/env";
 import { reportError } from "@repo/sentry";
-import { track } from "@/lib/track";
+import { track } from "@/lib/tracking/track";
 import { safeNextPath } from "@/lib/safe-next-path";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const { searchParams } = requestUrl;
-  const isLocalEnv = process.env.NODE_ENV === "development";
+  const isLocalEnv = env.NODE_ENV === "development";
 
   const origin = isLocalEnv
     ? requestUrl.origin
-    : (process.env.NEXT_PUBLIC_BASE_URL ?? requestUrl.origin);
+    : (env.NEXT_PUBLIC_BASE_URL ?? requestUrl.origin);
 
   const code = searchParams.get("code");
   const oauthError = searchParams.get("error");

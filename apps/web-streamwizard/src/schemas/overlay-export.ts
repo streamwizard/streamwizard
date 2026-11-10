@@ -5,6 +5,7 @@ import {
   DEFAULT_ANCHOR_X,
   DEFAULT_ANCHOR_Y,
 } from "@repo/ui/overlay";
+import { MAX_WIDGET_SOURCE_CHARS } from "./widgets";
 
 /**
  * The shape of an exported overlay file.
@@ -24,7 +25,6 @@ export const OVERLAY_EXPORT_SCHEMA_VERSION = 1;
 const MAX_EXPORTED_ITEMS = 500;
 const MAX_EXPORTED_WIDGETS = 50;
 const MAX_EXPORTED_GROUPS = 500;
-const MAX_WIDGET_SOURCE_CHARS = 500_000;
 
 /**
  * A custom widget's source, carried along so the item still works in an account

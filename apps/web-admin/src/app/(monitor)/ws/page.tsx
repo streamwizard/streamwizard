@@ -17,16 +17,16 @@ import type {
   WsRoomEventPoint,
   WsTopMessageTypePoint,
 } from "@repo/metrics";
-import { WsConnectionChart } from "@/components/charts/ws-connection-chart";
-import { WsMessageChart } from "@/components/charts/ws-message-chart";
-import { WsAuthFailureChart } from "@/components/charts/ws-auth-failure-chart";
-import { WsMessageDropChart } from "@/components/charts/ws-message-drop-chart";
-import { WsConnectionDurationChart } from "@/components/charts/ws-connection-duration-chart";
-import { WsTopEventsTable } from "@/components/charts/ws-top-events-table";
-import { PageHeader } from "@/components/widgets/page-header";
-import { SectionHeading } from "@/components/widgets/section-heading";
-import { StatCard } from "@/components/widgets/stat-card";
-import { ChartGrid, StatGrid } from "@/components/widgets/stat-grid";
+import { WsConnectionChart } from "@/components/ws/ws-connection-chart";
+import { WsMessageChart } from "@/components/ws/ws-message-chart";
+import { WsAuthFailureChart } from "@/components/ws/ws-auth-failure-chart";
+import { WsMessageDropChart } from "@/components/ws/ws-message-drop-chart";
+import { WsConnectionDurationChart } from "@/components/ws/ws-connection-duration-chart";
+import { WsTopEventsTable } from "@/components/ws/ws-top-events-table";
+import { PageHeader } from "@/components/shared/page/page-header";
+import { SectionHeading } from "@/components/shared/page/section-heading";
+import { StatCard } from "@/components/shared/stat-card";
+import { ChartGrid, StatGrid } from "@/components/shared/stat-grid";
 
 export const dynamic = "force-dynamic";
 
@@ -82,10 +82,10 @@ export default async function WsDashboard() {
   const authFailureCount1h = lastHourTotal(authFailures);
   const dropCount1h = lastHourTotal(droppedMessages);
 
-  const publisherDurations = connectionDuration.filter((d) => d.role === "publisher");
-  const avgPublisherDurationMs =
-    publisherDurations.length > 0
-      ? publisherDurations.reduce((acc, d) => acc + d.avgMs, 0) / publisherDurations.length
+  const subscriberDurations = connectionDuration.filter((d) => d.role === "subscriber");
+  const avgSubscriberDurationMs =
+    subscriberDurations.length > 0
+      ? subscriberDurations.reduce((acc, d) => acc + d.avgMs, 0) / subscriberDurations.length
       : null;
 
   const roomsCreated = roomEvents.filter((e) => e.event === "created").reduce((acc, e) => acc + e.count, 0);
@@ -118,9 +118,9 @@ export default async function WsDashboard() {
             className={dropCount1h > 0 ? "border-destructive/50" : undefined}
           />
           <StatCard
-            title="Publisher duration (avg)"
-            value={avgPublisherDurationMs !== null ? formatDuration(avgPublisherDurationMs) : "—"}
-            description="How long publishers stay connected"
+            title="Subscriber duration (avg)"
+            value={avgSubscriberDurationMs !== null ? formatDuration(avgSubscriberDurationMs) : "—"}
+            description="How long overlays stay connected"
           />
           <StatCard
             title="Active rooms"

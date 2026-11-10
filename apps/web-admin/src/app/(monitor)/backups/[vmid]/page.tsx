@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { BackupVmDetail } from "@/components/backups/backup-vm-detail";
-import { getBackupVm } from "@/lib/backups";
-import { PageCrumb } from "@/lib/crumbs";
+import { getBackupVm } from "@/lib/backups/backups";
+import { PageCrumb } from "@/lib/nav/crumbs";
 
 export const dynamic = "force-dynamic";
 

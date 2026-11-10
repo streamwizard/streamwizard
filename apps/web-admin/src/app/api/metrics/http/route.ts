@@ -1,6 +1,6 @@
 import { queryHttpRequests, queryHttpRouteStats } from "@repo/metrics";
 import { NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/admin-session";
+import { getAdminSession } from "@/lib/auth/admin-session";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     ]);
     return NextResponse.json({ requests, routeStats });
   } catch (err) {
-    console.error("[http metrics]", err);
+    console.warn("[http metrics]", err);
     return NextResponse.json({ requests: [], routeStats: [] });
   }
 }

@@ -1,5 +1,5 @@
 /**
- * Generates `src/widget-editor-declarations.ts` from the actual Zod schemas.
+ * Generates `src/widgets/editor-declarations.ts` from the actual Zod schemas.
  * Run with: bun run scripts/generate-widget-declarations.ts
  *
  * The output is committed so the editor always has correct types at zero runtime cost.
@@ -19,7 +19,7 @@ import {
   AutomodMessageUpdateV2EventSchema,
   AutomodSettingsUpdateEventSchema,
   AutomodTermsUpdateEventSchema,
-} from "../src/automod";
+} from "../src/eventsub/automod";
 
 // channel-points
 import {
@@ -31,7 +31,7 @@ import {
   ChannelPointsCustomRewardRedemptionAddEventSchema,
   ChannelPointsCustomRewardRedemptionUpdateEventSchema,
   ChannelCustomPowerUpRedemptionAddEventSchema,
-} from "../src/channel-points";
+} from "../src/eventsub/channel-points";
 
 // channel
 import {
@@ -49,7 +49,7 @@ import {
   ChannelUnbanEventSchema,
   ChannelUnbanRequestCreateEventSchema,
   ChannelUnbanRequestResolveEventSchema,
-} from "../src/channel";
+} from "../src/eventsub/channel";
 
 // chat
 import {
@@ -61,16 +61,16 @@ import {
   ChannelChatSettingsUpdateEventSchema,
   ChannelChatUserMessageHoldEventSchema,
   ChannelChatUserMessageUpdateEventSchema,
-} from "../src/chat";
+} from "../src/eventsub/chat";
 
 // conduit
-import { ConduitShardDisabledEventSchema } from "../src/conduit";
+import { ConduitShardDisabledEventSchema } from "../src/eventsub/conduit";
 
 // drops
-import { DropEntitlementGrantEventSchema } from "../src/drops";
+import { DropEntitlementGrantEventSchema } from "../src/eventsub/drops";
 
 // extensions
-import { ExtensionBitsTransactionCreateEventSchema } from "../src/extensions";
+import { ExtensionBitsTransactionCreateEventSchema } from "../src/eventsub/extensions";
 
 // guest-star
 import {
@@ -78,7 +78,7 @@ import {
   ChannelGuestStarSessionEndEventSchema,
   ChannelGuestStarGuestUpdateEventSchema,
   ChannelGuestStarSettingsUpdateEventSchema,
-} from "../src/guest-star";
+} from "../src/eventsub/guest-star";
 
 // misc
 import {
@@ -99,7 +99,7 @@ import {
   ChannelGoalBeginEventSchema,
   ChannelGoalProgressEventSchema,
   ChannelGoalEndEventSchema,
-} from "../src/misc";
+} from "../src/eventsub/misc";
 
 // moderate
 import {
@@ -113,7 +113,7 @@ import {
   ChannelSuspiciousUserUpdateEventSchema,
   ChannelVipAddEventSchema,
   ChannelVipRemoveEventSchema,
-} from "../src/moderate";
+} from "../src/eventsub/moderate";
 
 // polls-predictions
 import {
@@ -124,10 +124,10 @@ import {
   ChannelPredictionProgressEventSchema,
   ChannelPredictionLockEventSchema,
   ChannelPredictionEndEventSchema,
-} from "../src/polls-predictions";
+} from "../src/eventsub/polls-predictions";
 
 // stream
-import { StreamOnlineEventSchema, StreamOfflineEventSchema } from "../src/stream";
+import { StreamOnlineEventSchema, StreamOfflineEventSchema } from "../src/eventsub/stream";
 
 // streamwizard
 import {
@@ -135,8 +135,8 @@ import {
   ObsInstanceLifecyclePayloadSchema,
   ObsSceneChangedPayloadSchema,
   OverlayGeoEventSchema,
-} from "../src/streamwizard";
-import { autoSwitcherStatusSchema } from "../src/auto-switcher";
+} from "../src/streamwizard-events";
+import { autoSwitcherStatusSchema } from "../src/auto-switcher/auto-switcher";
 
 // user
 import {
@@ -144,7 +144,7 @@ import {
   UserAuthorizationRevokeEventSchema,
   UserUpdateEventSchema,
   UserWhisperMessageEventSchema,
-} from "../src/user";
+} from "../src/eventsub/user";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -372,7 +372,7 @@ type EventReceivedDetail =
 
 // buildWidgetSrcdoc in @repo/ui sets the fieldData global before the author's
 // JS runs and replaces it on onWidgetLoad and onFieldsUpdate. It is the same
-// object as StreamWizard.fieldData (widget-editor-lib-declarations.ts).
+// object as StreamWizard.fieldData (widgets/editor-lib-declarations.ts).
 const globalDeclarations = `
 declare var fieldData: Record<string, any>;
 
@@ -402,6 +402,6 @@ const output = `// AUTO-GENERATED — do not edit by hand.
 export const WIDGET_EDITOR_DECLARATIONS = ${JSON.stringify(declarations)};
 `;
 
-const outPath = join(__dirname, "../src/widget-editor-declarations.ts");
+const outPath = join(__dirname, "../src/widgets/editor-declarations.ts");
 writeFileSync(outPath, output, "utf-8");
 console.log(`✓ Written to ${outPath}`);

@@ -2,8 +2,8 @@
 
 import type { ReactNode } from "react";
 import { cn, Label, Slider } from "@repo/ui";
-import { NumberField } from "../editor/number-field";
-import { InspectorHint } from "../editor/inspector-hint";
+import { NumberField } from "@/components/overlays/editor/inspector/number-field";
+import { InspectorHint } from "@/components/overlays/editor/inspector/inspector-hint";
 
 export interface SliderFieldProps {
   id: string;

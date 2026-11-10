@@ -6,18 +6,18 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import {
   AUTO_SWITCHER_PRESET_THRESHOLDS,
+  PRESET_COPY,
   type AutoSwitcherSensitivityPreset,
-  type AutoSwitcherThresholds,
-} from "@repo/schemas";
+} from "@repo/schemas/auto-switcher/constants";
+import { type AutoSwitcherThresholds } from "@repo/schemas/auto-switcher/auto-switcher";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@repo/ui";
 import { ChevronDown } from "lucide-react";
-import { upsertAutoSwitcherConfig } from "@/actions/supabase/auto-switcher";
-import type { AutoSwitcherConfigRow } from "@repo/supabase/queries/auto-switcher";
-import { autoSwitcherFormSchema, type AutoSwitcherFormValues } from "@repo/schemas";
-import { PRESET_COPY, defaultsFrom } from "@repo/schemas";
+import { upsertAutoSwitcherConfig } from "@/actions/irl/auto-switcher";
+import type { AutoSwitcherConfigRow } from "@repo/supabase/queries/irl/auto-switcher";
+import { autoSwitcherFormSchema, defaultsFrom, type AutoSwitcherFormValues } from "@repo/schemas/auto-switcher/form";
 import { useAutoSwitcherStatus } from "@/hooks/obs/use-auto-switcher-status";
-import { SwitcherStatusStrip } from "@/components/deck/switcher-status-strip";
-import { ChoiceCards, SettingRow, SettingSection, StepperRow, SwitchRow } from "@/components/deck/setting-row";
+import { SwitcherStatusStrip } from "@/components/shared/obs/switcher-status-strip";
+import { ChoiceCards, SettingRow, SettingSection, StepperRow, SwitchRow } from "@/components/shared/setting-row";
 
 // Sensitivity-only slice of the dashboard's AutoSwitcherForm. Same schema, same
 // server action, same defaults -- every other field round-trips untouched, so

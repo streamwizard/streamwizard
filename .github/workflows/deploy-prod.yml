@@ -21,7 +21,15 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       actions: read
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # Only promote runs that came from this repo's own main: a push, or a
+    # manual dispatch (which needs write access). A run from a fork can carry
+    # head_branch "main" too, so the branches filter above is not enough.
+    if: >-
+      ${{
+        github.event.workflow_run.conclusion == 'success' &&
+        (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch') &&
+        github.event.workflow_run.head_repository.full_name == github.repository
+      }}
     steps:
       # This job runs once per completed upstream workflow. Merge only when the
       # latest completed run of *both* upstreams on main is green, so app code
@@ -35,8 +43,9 @@ jobs:
         run: |
           ready=true
           for wf in build-check.yml deploy-prod-db.yml; do
-            conclusion=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow "$wf" --branch main --limit 1 \
-              --json status,conclusion --jq '.[0] | select(.status == "completed") | .conclusion')
+            conclusion=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow "$wf" --branch main --limit 20 \
+              --json status,conclusion,event \
+              --jq '[.[] | select(.event == "push" or .event == "workflow_dispatch")][0] | select(.status == "completed") | .conclusion')
             echo "$wf: ${conclusion:-not completed}"
             [ "$conclusion" = "success" ] || ready=false
           done
@@ -60,6 +69,14 @@ jobs:
             exit 1
           fi
 
+          # Ship only the commit the upstream run verified. If main has moved
+          # on, the newer commit's own runs will trigger the deploy.
+          main_sha=$(gh api "repos/$REPO/commits/main" --jq '.sha')
+          if [ "$main_sha" != "$SHA" ]; then
+            echo "main is at ${main_sha:0:8}, not the verified ${SHA:0:8}; leaving it to the newer run"
+            exit 0
+          fi
+
           ahead=$(gh api "repos/$REPO/compare/production...main" --jq '.ahead_by')
           if [ "$ahead" = "0" ]; then
             echo "production already contains main, nothing to deploy"
@@ -77,8 +94,9 @@ jobs:
           # Merge commit only: a squash would make production diverge from main.
           # GitHub computes mergeability a moment after the PR opens, so an
           # immediate merge can be refused once; retry briefly.
+          # --match-head-commit refuses the merge if main moved after the check.
           for attempt in 1 2 3 4 5; do
-            if gh pr merge "$pr" --repo "$REPO" --merge --admin; then
+            if gh pr merge "$pr" --repo "$REPO" --merge --admin --match-head-commit "$SHA"; then
               echo "merged #$pr into production"
               exit 0
             fi

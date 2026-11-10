@@ -3,7 +3,7 @@ import { isContextMenuCommand, type BotEvent } from "../types/discord";
 import { reportError } from "@repo/sentry";
 import { canRunCommand } from "../lib/permissions";
 import { handleTicketInteraction } from "../lib/tickets";
-import { handleSetupInteraction } from "../lib/setup-wizard";
+import { handleSetupInteraction } from "@/lib/setup/setup-wizard";
 import { handleBuiltButton, isBuiltButton } from "../lib/built-buttons";
 import { handleVoiceInteraction, isVoiceInteraction } from "../lib/voice/buttons";
 import { trackCommand } from "../lib/command-tracking";

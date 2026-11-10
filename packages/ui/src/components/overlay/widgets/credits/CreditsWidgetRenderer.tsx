@@ -1,13 +1,10 @@
 "use client";
 
-// Next.js replaces NEXT_PUBLIC_* at build time; declare process so tsc is happy in this library package.
-declare const process: { env: Record<string, string | undefined> };
-
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { creditsDataSchema, type CreditsData } from "@repo/schemas";
+import { creditsDataSchema, type CreditsData } from "@repo/schemas/widgets/credits";
 import { useGoogleFonts } from "../../hooks/use-google-font";
 import { subscribeToWsRoom } from "../../lib/ws-store";
-import type { OverlayItem, OverlayScene } from "../../types";
+import type { OverlayItem, OverlayScene } from "../../types/item";
 import { normalizeCreditsWidgetConfig } from "./credits-widget-config";
 import {
   CREDITS_RESET_BROWSER_EVENT,
@@ -21,6 +18,8 @@ import { buildCreditsHybridView, buildCreditsView, type CreditsViewSection } fro
 import { creditsTimeline, heroIndexAt, scrollOffsetAt, scrollProgressAt } from "./credits-playback";
 import { useCreditsMeasured, useCreditsPlayback, useReducedMotion, useRollOnVisible } from "./use-credits-playback";
 import { CREDITS_KEYFRAMES, CREDITS_PRESET_COMPONENTS } from "./presets";
+import { useOverlayWsUrl } from "../../hooks/use-overlay-ws-url";
+import { EditorHint } from "../editor-hint";
 
 export interface CreditsWidgetRendererProps {
   item: OverlayItem;
@@ -71,34 +70,6 @@ function useFetchedCredits(isEditor: boolean, token: string | undefined, refresh
   }, [isEditor, token, refreshKey, avatars]);
 
   return result;
-}
-
-function EditorHint({ title, body }: { title: string; body: string }) {
-  return (
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        boxSizing: "border-box",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 4,
-        border: "1.5px dashed rgba(158,122,255,0.5)",
-        borderRadius: 8,
-        color: "rgba(255,255,255,0.6)",
-        fontFamily: "sans-serif",
-        fontSize: 14,
-        lineHeight: 1.4,
-        textAlign: "center",
-        padding: 12,
-      }}
-    >
-      <strong style={{ color: "rgba(255,255,255,0.85)", fontSize: 15 }}>{title}</strong>
-      <span>{body}</span>
-    </div>
-  );
 }
 
 /** The editor's idle canvas: the roll's first screen, dimmed, with how to preview it. */
@@ -210,15 +181,15 @@ export function CreditsWidgetRenderer({ item, scene, isEditor = false }: Credits
   }, [armedAt, fetched.at, cfg.startDelaySeconds, start]);
 
   // The stream started or ended: read again, now or once the current roll is over.
+  const wsUrl = useOverlayWsUrl();
   useEffect(() => {
-    const wsUrl = process.env.NEXT_PUBLIC_WS_SERVER_URL ?? "";
     if (!token || !wsUrl) return;
     return subscribeToWsRoom(token, wsUrl, (raw) => {
       if (!streamChangedFromFrame(raw as CreditsWidgetFrame)) return;
       if (playingRef.current) staleRef.current = true;
       else setRefreshKey((k) => k + 1);
     });
-  }, [token]);
+  }, [token, wsUrl]);
 
   useEffect(() => {
     if (playing || !staleRef.current) return;

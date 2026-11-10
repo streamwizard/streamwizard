@@ -1,4 +1,4 @@
-import type { VoiceNamePlaceholder } from "@repo/supabase/queries/discord-voice";
+import type { VoiceNamePlaceholder } from "@repo/supabase/queries/discord/voice";
 
 /** Discord's limit for a channel name. */
 export const CHANNEL_NAME_MAX = 100;

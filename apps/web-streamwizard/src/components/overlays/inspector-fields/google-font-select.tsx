@@ -8,7 +8,7 @@ import {
   uploadedFontName,
   uploadedFontRef,
 } from "@repo/ui/overlay";
-import { listAssets } from "@/actions/assets";
+import { listAssets } from "@/actions/media/assets";
 import { AssetPickerDialog } from "@/components/media/asset-picker-dialog";
 import { Button } from "@repo/ui";
 import {
@@ -31,7 +31,7 @@ import {
   type GoogleFontFamily,
 } from "@/constants/google-fonts";
 import { useGoogleFont, useGoogleFontsBatch } from "@/hooks/use-google-font";
-import { getGoogleFontsCatalog } from "@/lib/google-fonts-catalog";
+import { getGoogleFontsCatalog } from "@/lib/overlays/google-fonts-catalog";
 import { cn } from "@/lib/utils";
 
 const SEARCH_DEBOUNCE_MS = 300;

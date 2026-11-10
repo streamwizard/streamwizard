@@ -19,22 +19,25 @@ import { deriveObsFlowState } from "@/components/irl/cloud-obs/obs-flow-state";
 import { ObsStatusBadge } from "@/components/irl/cloud-obs/obs-status-badge";
 import { CloudObsSetupScreen } from "@/components/irl/cloud-obs/cloud-obs-setup-screen";
 import { ObsContainerControl, ObsStreamControl } from "@/components/irl/cloud-obs/obs-container-control";
-import { ObsVncPreview } from "@/components/irl/obs-vnc-preview";
-import { ObsBootProgress } from "@/components/irl/obs-boot-progress";
-import { ObsOfflineState } from "@/components/irl/obs-offline-state";
-import { ObsLifecycleBanner } from "@/components/irl/obs-lifecycle-banner";
+import { ObsDesktopPreview } from "@/components/irl/obs-desktop-preview";
+import { ObsBootProgress } from "@/components/shared/obs/obs-boot-progress";
+import { ObsOfflineState } from "@/components/shared/obs/obs-offline-state";
+import { ObsLifecycleBanner } from "@/components/shared/obs/obs-lifecycle-banner";
 import { ObsSourceProfiler } from "@/components/irl/obs-source-profiler";
 import { ObsResourceGraphs } from "@/components/irl/obs-resource-graphs";
 import { ObsFileUploader } from "@/components/irl/obs-file-uploader";
 import { ObsIngestSources } from "@/components/irl/obs-ingest-sources";
-import { FeatureDisabledBanner } from "@/components/ui/feature-disabled-banner";
-import { TwitchScopeBanner } from "@/components/ui/twitch-scope-banner";
+import { FeatureDisabledBanner } from "@/components/shared/feature-disabled-banner";
+import { TwitchScopeBanner } from "@/components/shared/twitch/twitch-scope-banner";
 import type { ProductAccess } from "@/lib/require-product-access";
-import type { IngestStreamKey } from "@/actions/ingest-keys";
-import type { AutoSwitcherConfigRow } from "@repo/supabase/queries/auto-switcher";
+import type { IngestStreamKey } from "@repo/supabase/queries/ingest/ingest";
+import { openViewerWindow } from "@repo/obs-web";
+import type { AutoSwitcherConfigRow } from "@repo/supabase/queries/irl/auto-switcher";
 import { AutoSwitcherTab } from "@/components/irl/auto-switcher/auto-switcher-tab";
-import { listOutputKeys } from "@/actions/ingest-output-keys";
-import { ALERTS_SCENE_NAME, IRL_SCENE_NAME, IRL_SOURCE_NAME, obsPullUrl } from "@/lib/obs-irl";
+import { listOutputKeys } from "@/actions/irl/ingest-output-keys";
+import { ALERTS_SCENE_NAME, IRL_SCENE_NAME, IRL_SOURCE_NAME, obsPullUrl } from "@/lib/obs/obs-irl";
+import { useIngestSourceGuard } from "@/hooks/obs/use-ingest-source-guard";
+import { IngestSourceProblemDialog } from "@/components/irl/ingest-source-problem-dialog";
 
 interface CloudObsContentProps {
   canInteract: boolean;
@@ -102,7 +105,7 @@ export function CloudObsContent({
     if (!instanceId) return;
     setHasOpenedViewer(true);
     const params = new URLSearchParams({ instanceId, name: "Cloud OBS" });
-    window.open(`/obs-viewer?${params.toString()}`, "obs-viewer", "width=1280,height=800");
+    openViewerWindow(`/obs-viewer?${params.toString()}`, "obs-viewer");
   };
 
   const flow = deriveObsFlowState({
@@ -189,12 +192,23 @@ export function CloudObsContent({
           });
         }
       }
-    })();
+    })().catch(() => {
+      // OBS didn't answer in time (still loading, or the socket dropped).
+      // Expected, not an error: this runs again on the next scene update.
+    });
 
     return () => {
       cancelled = true;
     };
   }, [obs.status, obs.scenes.length, obs.sceneItems, ingestKeys, obsPullHost, showSetupStepper]);
+
+  // Warns when an ingest source is removed from a scene (the viewer window
+  // runs its own copy). Off during setup: the auto-wire above puts it back.
+  const ingestGuard = useIngestSourceGuard({
+    obs,
+    obsPullHost,
+    enabled: !showSetupStepper && canInteract,
+  });
 
   if (showSetupStepper) {
     return (
@@ -225,6 +239,13 @@ export function CloudObsContent({
       {!canInteract && <FeatureDisabledBanner />}
       {needsTwitchScopes && <TwitchScopeBanner feature="cloud_obs" next="/dashboard/irl/obs" />}
 
+      <IngestSourceProblemDialog
+        state={ingestGuard.state}
+        problem={ingestGuard.problem}
+        onPutBack={() => void ingestGuard.putBack()}
+        onLeave={ingestGuard.leave}
+      />
+
       {/* High-signal banner for a crash (stream just dropped) or a delete. */}
       <ObsLifecycleBanner
         reason={stopReason}
@@ -235,8 +256,8 @@ export function CloudObsContent({
 
       {/* Top section */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-        {/* VNC preview */}
-        <ObsVncPreview
+        {/* OBS desktop launcher */}
+        <ObsDesktopPreview
           instanceId={instanceId}
           status={obs.status === "open" ? "connected" : inLaunchFlow ? "booting" : "offline"}
           onOpen={openViewer}

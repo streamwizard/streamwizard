@@ -1,10 +1,11 @@
 import { ClipsDisplay } from "@/components/clips/clips-display";
-import { ClipsPaginationBar } from "@/components/nav/clips-pagination-bar";
+import { ClipsPaginationBar } from "@/components/clips/clips-pagination-bar";
 import { createClient } from "@repo/supabase/next/server";
-import buildClipQuery from "@/lib/utils/build-clip-query";
-import { parseClipPageSize } from "@/lib/utils/clip-pagination";
-import { parseClipView } from "@/lib/utils/clip-view";
-import { normalizeClipsWithFolders } from "@/types/database";
+import { reportError } from "@repo/sentry";
+import buildClipQuery from "@/lib/clips/build-clip-query";
+import { parseClipPageSize } from "@/lib/clips/clip-pagination";
+import { parseClipView } from "@/lib/clips/clip-view";
+import { normalizeClipsWithFolders } from "@/lib/clips/clips-with-folders";
 import { ClipSearchParams } from "@/types/pages";
 import { redirect } from "next/navigation";
 
@@ -28,7 +29,7 @@ export default async function ClipsPage({ searchParams }: { searchParams: Promis
 
   const { data, error, count, } = await query;
   if (error) {
-    console.error(error);
+    reportError(error, "clips-page: list clips");
     return null;
   }
 

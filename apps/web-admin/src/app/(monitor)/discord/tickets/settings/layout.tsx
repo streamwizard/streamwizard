@@ -1,5 +1,5 @@
-import { PageTabs } from "@/components/page-tabs";
-import { PageHeader } from "@/components/widgets/page-header";
+import { PageTabs } from "@/components/shared/page/page-tabs";
+import { PageHeader } from "@/components/shared/page/page-header";
 
 const BASE = "/discord/tickets/settings";
 

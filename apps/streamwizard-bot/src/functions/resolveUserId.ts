@@ -1,5 +1,5 @@
 import { supabase } from "@repo/supabase";
-import { getTwitchIntegrationByBroadcasterId } from "@repo/supabase/queries/user";
+import { getTwitchIntegrationByBroadcasterId } from "@repo/supabase/queries/users/user";
 
 /**
  * broadcaster_user_id (Twitch) → supabase user_id.

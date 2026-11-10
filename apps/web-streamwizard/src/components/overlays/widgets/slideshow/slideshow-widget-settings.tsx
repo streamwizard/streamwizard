@@ -4,15 +4,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronUp, ImagePlus, X } from "lucide-react";
 import { Button } from "@repo/ui";
 import { AssetPickerDialog } from "@/components/media/asset-picker-dialog";
-import {
-  InspectorReveal,
-  InspectorSection,
-  SegmentedField,
-  SliderField,
-  SwitchField,
-  presetGeometry,
-  type SegmentedOption,
-} from "@/components/overlays/inspector-fields";
+import { InspectorReveal, InspectorSection } from "@/components/shared/inspector-section";
+import { SegmentedField, type SegmentedOption } from "@/components/overlays/inspector-fields/segmented-field";
+import { SliderField } from "@/components/overlays/inspector-fields/slider-field";
+import { SwitchField } from "@/components/overlays/inspector-fields/switch-field";
+import { presetGeometry } from "@/components/overlays/inspector-fields/preset-geometry";
 import {
   SLIDESHOW_WIDGET_LIMITS,
   getDesignSize,

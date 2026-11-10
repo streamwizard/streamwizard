@@ -1,10 +1,13 @@
-export * from "./components/overlay/types";
+export * from "./components/overlay/types/base";
+export * from "./components/overlay/types/clips";
+export * from "./components/overlay/types/widgets";
+export * from "./components/overlay/types/item";
 export type {
   OverlayEventType,
   OverlaySocketMessage,
   BotBroadcastMessage,
   StreamWizardEventType,
-} from "@repo/types";
+} from "@repo/types/overlay-ws";
 export * from "./components/overlay/widget-definition";
 export {
   MIN_ITEM_SCALE,
@@ -696,6 +699,7 @@ export {
   EditorAudioProvider,
   useEditorAudioMuted,
 } from "./components/overlay/hooks/use-editor-audio";
+export { OverlayWsUrlProvider, useOverlayWsUrl } from "./components/overlay/hooks/use-overlay-ws-url";
 export {
   EditorPreviewValuesProvider,
   useEditorPreviewValues,

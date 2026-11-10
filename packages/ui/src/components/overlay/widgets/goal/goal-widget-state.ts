@@ -16,7 +16,7 @@ export type GoalWidgetState = Partial<Record<TwitchGoalType, GoalSnapshot>>;
 
 /**
  * Test goals (the Test buttons and the demo bar) use ids with this prefix; see
- * demoGoal in @repo/schemas widget-test-events. The widget keeps them apart
+ * demoGoal in @repo/schemas/widgets/test-events. The widget keeps them apart
  * from the real goals so a reset can drop them.
  */
 export const DEMO_GOAL_ID_PREFIX = "demo-goal-";

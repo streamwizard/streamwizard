@@ -7,6 +7,11 @@ const schema = z.object({
   NODE_ENV: z
     .enum(["development", "staging", "production"])
     .default("development"),
+  // Read by @repo/sentry (and @repo/posthog/server) as the environment name,
+  // before NODE_ENV. Usually unset on the Bun services.
+  APP_ENV: z.string().optional(),
+  // /health for the container healthcheck.
+  PORT: z.coerce.number().int().positive().default(8020),
 
   // Which environment this deployment monitors; falls back to NODE_ENV
   // mapping inside @repo/alerting's homeEnv().

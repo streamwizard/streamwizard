@@ -25,7 +25,7 @@ export type PollWidgetState = PollSnapshot | null;
 /**
  * Test polls use this id (the Test buttons) or start with it (the Poll
  * simulator, one id per poll); see demoPoll and stepPollCycle in
- * @repo/schemas. The widget keeps them apart from the real poll so a reset can
+ * @repo/schemas/widgets. The widget keeps them apart from the real poll so a reset can
  * drop them.
  */
 export const DEMO_POLL_ID = "demo-poll";

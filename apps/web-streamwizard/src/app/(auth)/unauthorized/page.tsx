@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import NotWhitelisted from "@/components/cards/not-whitelisted";
+import NotWhitelisted from "@/components/auth/not-whitelisted";
 
 // A dead end for accounts that are not on the list: nothing here belongs in a
 // search result. noindex rather than a robots.txt Disallow, so crawlers can

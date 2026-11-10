@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { DISALLOWED_PATHS, absoluteUrl, isIndexableEnvironment } from "@/lib/seo";
+import { DISALLOWED_PATHS, absoluteUrl, isIndexableEnvironment } from "@/lib/seo/seo";
 
 export default function robots(): MetadataRoute.Robots {
   // Staging sits behind Cloudflare Access, so this is defence in depth rather

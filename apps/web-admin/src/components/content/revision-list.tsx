@@ -16,12 +16,12 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@repo/ui";
-import { restoreRevisionAction } from "@/actions/cms-content";
-import { DataList, type DataColumn } from "@/components/widgets/data-list";
-import { PageHeader } from "@/components/widgets/page-header";
-import { REVISION_KIND_LABELS, type RevisionKind } from "@/lib/cms/revision-kinds";
-import { PageCrumb } from "@/lib/crumbs";
-import { formatDateTime, formatRelativeTime } from "@/lib/discord/tickets";
+import { restoreRevisionAction } from "@/actions/cms/content";
+import { DataList, type DataColumn } from "@/components/shared/data-list";
+import { PageHeader } from "@/components/shared/page/page-header";
+import { REVISION_KIND_LABELS, type RevisionKind } from "@/lib/cms/revisions/revision-kinds";
+import { PageCrumb } from "@/lib/nav/crumbs";
+import { formatDateTime, formatRelativeTime } from "@/lib/discord/tickets/tickets";
 import { ConfirmButton } from "./confirm-button";
 
 export interface RevisionRow {

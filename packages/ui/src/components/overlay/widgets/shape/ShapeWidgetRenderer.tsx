@@ -2,7 +2,7 @@
 
 import { useId, useMemo } from "react";
 import { getDesignSize } from "../../lib/item-scale";
-import type { OverlayItem } from "../../types";
+import type { OverlayItem } from "../../types/item";
 import { roundingRadiusPx } from "../media/media-widget-config";
 import { normalizeShapeWidgetConfig, shapeGradientLine, shapePolygonPoints } from "./shape-widget-config";
 

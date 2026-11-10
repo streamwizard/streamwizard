@@ -4,7 +4,7 @@ import { PermissionFlagsBits } from "discord.js";
 import { parseBuiltMessage } from "@repo/discord-message";
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
-import { deleteBuiltMessage, getBuiltMessage, recordBuiltMessagePublication } from "@repo/supabase/queries/discord-built-messages";
+import { deleteBuiltMessage, getBuiltMessage, recordBuiltMessagePublication } from "@repo/supabase/queries/discord/built-messages";
 import {
   BuiltMessageError,
   BuiltMessageSendError,

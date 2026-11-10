@@ -11,7 +11,7 @@ import {
   type GeoWalkState,
   type PollCycleState,
   type SwitcherDegradeState,
-} from "@repo/schemas";
+} from "@repo/schemas/widgets/simulator-steps";
 
 /**
  * Looping demo sources. A one-shot fixture answers "what does this event look
@@ -20,7 +20,7 @@ import {
  * question is the one widget authors used to answer by writing a demo mode
  * into their own script.
  *
- * The step maths lives in @repo/schemas so it can be unit tested against the
+ * The step maths lives in @repo/schemas/widgets/simulator-steps so it can be unit tested against the
  * event schemas; only the timers are here.
  */
 

@@ -389,6 +389,80 @@ export function FitText({
 }
 
 /**
+ * A block that shrinks its content to fit the room it's given instead of
+ * cutting it off. The box takes whatever height its parent allows (its own
+ * `maxHeight: 100%`, or flex shrinking); the content is measured at full size
+ * and scaled down (never up) from `origin`. With `fitWidth` the content keeps
+ * its natural width too, and is scaled to fit both ways and centred.
+ */
+export function FitBox({
+  children,
+  origin = "top center",
+  fitWidth = false,
+  style,
+  innerStyle,
+}: {
+  children: ReactNode;
+  origin?: string;
+  fitWidth?: boolean;
+  style?: CSSProperties;
+  /** For a flex list that fills the box when it fits: give it `flex: "1 0 auto"` and a flex `style` here. */
+  innerStyle?: CSSProperties;
+}) {
+  const outerRef = useRef<HTMLDivElement | null>(null);
+  const innerRef = useRef<HTMLDivElement | null>(null);
+  const [fit, setFit] = useState({ scale: 1, dx: 0, dy: 0 });
+
+  useLayoutEffect(() => {
+    const outer = outerRef.current;
+    const inner = innerRef.current;
+    if (!outer || !inner) return;
+    const measure = () => {
+      // offset* ignore transforms: the content's full-size box.
+      const h = inner.offsetHeight;
+      const roomH = outer.clientHeight;
+      let scale = h > 0 && roomH > 0 ? Math.min(1, roomH / h) : 1;
+      if (!fitWidth) {
+        setFit((f) => (f.scale === scale ? f : { scale, dx: 0, dy: 0 }));
+        return;
+      }
+      const w = inner.offsetWidth;
+      const roomW = outer.clientWidth;
+      if (w > 0 && roomW > 0) scale = Math.min(scale, roomW / w);
+      // Scaled from the top left, then moved to the middle of the room.
+      const dx = scale < 1 ? Math.max(0, (roomW - w * scale) / 2) : 0;
+      const dy = scale < 1 ? Math.max(0, (roomH - h * scale) / 2) : 0;
+      setFit((f) => (f.scale === scale && f.dx === dx && f.dy === dy ? f : { scale, dx, dy }));
+    };
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(outer);
+    ro.observe(inner);
+    return () => ro.disconnect();
+  }, [fitWidth]);
+
+  const { scale, dx, dy } = fit;
+  const transform =
+    scale >= 1 ? undefined : fitWidth ? `translate(${dx}px, ${dy}px) scale(${scale})` : `scale(${scale})`;
+  return (
+    <div ref={outerRef} style={{ minHeight: 0, minWidth: 0, maxHeight: "100%", maxWidth: "100%", overflow: "hidden", ...style }}>
+      <div
+        ref={innerRef}
+        style={{
+          ...(fitWidth ? { width: "max-content" } : null),
+          ...innerStyle,
+          transform,
+          transformOrigin: fitWidth ? "top left" : origin,
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/**
  * An SVG text line that shrinks to fit `maxWidth` user units. It measures
  * itself at `fontSize` once rendered (and again when a web font arrives)
  * and scales the size down if the line is wider than the room it has.

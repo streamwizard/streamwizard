@@ -1,5 +1,5 @@
-import type { PlatformEventPayloads } from "@repo/types";
-import type { EmitPlatformEventInput } from "@repo/supabase/queries/platform-events";
+import type { PlatformEventPayloads } from "@repo/types/platform-events";
+import type { EmitPlatformEventInput } from "@repo/supabase/queries/platform/events";
 
 /**
  * Row types that every shard of one process tends to hit together: a deploy,

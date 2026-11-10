@@ -2,7 +2,7 @@
  * Generates apps/docs/widgets/api/events.mdx from the same sources the widget
  * editor's autocomplete uses:
  *  - packages/types/src/overlay-ws.ts   -> which listener string maps to which payload type
- *  - src/widget-editor-declarations.ts  -> the payload type definitions (zod-derived)
+ *  - src/widgets/editor-declarations.ts -> the payload type definitions (zod-derived)
  *
  * Run from packages/schemas:  bun run scripts/generate-widget-event-docs.ts
  * Commit the output. Re-run whenever event schemas change.
@@ -10,7 +10,7 @@
 
 import { readFileSync, writeFileSync } from "fs";
 import { join } from "path";
-import { WIDGET_EDITOR_DECLARATIONS } from "../src/widget-editor-declarations";
+import { WIDGET_EDITOR_DECLARATIONS } from "../src/widgets/editor-declarations";
 
 const repoRoot = join(import.meta.dir, "../../..");
 const overlayWsSource = readFileSync(join(repoRoot, "packages/types/src/overlay-ws.ts"), "utf8");

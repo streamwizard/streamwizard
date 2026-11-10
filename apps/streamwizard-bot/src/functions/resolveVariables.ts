@@ -1,9 +1,10 @@
-import type { ChannelChatMessageEvent } from "@repo/schemas";
+import type { ChannelChatMessageEvent } from "@repo/schemas/eventsub/chat";
 import { reportError } from "@repo/sentry";
 
 // Import variable resolvers from separate files
 import { GlobalVariableResolvers, type GlobalContext } from "./variables/global";
 import { TwitchVariableResolvers, type TwitchContext } from "./variables/twitch";
+import { isUuid } from "@repo/schemas/ids";
 
 // Base context that all resolvers can use
 export type BaseContext = {
@@ -163,7 +164,3 @@ function validateContextForNamespaces(ctx: BaseContext, namespaces: string[]): v
   }
 }
 
-function isUuid(value: string): boolean {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(value);
-}

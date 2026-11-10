@@ -5,10 +5,10 @@
 ## Access model
 
 - Sign-in: Twitch OAuth via Supabase (own cookie/domain — separate session from the main app), then an authenticator-app code.
-- Gate: `src/lib/admin-session.ts` (`getAdminSession()` / `requireAdminSession()`) is the single decision point. It requires a `user_roles` row with `role = 'admin'` (service-role lookup) **and** a strong session (see "Second factor" below). Non-admins land on `/no-access`; admins with a weak session land on `/auth/verify` or `/auth/setup`.
-- `src/proxy.ts` applies the same rule before any page renders, and `src/app/(monitor)/layout.tsx` and `src/app/vnc/layout.tsx` (bare full-screen popup outside the group) both call `requireAdminSession()`.
-- Every server action re-checks via `src/lib/assert-admin.ts` (`assertAdmin()`, returns the acting admin's user id) — actions are their own POST endpoints, the layout guard doesn't cover them. It applies the same rule and throws `Not signed in` / `Not authorized` / `Verification required`.
-- Calls to obs-instance-manager's `/admin/instances/*` go through server actions in `src/actions/nodes.ts` for the same reason: that service checks the JWT and the role, not the second factor.
+- Gate: `src/lib/auth/admin-session.ts` (`getAdminSession()` / `requireAdminSession()`) is the single decision point. It requires a `user_roles` row with `role = 'admin'` (service-role lookup) **and** a strong session (see "Second factor" below). Non-admins land on `/no-access`; admins with a weak session land on `/auth/verify` or `/auth/setup`.
+- `src/proxy.ts` applies the same rule before any page renders, and `src/app/(monitor)/layout.tsx` and `src/app/obs-desktop/layout.tsx` (bare full-screen popup outside the group) both call `requireAdminSession()`.
+- Every server action re-checks through `src/lib/auth/admin-context.ts` (`requireAdmin()`, `requireAdminContext()`, `tryAdminContext()`), built on `assertAdmin()` (`src/lib/auth/assert-admin.ts`) — actions are their own POST endpoints, the layout guard doesn't cover them. It applies the same rule and refuses with `Not signed in` / `Not authorized` / `Verification required`.
+- Calls to obs-instance-manager's `/admin/instances/*` go through server actions in `src/actions/nodes/obs.ts` for the same reason: that service checks the JWT and the role, not the second factor.
 - In the database, admin RLS policies use `public.is_strong_admin()`: the admin role **and** `aal2`.
 - The old `app_metadata.is_admin` JWT claim is no longer read anywhere; `user_roles` is the single source of admin truth.
 
@@ -32,7 +32,7 @@ TOTP enroll + verify must be on in every environment (local `supabase/config.tom
 
 ## Navigation
 
-The sidebar has five groups and 19 items (`src/lib/nav-config.ts`). Sub-pages are tabs at the top of their page, not sidebar items; the tab row is drawn by the `(monitor)` layout from the same config, so adding a tab is one line there.
+The sidebar has five groups and 19 items (`src/lib/nav/nav-config.ts`). Sub-pages are tabs at the top of their page, not sidebar items; the tab row is drawn by the `(monitor)` layout from the same config, so adding a tab is one line there.
 
 | Group | Item | Route | Tabs |
 |---|---|---|---|
@@ -63,13 +63,13 @@ The sidebar has five groups and 19 items (`src/lib/nav-config.ts`). Sub-pages ar
 
 - **Counters** next to Tickets (waiting for a reply), Alerts (firing, not silenced) and Widget review (pending) come from `GET /api/nav-counts`, polled every 45 s.
 - **Phones** (below 768px) get a bottom bar: Home, Tickets, Alerts, Users, More. "More" opens the full menu as a drawer.
-- **Breadcrumb**: group, item and tab come from the nav config; a detail page adds its own level by rendering `<PageCrumb label href />` (`src/lib/crumbs.tsx`). On phones the header shows the last level plus a back arrow.
+- **Breadcrumb**: group, item and tab come from the nav config; a detail page adds its own level by rendering `<PageCrumb label href />` (`src/lib/nav/crumbs.tsx`). On phones the header shows the last level plus a back arrow.
 - **Header controls** (range, refresh, bandwidth) only show on pages whose nav entry lists them under `controls`.
 - Route URLs are stable: other apps link in (the Discord bot posts `/discord/tickets/{number}`).
-- **Search** (the header button, or Ctrl/Cmd+K) jumps to any page or tab, a ticket by number, or a user by name, email or Twitch name (`src/components/command-palette.tsx`).
-- **Dashboard** (`/overview`): what needs attention, one status chip per subsystem (read from the alert engine's state, so it agrees with `/alerts`), live streamers and Cloud OBS load, who is live, shortcuts. Logic in `src/lib/overview.ts`, loading in `src/lib/overview-data.ts`.
-- **Desktop-only tools**: the message builder, the WebSocket live feed, the topology graphs and `/vnc` show a notice below 768px and are not mounted there (`src/components/widgets/desktop-only.tsx`).
-- **Shared page building blocks** live in `src/components/widgets/`: `PageHeader`, `StatGrid` / `ChartGrid`, `DataList` (a table that becomes cards when narrow), `FilterPanel`, `SaveBar`, `ResponsiveDialog` (a drawer on phones). New pages should start from these. The plan behind the layout is `docs/admin-redesign-plan.md`.
+- **Search** (the header button, or Ctrl/Cmd+K) jumps to any page or tab, a ticket by number, or a user by name, email or Twitch name (`src/components/layout/command-palette.tsx`).
+- **Dashboard** (`/overview`): what needs attention, one status chip per subsystem (read from the alert engine's state, so it agrees with `/alerts`), live streamers and Cloud OBS load, who is live, shortcuts. Logic in `src/lib/overview/overview.ts`, loading in `src/lib/overview/overview-data.ts`.
+- **Desktop-only tools**: the message builder, the WebSocket live feed, the topology graphs and `/obs-desktop` show a notice below 768px and are not mounted there (`src/components/shared/page/desktop-only.tsx`).
+- **Shared page building blocks** live in `src/components/shared/` (`page/` for the page frame, `charts/` for chart pieces): `PageHeader`, `StatGrid` / `ChartGrid`, `DataList` (a table that becomes cards when narrow), `FilterPanel`, `SaveBar`, `ResponsiveDialog` (a drawer on phones). New pages should start from these. The plan behind the layout is `docs/admin-redesign-plan.md`.
 
 ## Pages
 
@@ -77,7 +77,7 @@ The sidebar has five groups and 19 items (`src/lib/nav-config.ts`). Sub-pages ar
 |---|---|
 | `/overview`, `/http`, `/eventsub`, `/database`, `/supabase`, `/ws/*`, `/alerts/*` | Monitoring (InfluxDB via `@repo/metrics`, alerting config) — pre-existing |
 | `/obs` | Two tabs in the page (`?tab=`, no extra routes). **Fleet**: stats, one node list (registry state, health probe and latest metrics merged; a node missing from one source still shows, with blanks), running instances linking to the instance page, history charts. **Manage** (`?tab=manage`): register/edit/delete GPU nodes, claim-token install command |
-| `/obs/[nodeId]` | Node detail: hardware card, live metrics stream, instance table (start/stop/remove/VNC), 24h history charts |
+| `/obs/[nodeId]` | Node detail: hardware card, live metrics stream, instance table (start/stop/remove/desktop), 24h history charts |
 | `/obs/[nodeId]/instances/[instanceId]` | Instance detail, tabbed: **Overview** (details incl. RAM limit, CPU quota, shm, config template, storage used/quota + live metrics), **Metrics history** (per-instance InfluxDB series), **Auto Switcher** (edit the owner's switcher config, hold/release scene override) |
 | `/ingest` | Three tabs in the page (`?tab=`, no extra routes). **Fleet**: stats, one node list (registry state, health probe, latest host metrics), history charts. **Live** (`?tab=live`): monitor socket status, fleet bandwidth, one streams list (socket and polled metrics joined per stream; loss and retransmit turn amber at 0.5% and red at 2%), node bandwidth. **Manage** (`?tab=manage`): register/edit/delete SRT/SRTLA boxes, claim-token install command |
 | `/apps`, `/apps/[env]/[app]`, `/apps/server` | Every app on the Dokploy server, from the Telegraf that runs on it (bucket `webserver`). **List**: the server's load, then one row per app per environment (health, CPU, memory, network, container starts in 24 h, requests, errors, response time); other projects on the server sit folded under "Other", without status colours. An app in `EXPECTED_APPS` (`packages/metrics/src/apps-model.ts`, shared with the alert rules) keeps its row when Telegraf has nothing on it. **App page**: charts plus the containers of the last 24 hours with exit codes, which is where a restart or an OOM kill shows. **Server page**: CPU, memory, swap, disk, network, OOM kills. Only the production Influx org has the bucket, so staging and local say "No server data in this environment" and query nothing. Each read fails on its own: the page names the ones that did not answer and leaves those numbers blank. **Alerts**: the `app.*` and `server.*` rules (`packages/alerting/src/rules/apps.ts`) read the same data from the prod alert-worker: app down, crashed, killed for memory, restart loop, failing healthcheck, memory above its budget; server disk, out of memory, Telegraf silent. A stop counts as a deploy, and never alerts, when a newer container of the app was already running. Staging apps are not watched unless the switch rule `app.watch_staging` is enabled on `/alerts/rules` (staging is not always on); when watched they stay at warn |
@@ -90,13 +90,13 @@ The sidebar has five groups and 19 items (`src/lib/nav-config.ts`). Sub-pages ar
 | `/content/media` | Images for blog posts, guides and author avatars (`cms_assets`, R2 prefix `cms/`). Upload asks for alt text (or **Decorative**) first; the browser PUTs straight to a presigned R2 URL and the server confirms with a HEAD. Search, edit alt text, copy URL; **Delete** only shows on images nothing uses (same check as `cms_unreferenced_assets`). Alt edits reach live posts on their next Update |
 | `/content/authors`, `/content/authors/[id]` | Public author profiles: name, slug, role, bio, avatar (from Media), social links (https, checked per platform), optional private link to a StreamWizard account. Soft delete (posts keep the credit) and restore |
 | `/content/categories`, `/content/tags` | Topics shared by blog posts and guides. Categories have a description and an order; tags can be merged into another tag. Deleting either takes it off its posts, not the posts away |
-| `/vnc?nodeId&instanceId&name` | noVNC popup onto an instance's OBS desktop (opened from node/instance pages) |
+| `/obs-desktop?nodeId&instanceId&name` | Popup with an instance's OBS desktop: our header and controls around the node's Selkies viewer in an `<iframe>` (`CloudOBSViewer` in `@repo/obs-web`; opened from node/instance pages) |
 
 ## How it talks to obs-instance-manager
 
 Base URL is always the node's `api_url`, resolved server-side (never from the query string — the URL gets tokens/tickets attached).
 
-REST (Supabase JWT in `Authorization: Bearer`, verified against Supabase JWKS on the node; admin routes additionally check the role via rest-api `GET /api/nodes/users/:userId/is-admin`):
+REST (Supabase JWT in `Authorization: Bearer`, verified against Supabase JWKS on the node; admin routes additionally check the role via rest-api `GET /api/obs-nodes/users/:userId/is-admin`):
 
 - `GET /health` — node health badges / fleet table / alert probes
 - `POST /instances` — create instance (from node detail)
@@ -106,14 +106,19 @@ REST (Supabase JWT in `Authorization: Bearer`, verified against Supabase JWKS on
 WebSocket (ticket in query string, minted immediately before every connect):
 
 - `/admin/metrics/stream` — host + per-container metrics (Twitch-EventSub-style envelope)
-- `/admin/instances/:id/novnc` — VNC (RFB password comes from the ticket response)
 - `/admin/instances/:id/obsws` — obs-websocket proxy; powers the Auto Switcher tab's scene pickers. Password is the instance's OBS WS password, decrypted server-side (`getInstanceObsWsPasswordAdminAction`).
 
-**CORS**: start/stop/remove and ticket mints are browser-side fetches from the web-admin origin. If the manager enforces an Origin allowlist, the admin origin must be on it.
+Framed page (ticket in the URL fragment, `#token=`, never sent to a server):
+
+- `/admin/instances/:id/selkies/` — the instance's Selkies viewer (OBS desktop with audio and two-way clipboard), shown in an `<iframe>` on `/obs-desktop`, so the Selkies client runs on the node's origin, never the admin's. The popup first probes the page with `HEAD` (no ticket) until OBS is up, then mints a ticket and frames it. The Selkies client presents the ticket on its API calls and WebSockets; the node checks it and the admin role on every connect, allows reconnects for 2 minutes after a disconnect, and adds the viewer's own basic auth upstream, so the browser never holds an OBS password. No cookie.
+- The node's page carries a relay that pairs with `/obs-desktop` over `postMessage` (only for origins in the node's `PANEL_ORIGIN`) and passes mute, volume and Actual size through. Copy and paste is Selkies' own (Ctrl+C / Ctrl+V in the frame). When the viewer session dies (2 minutes offline, or the 12-hour cap) it tells the popup, which mints a new ticket and loads a new frame. Against a node without the relay the popup shows the frame without controls; Reconnect still works. Protocol: OIM's `docs/PANEL_INTEGRATION.md`.
+- `frame-src` in `src/lib/csp.ts` allows `https://*.streamwizard.org` for this.
+
+**CORS and framing**: start/stop/remove, ticket mints and the viewer's readiness probe are browser-side fetches from the web-admin origin. The node's `PANEL_ORIGIN` must list the admin origin, for CORS and so the viewer relay pairs with it.
 
 ## Auto Switcher editing
 
-Config is **per user** (`obs_auto_switcher_configs`, one row per user), not per instance — the instance page edits its *owner's* row. Admin actions (`src/actions/auto-switcher.ts`) use the service-role client after `assertAdmin()`, then push the row through ws-server `POST /internal/broadcast` so the engine reacts in ~1s. Without `WS_SERVER_URL`/`CONSUMER_SECRET` the push is skipped and the engine's 60s DB reconcile picks the change up instead.
+Config is **per user** (`obs_auto_switcher_configs`, one row per user), not per instance — the instance page edits its *owner's* row. Admin actions (`src/actions/nodes/auto-switcher.ts`) use the service-role client after `assertAdmin()`, then push the row through ws-server `POST /internal/broadcast` so the engine reacts in ~1s. Without `WS_SERVER_URL` and a ws-server credential (`WS_SERVICE_SIGNING_JWK`) the push is skipped and the engine's 60s DB reconcile picks the change up instead.
 
 Scene pickers populate only while the instance's OBS is running (obsws session); the form saves fine without it — scenes are stored by uuid, names are display-only.
 
@@ -125,11 +130,11 @@ Scene pickers populate only while the instance's OBS is running (obsws session);
 | `SUPABASE_URL`, `SUPABASE_PUBLIC_KEY`, `SUPABASE_SECRET_KEY` | yes | auth + service-role |
 | `STREAMWIZARD_API_URL` | yes | embedded in node install commands (`/obs`, `/ingest`) |
 | `TOKEN_ENCRYPTION_KEY` | yes | encrypt/decrypt OBS WS passwords — **must be byte-identical to web-streamwizard's** |
-| `WS_SERVER_URL`, `CONSUMER_SECRET` | no | ~1s auto-switcher config pushes (fallback: 60s reconcile) |
+| `WS_SERVER_URL`, `WS_SERVICE_SIGNING_JWK` | no | ~1s auto-switcher config pushes (fallback: 60s reconcile), socket revokes, and the live monitor on `/ws/live`, `/ws/rooms`, `/ws/topology` and `/ingest` (web-admin signs a 60-second `monitor` token per dial; ws-server needs this app's public key in `WS_SERVICE_JWKS`) |
 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_ASSETS_BUCKET`, `NEXT_PUBLIC_CDN_URL` | no | banner image uploads in the Discord message builder (`discord-banners/` prefix) and Content section images (`cms/` prefix, presigned PUT from the browser: the bucket's CORS must allow this app's origin). Without them banners use theme images only and Media can't upload. The bot needs the same `NEXT_PUBLIC_CDN_URL`: it only attaches uploads that start with it |
 | `CMS_SITE_URL`, `CMS_REVALIDATE_SECRET` | no | `CMS_SITE_URL` is web-streamwizard's origin: preview links point there, and Content section changes refresh its cached pages (`POST {url}/api/revalidate`, secret shared with web-streamwizard). Without the secret saves still land and the site catches up within the hour; without the URL there are no preview links. A refresh the site doesn't confirm goes into `cms_revalidate_queue`; rest-api retries it (same two vars there). Changed posts are pinged to IndexNow by the site, on production only |
 | `CMS_ADMIN_URL` (on web-streamwizard) | no | The admin's origin. Lets `/preview/[token]` be framed by it (CSP `frame-ancestors`, those routes only) for the editor's side-by-side preview. Unset: previews can't be framed, everything else is unchanged |
-| `SENTRY_DSN`, `ALERT_*`, `DISCORD_BOT_TOKEN`, `TELEGRAM_*`, `MONITOR_SECRET` | no | observability + alert routing |
+| `SENTRY_DSN`, `ALERT_*`, `DISCORD_BOT_TOKEN`, `TELEGRAM_*` | no | observability + alert routing |
 
 ## Known gaps / roadmap
 

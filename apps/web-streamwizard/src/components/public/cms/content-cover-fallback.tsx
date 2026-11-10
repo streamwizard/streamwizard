@@ -1,4 +1,4 @@
-import { cn } from "@repo/ui";
+import { cn } from "@/lib/utils";
 import { Compass, Newspaper } from "lucide-react";
 import type { ContentType } from "@repo/cms";
 

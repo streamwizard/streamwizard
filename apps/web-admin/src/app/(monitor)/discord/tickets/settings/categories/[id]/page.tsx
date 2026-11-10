@@ -17,26 +17,26 @@ import {
   TICKET_SUBJECT_MAX,
   ticketSelectOptions,
   type TicketFieldKind,
-} from "@repo/supabase/queries/ticket-config";
-import { Badge } from "@repo/ui";
-import { getTicketSettings } from "@repo/supabase/queries/tickets";
-import { TicketCategoryRulesForm } from "@/components/discord/ticket-category-rules-form";
-import { TicketCategorySave } from "@/components/discord/ticket-category-save";
-import { TicketFormEditor, type TicketFieldDraft } from "@/components/discord/ticket-form-editor";
-import { TicketOpeningEditor } from "@/components/discord/ticket-opening-editor";
+} from "@repo/supabase/queries/tickets/config";
+import { Badge } from "@repo/ui/components/ui/badge";
+import { getTicketSettings } from "@repo/supabase/queries/tickets/tickets";
+import { TicketCategoryRulesForm } from "@/components/discord/tickets/settings/ticket-category-rules-form";
+import { TicketCategorySave } from "@/components/discord/tickets/settings/ticket-category-save";
+import { TicketFormEditor, type TicketFieldDraft } from "@/components/discord/tickets/settings/ticket-form-editor";
+import { TicketOpeningEditor } from "@/components/discord/tickets/settings/ticket-opening-editor";
 import { getBotProfile, getGuildRoles, requireDiscordContext } from "@/lib/discord/api";
 import { toRoleOptions } from "@/lib/discord/options";
-import { getBuilderThemes } from "@/lib/discord/theme-assets";
-import { emojiForDisplay } from "@/lib/discord/ticket-options";
-import { PageCrumb } from "@/lib/crumbs";
+import { getBuilderThemes } from "@/lib/discord/messages/theme-assets";
+import { emojiForDisplay } from "@/lib/discord/tickets/ticket-options";
+import { PageCrumb } from "@/lib/nav/crumbs";
+import { isGuid } from "@repo/schemas/ids";
 
 export const dynamic = "force-dynamic";
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function DiscordTicketCategoryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  if (!UUID.test(id)) notFound();
+  if (!isGuid(id)) notFound();
 
   const { guildId } = requireDiscordContext();
   const category = await getTicketCategory(supabaseAdmin, guildId, id);

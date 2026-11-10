@@ -1,12 +1,13 @@
 import { ExternalLink } from "lucide-react";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { getUserDiscordState } from "@repo/supabase/queries/admin-users";
-import { Card, CardContent, CardHeader, CardTitle, Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@repo/ui";
+import { getUserDiscordState } from "@repo/supabase/queries/users/admin-users";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@repo/ui/components/ui/empty";
 import { Row, When } from "@/components/users/detail";
 import { UnlinkDiscordButton } from "@/components/users/user-actions";
 import { getDiscordContext } from "@/lib/discord/api";
-import { formatDateTimeShort } from "@/lib/discord/tickets";
-import { loadAdminUser, userDisplayName } from "@/lib/users";
+import { formatDateTimeShort } from "@/lib/discord/tickets/tickets";
+import { loadAdminUser, userDisplayName } from "@/lib/users/users";
 
 export const dynamic = "force-dynamic";
 

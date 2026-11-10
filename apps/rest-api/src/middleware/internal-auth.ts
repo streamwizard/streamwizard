@@ -1,5 +1,6 @@
 import type { MiddlewareHandler } from "hono";
-import { secretsMatch } from "../lib/secret-compare";
+import { readBearerToken } from "@repo/service-token/bearer";
+import { secretsMatch } from "@/lib/secret-compare";
 
 /**
  * Server-to-server auth for /internal/* routes: `Authorization: Bearer <secret>`
@@ -9,8 +10,7 @@ import { secretsMatch } from "../lib/secret-compare";
 export function internalAuth(secret: string | undefined): MiddlewareHandler {
   return async (c, next) => {
     if (!secret) return c.json({ error: "Not found" }, 404);
-    const header = c.req.header("authorization") ?? "";
-    const token = header.startsWith("Bearer ") ? header.slice("Bearer ".length) : null;
+    const token = readBearerToken(c.req.header("authorization"));
     if (!secretsMatch(token, secret)) return c.json({ error: "Unauthorized" }, 401);
     await next();
   };

@@ -1,4 +1,4 @@
-import { Skeleton } from "@repo/ui";
+import { Skeleton } from "@repo/ui/components/ui/skeleton";
 
 // Mixed indents so the skeleton reads as a folder tree, not a flat table.
 const ROW_INDENTS = [0, 20, 20, 0, 20, 40, 0, 0, 20, 0];

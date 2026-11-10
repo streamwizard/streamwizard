@@ -1,8 +1,13 @@
+import "server-only";
+
 import type { NextRequest } from "next/server";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { getTwitchUserIdByUserIdMaybe } from "@repo/supabase/queries/user";
-import { getOverlaySceneBySubscriberToken } from "@repo/supabase/queries/overlays";
+import { getTwitchUserIdByUserIdMaybe } from "@repo/supabase/queries/users/user";
+import { getOverlaySceneBySubscriberToken } from "@repo/supabase/queries/overlays/overlays";
 import { TtlCache } from "@repo/ttl-cache";
+import { env } from "@/lib/env";
+import { readBearerToken } from "@repo/service-token/bearer";
+import { overlayTokenSchema } from "@/schemas/overlay-token";
 
 /**
  * Shared plumbing for the API routes overlay widgets call from inside their
@@ -28,8 +33,8 @@ const OPAQUE_ORIGIN = "null";
 
 const ALLOWED_ORIGINS = new Set(
   [
-    process.env.NEXT_PUBLIC_OVERLAY_URL, // prod overlay URL
-    process.env.NEXT_PUBLIC_BASE_URL, // streamwizard dashboard (editor preview)
+    env.NEXT_PUBLIC_OVERLAY_URL, // prod overlay URL
+    env.NEXT_PUBLIC_BASE_URL, // streamwizard dashboard (editor preview)
     OPAQUE_ORIGIN, // sandboxed widget iframe on either of the above
   ].filter(Boolean)
 );
@@ -54,21 +59,17 @@ export function corsHeaders(req: NextRequest): Record<string, string> {
  * against the original contract.
  */
 export function bearerToken(req: NextRequest): string | null {
-  const auth = req.headers.get("authorization");
-  if (auth?.startsWith("Bearer ")) return auth.slice("Bearer ".length);
-  return null;
+  return readBearerToken(req.headers.get("authorization"));
 }
-
-const TOKEN_FORMAT = /^[0-9a-f]{64}$/;
 
 /**
  * subscriber_token is always 32 random bytes as lowercase hex (the column
- * default and resetSceneSubscriberToken). Routes answer 403 for anything else
+ * default and resetSceneUrl). Routes answer 403 for anything else
  * before it reaches the rate limiter or the database, so a made-up string of
  * any size never gets stored.
  */
 export function isPlausibleToken(token: unknown): token is string {
-  return typeof token === "string" && TOKEN_FORMAT.test(token);
+  return overlayTokenSchema.safeParse(token).success;
 }
 
 /**
@@ -112,15 +113,51 @@ export async function broadcasterIdForToken(token: string): Promise<string | nul
  */
 const RATE_LIMIT = 60;
 const RATE_WINDOW_MS = 60_000;
-const buckets = new TtlCache<{ count: number }>({ ttlMs: RATE_WINDOW_MS, maxEntries: 5000 });
+
+/** Fixed-window counter: true once `key` has gone past `limit` this window. */
+function windowCounter(limit: number, maxEntries = 5000) {
+  const buckets = new TtlCache<{ count: number }>({ ttlMs: RATE_WINDOW_MS, maxEntries });
+  return (key: string): boolean => {
+    const entry = buckets.get(key);
+    if (!entry) {
+      buckets.set(key, { count: 1 });
+      return false;
+    }
+    entry.count++;
+    return entry.count > limit;
+  };
+}
+
+const tokenLimited = windowCounter(RATE_LIMIT);
 
 export function isRateLimited(token: string): boolean {
   if (!isPlausibleToken(token)) return true;
-  const entry = buckets.get(token);
-  if (!entry) {
-    buckets.set(token, { count: 1 });
-    return false;
-  }
-  entry.count++;
-  return entry.count > RATE_LIMIT;
+  return tokenLimited(token);
+}
+
+/**
+ * `users` is the one resource that takes ids from the caller, and its misses
+ * go to Helix on the shared app token. A per-token limit alone doesn't bound
+ * that: every scene has its own token and a token can be reset, so one account
+ * could hold any number of buckets. This one is keyed on the channel the token
+ * resolves to, so all of an owner's scenes share it.
+ */
+const USERS_PER_OWNER_LIMIT = 60;
+const ownerLimited = windowCounter(USERS_PER_OWNER_LIMIT);
+
+export function isUsersLookupLimited(broadcasterId: string): boolean {
+  return ownerLimited(broadcasterId);
+}
+
+/**
+ * Helix `/users` batches this instance may send per minute for widget lookups,
+ * across every owner. The app token's bucket also serves EventSub, badges,
+ * stream state and the rest, so widget lookups get a slice of it, never all
+ * of it. Past the cap a request still answers, with cached users only.
+ */
+const USERS_HELIX_BUDGET = 120;
+const helixBudgetSpent = windowCounter(USERS_HELIX_BUDGET, 1);
+
+export function takeUsersHelixBudget(): boolean {
+  return !helixBudgetSpent("users");
 }

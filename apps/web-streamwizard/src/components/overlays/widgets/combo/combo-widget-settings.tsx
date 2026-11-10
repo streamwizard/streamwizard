@@ -11,19 +11,15 @@ import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@repo/ui";
-import {
-  EmoteCodePicker,
-  FontWeightSelect,
-  GoogleFontSelect,
-  InspectorHint,
-  InspectorReveal,
-  InspectorSection,
-  SegmentedField,
-  SliderField,
-  SwitchField,
-  type SegmentedOption,
-} from "@/components/overlays/inspector-fields";
-import { buildWidgetTestEvent } from "@repo/schemas";
+import { EmoteCodePicker } from "@/components/overlays/inspector-fields/emote-picker";
+import { FontWeightSelect } from "@/components/overlays/inspector-fields/font-weight-select";
+import { GoogleFontSelect } from "@/components/overlays/inspector-fields/google-font-select";
+import { InspectorHint } from "@/components/overlays/editor/inspector/inspector-hint";
+import { InspectorReveal, InspectorSection } from "@/components/shared/inspector-section";
+import { SegmentedField, type SegmentedOption } from "@/components/overlays/inspector-fields/segmented-field";
+import { SliderField } from "@/components/overlays/inspector-fields/slider-field";
+import { SwitchField } from "@/components/overlays/inspector-fields/switch-field";
+import { buildWidgetTestEvent } from "@repo/schemas/widgets/test-events";
 import {
   COMBO_PREVIEW_EVENT,
   COMBO_WIDGET_LIMITS,

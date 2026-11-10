@@ -2,7 +2,7 @@
 
 import { Check } from "lucide-react";
 import { MotionConfig, motion } from "motion/react";
-import type { TimelineStatus } from "@/app/(public)/roadmap/roadmap-data";
+import type { TimelineStatus } from "@/components/public/roadmap/roadmap-data";
 
 /*
  * The dots on the roadmap spine. Each status gets its own treatment: shipped

@@ -8,6 +8,7 @@ import type { PollChoiceView, PollView } from "../poll-view";
 export {
   CELEBRATION_MS,
   Confetti,
+  FitBox,
   FitSvgText,
   FitText,
   GOAL_KEYFRAMES,
@@ -15,6 +16,11 @@ export {
   hexToRgba,
   textStyle,
 } from "../../goal/presets/shared";
+
+/** Two or more choices share the most votes, open or closed. `view.leader` is then just the first of them. */
+export function leadersTied(view: PollView): boolean {
+  return view.choices.filter((c) => c.isLeader).length > 1;
+}
 
 /** What every poll preset gets. */
 export interface PollPresetProps {
@@ -97,11 +103,17 @@ export function PollHeader({ view, cfg, style }: { view: PollView; cfg: PollWidg
   if (!showTitle && !right) return null;
   return (
     <div style={{ display: "flex", alignItems: "baseline", gap: Math.round(cfg.fontSize * 0.6), minWidth: 0, flexShrink: 0, ...style }}>
-      <span style={{ flex: "1 1 auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-        {showTitle ? view.title : ""}
-      </span>
+      {showTitle && (
+        <span style={{ flex: "1 1 auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {view.title}
+        </span>
+      )}
+      {/* Without a title the right-hand text may shrink, so it never sticks out of the row. */}
       {right && (
-        <FitText align="right" style={{ flexShrink: 0, maxWidth: showTitle ? "55%" : "100%", opacity: view.ended ? 1 : 0.85 }}>
+        <FitText
+          align="right"
+          style={{ marginLeft: "auto", flexShrink: showTitle ? 0 : 1, maxWidth: showTitle ? "55%" : "100%", opacity: view.ended ? 1 : 0.85 }}
+        >
           {right}
         </FitText>
       )}

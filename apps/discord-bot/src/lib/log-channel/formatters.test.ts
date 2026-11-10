@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { PLATFORM_EVENT_TYPES } from "@repo/types";
-import type { PlatformEvent } from "@repo/supabase/queries/platform-events";
+import { PLATFORM_EVENT_TYPES } from "@repo/schemas/platform-events";
+import type { PlatformEvent } from "@repo/supabase/queries/platform/events";
 import { DANGER_RED, TWITCH_PURPLE } from "../branding";
 import { FORMATTERS, formatPlatformEvent, formatSettingValue } from "./formatters";
 
