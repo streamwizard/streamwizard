@@ -40,7 +40,7 @@ export function GoalArcade({ view, cfg, pulseKey, celebrating }: GoalPresetProps
           <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{view.title}</span>
         )}
         {(cfg.showNumbers || cfg.showPercent) && (
-          <FitText align="right" style={{ marginLeft: "auto", flexShrink: 0, maxWidth: statsMaxWidth(showTitle), fontSize: small }}>
+          <FitText align="right" style={{ marginLeft: "auto", flexShrink: showTitle ? 0 : 1, maxWidth: statsMaxWidth(showTitle), fontSize: small }}>
             {cfg.showNumbers ? `${view.currentText}/${view.targetText}` : ""}
             {cfg.showNumbers && cfg.showPercent ? " " : ""}
             {cfg.showPercent ? view.percentText : ""}

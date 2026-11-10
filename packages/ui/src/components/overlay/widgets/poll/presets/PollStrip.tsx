@@ -6,6 +6,7 @@ import {
   SHARE_MS,
   capRadius,
   choiceValueText,
+  leadersTied,
   textStyle,
   trackPaint,
   type PollPresetProps,
@@ -21,14 +22,16 @@ export function PollStrip({ view, cfg }: PollPresetProps) {
   const radius = capRadius(cfg.radius, lineHeight);
   const gap = Math.round(cfg.fontSize * 0.6);
   const lead = view.leader;
+  const tied = leadersTied(view);
   const leadValue = lead ? choiceValueText(lead, cfg) : "";
   const status = view.ended
     ? view.resultText
     : lead
-      ? [lead.title, leadValue].filter(Boolean).join(" ")
+      ? [tied ? "Tied" : lead.title, leadValue].filter(Boolean).join(" ")
       : (view.emptyText ?? "No votes yet");
   const right = !view.ended && cfg.showTimer ? view.timerText : "";
-  const dotColor = lead && view.resultText !== "Tie" ? lead.color : null;
+  // No dot on a tie: the first tied choice's colour would name a leader there isn't.
+  const dotColor = lead && !tied ? lead.color : null;
   const dot = Math.round(cfg.fontSize * 0.55);
 
   return (

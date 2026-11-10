@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useGoogleFonts } from "../../hooks/use-google-font";
+import { FitBox } from "../goal/presets/shared";
 import { subscribeToWsRoom } from "../../lib/ws-store";
 import type { OverlayItem, OverlayScene } from "../../types/item";
 import { twitchEmoteUrl } from "../../../chat/asset-urls";
@@ -293,10 +294,8 @@ export function ComboWidgetRenderer({ item, scene, isEditor = false }: ComboWidg
         height: "100%",
         boxSizing: "border-box",
         display: "flex",
-        flexDirection: cfg.layout === "horizontal" ? "row" : "column",
         alignItems: "center",
         justifyContent: "center",
-        gap: 12,
         overflow: "hidden",
         color: cfg.color,
         fontFamily: `"${cfg.fontFamily}", sans-serif`,
@@ -304,11 +303,23 @@ export function ComboWidgetRenderer({ item, scene, isEditor = false }: ComboWidg
       }}
     >
       <style>{KEYFRAMES}</style>
-      {showSample ? (
-        <ComboRow cfg={cfg} combo={SAMPLE_COMBO} sample />
-      ) : (
-        visible.map((combo) => <ComboRow key={combo.id} cfg={cfg} combo={combo} />)
-      )}
+      {/* Several combos (or the big Stack design) shrink to fit the box instead of being cut at both ends. */}
+      <FitBox
+        fitWidth
+        innerStyle={{
+          display: "flex",
+          flexDirection: cfg.layout === "horizontal" ? "row" : "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 12,
+        }}
+      >
+        {showSample ? (
+          <ComboRow cfg={cfg} combo={SAMPLE_COMBO} sample />
+        ) : (
+          visible.map((combo) => <ComboRow key={combo.id} cfg={cfg} combo={combo} />)
+        )}
+      </FitBox>
     </div>
   );
 }

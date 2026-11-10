@@ -492,6 +492,8 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
         style={{
           maxWidth: "100%",
           maxHeight: variant.layout === "overlay" ? "100%" : "60%",
+          // The media gives way to a long message instead of both spilling out of the box.
+          minHeight: 0,
           objectFit: "contain",
           ...(variant.layout === "overlay"
             ? { position: "absolute" as const, inset: 0, width: "100%", height: "100%" }
@@ -507,6 +509,8 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
         style={{
           maxWidth: "100%",
           maxHeight: variant.layout === "overlay" ? "100%" : "60%",
+          // The media gives way to a long message instead of both spilling out of the box.
+          minHeight: 0,
           objectFit: "contain",
           ...(variant.layout === "overlay"
             ? { position: "absolute" as const, inset: 0, width: "100%", height: "100%" }
@@ -604,6 +608,8 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
             alignItems,
             gap: 4,
             minWidth: 0,
+            // Stacked, the text keeps its height and the media shrinks instead.
+            flexShrink: variant.layout === "row" ? 1 : 0,
             visibility: textHidden ? "hidden" : "visible",
             ...(textMotion ?? { animation: "none" }),
           }}
