@@ -2,6 +2,7 @@
 
 import type { CSSProperties } from "react";
 import {
+  FitBox,
   FitText,
   PollHeader,
   SHARE_EASE,
@@ -26,6 +27,7 @@ const OPEN_REACH = 0.82;
  */
 export function PollRace({ view, cfg, pulses }: PollPresetProps) {
   const laneMax = Math.round(cfg.fontSize * 2);
+  const laneMin = Math.round(cfg.fontSize * 1.3);
   const runner = Math.round(cfg.fontSize * 1.05);
   const finish = Math.max(6, Math.round(cfg.fontSize * 0.45));
   const checker = Math.max(3, Math.round(finish / 2));
@@ -44,7 +46,11 @@ export function PollRace({ view, cfg, pulses }: PollPresetProps) {
       }}
     >
       <PollHeader view={view} cfg={cfg} />
-      <div style={{ flex: "1 1 auto", minHeight: 0, display: "flex", flexDirection: "column", justifyContent: "center", gap: Math.round(cfg.fontSize * 0.25) }}>
+      {/* Lanes never get shorter than a line of text; with many choices (a prediction has up to ten) the list shrinks to fit. */}
+      <FitBox
+        style={{ flex: "1 1 auto", display: "flex", flexDirection: "column" }}
+        innerStyle={{ flex: "1 0 auto", display: "flex", flexDirection: "column", justifyContent: "center", gap: Math.round(cfg.fontSize * 0.25) }}
+      >
         {view.choices.map((c) => {
           const reach = c.isWinner ? 1 : c.relative * OPEN_REACH;
           // The runner's left edge: along the lane, never past its end.
@@ -57,7 +63,7 @@ export function PollRace({ view, cfg, pulses }: PollPresetProps) {
               style={{
                 flex: "1 1 0",
                 maxHeight: laneMax,
-                minHeight: 0,
+                minHeight: laneMin,
                 display: "flex",
                 alignItems: "center",
                 gap: Math.round(cfg.fontSize * 0.5),
@@ -160,7 +166,7 @@ export function PollRace({ view, cfg, pulses }: PollPresetProps) {
             </div>
           );
         })}
-      </div>
+      </FitBox>
     </div>
   );
 }

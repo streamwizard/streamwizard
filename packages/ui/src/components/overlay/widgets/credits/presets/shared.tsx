@@ -12,7 +12,7 @@ import type { CreditsViewName, CreditsViewSection } from "../credits-view";
 import type { CreditsPlaybackMode } from "../credits-playback";
 
 import { FitText } from "../../goal/presets/shared";
-export { hexToRgba, mixHex, textStyle, FitText } from "../../goal/presets/shared";
+export { hexToRgba, mixHex, textStyle, FitText, FitBox } from "../../goal/presets/shared";
 
 /** What every design gets. */
 export interface CreditsPresetProps {
@@ -123,13 +123,15 @@ export function NameRow({
         justifyContent: align === "left" ? "flex-start" : "center",
         gap: Math.round(cfg.fontSize * 0.4),
         minWidth: 0,
+        // A centred column sizes rows to their content; the cap lets a long name ellipsis instead of spilling.
+        maxWidth: "100%",
         ...nameStyle(cfg),
         ...style,
       }}
     >
       <Avatar src={entry.avatar} size={Math.round(cfg.fontSize * 1.1)} />
-      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.name}</span>
-      {entry.valueText && <span style={valueStyle(cfg)}>{entry.valueText}</span>}
+      <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.name}</span>
+      {entry.valueText && <span style={{ ...valueStyle(cfg), flexShrink: 0, whiteSpace: "nowrap" }}>{entry.valueText}</span>}
     </div>
   );
 }
@@ -180,9 +182,9 @@ export function SocialIcon({ platform, size, color }: { platform: CreditsSocialP
 /** One platform: logo, then the handle as typed. */
 export function SocialRow({ entry, cfg, style }: { entry: CreditsSocial; cfg: CreditsWidgetItemConfig; style?: CSSProperties }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: Math.round(cfg.fontSize * 0.4), minWidth: 0, ...nameStyle(cfg), ...style }}>
+    <div style={{ display: "flex", alignItems: "center", gap: Math.round(cfg.fontSize * 0.4), minWidth: 0, maxWidth: "100%", ...nameStyle(cfg), ...style }}>
       <SocialIcon platform={entry.platform} size={Math.round(cfg.fontSize * 1.05)} color={socialIconColor(entry.platform, cfg)} />
-      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.handle}</span>
+      <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.handle}</span>
     </div>
   );
 }
@@ -223,7 +225,17 @@ export function SectionBlock({
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: align === "left" ? "flex-start" : "center", gap: rowGap, textAlign }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: align === "left" ? "flex-start" : "center",
+        gap: rowGap,
+        textAlign,
+        minWidth: 0,
+        maxWidth: "100%",
+      }}
+    >
       <div style={{ ...headingStyle(cfg), ...heading }}>{headingText(section)}</div>
       {section.kind === "stat" && <div style={{ ...big, fontSize: Math.round(cfg.fontSize * 1.8) }}>{section.stat}</div>}
       {section.kind === "text" && (
@@ -256,6 +268,41 @@ export function SectionBlock({
             <div style={{ ...nameStyle(cfg), ...valueStyle(cfg), fontStyle: "italic" }}>{section.overflowText}</div>
           )}
         </>
+      )}
+    </div>
+  );
+}
+
+/** How many columns a names list flows into, so long lists stay readable in a short box. */
+export function namesColumnCount(section: CreditsViewSection): number {
+  if (section.kind !== "names" || section.names.length <= 8) return 1;
+  return section.names.length > 16 ? 3 : 2;
+}
+
+/** A names section with its names flowed into `columns` columns (Cards, Cinematic). */
+export function NamesInColumns({
+  section,
+  cfg,
+  columns,
+  columnGap,
+}: {
+  section: CreditsViewSection;
+  cfg: CreditsWidgetItemConfig;
+  columns: number;
+  columnGap: number;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: Math.round(cfg.fontSize * 0.5) }}>
+      <div style={{ ...headingStyle(cfg), textAlign: "center" }}>{headingText(section)}</div>
+      <div style={{ columnCount: columns, columnGap }}>
+        {section.names.map((entry) => (
+          <div key={entry.key} style={{ breakInside: "avoid" }}>
+            <NameRow entry={entry} cfg={cfg} align="left" />
+          </div>
+        ))}
+      </div>
+      {section.overflowText && (
+        <div style={{ ...nameStyle(cfg), ...valueStyle(cfg), fontStyle: "italic", textAlign: "center" }}>{section.overflowText}</div>
       )}
     </div>
   );

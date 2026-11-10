@@ -272,12 +272,17 @@ export function EditorCanvas({ paneRef, onAddWidget, onOpenShortcuts }: EditorCa
                 >
                   <div
                     className={`
-                    w-full h-full border-solid transition-colors overflow-hidden
-                    ${isSelected ? "border-primary" : "border-white/20 hover:border-white/40"}
+                    w-full h-full outline-solid transition-colors
+                    ${isSelected ? "outline-primary" : "outline-white/20 hover:outline-white/40"}
                   `}
                     style={{
-                      borderWidth: 2 / zoom,
-                      borderRadius: 4 / zoom,
+                      // Shows the widget exactly as the live overlay does: an
+                      // outline, not a border (a border takes its width out of
+                      // the box and cut the right and bottom edges), and no
+                      // clipping, so glows past the box show here as on stream.
+                      // A cropped widget still clips itself in WidgetScaleFrame.
+                      outlineWidth: 2 / zoom,
+                      outlineOffset: 0,
                       // Mirrored in here, inside the rotated wrapper, so the
                       // resize handles stay where the cursor expects them.
                       // Same maths as the live renderer's rotate-then-scale.

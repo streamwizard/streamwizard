@@ -5,6 +5,7 @@ import type { AdWidgetItemConfig } from "../ad-widget-config";
 import type { AdPhase, AdPhaseView } from "../ad-widget-state";
 
 export {
+  FitBox,
   FitSvgText,
   FitText,
   GOAL_KEYFRAMES,

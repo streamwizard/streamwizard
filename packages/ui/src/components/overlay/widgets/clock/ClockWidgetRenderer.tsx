@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useGoogleFont } from "../../hooks/use-google-font";
+import { FitText } from "../goal/presets/shared";
 import { formatClockWidgetDisplay } from "../../lib/format-clock-widget";
 import { normalizeClockWidgetConfig, resolvedTextWidgetFontFamily } from "../../types/widgets";
 import type { WidgetRenderProps } from "../text/TextWidgetRenderer";
@@ -63,16 +64,10 @@ export function ClockWidgetRenderer({ item }: WidgetRenderProps) {
           {display}
         </span>
       ) : (
-        <span
-          style={{
-            fontVariantNumeric: "tabular-nums",
-            whiteSpace: "nowrap",
-            lineHeight: 1.375,
-            maxWidth: "100%",
-          }}
-        >
+        // Shrinks to fit, so a long date format isn't cut at the edge.
+        <FitText align={cfg.align} style={{ fontVariantNumeric: "tabular-nums", lineHeight: 1.375 }}>
           {display}
-        </span>
+        </FitText>
       )}
     </div>
   );

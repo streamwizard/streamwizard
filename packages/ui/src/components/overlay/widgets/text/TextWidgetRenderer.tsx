@@ -126,7 +126,9 @@ export function TextWidgetRenderer({ item }: WidgetRenderProps) {
   ) : (
     <StyledText
       cfg={cfg}
-      style={{ wordBreak: "break-word", whiteSpace: "pre-wrap", lineHeight: 1.2, maxWidth: "100%" }}
+      // Auto margins centre the text like align-items does, but text taller
+      // than the box starts at the top, so only the end is cut, never the first line.
+      style={{ wordBreak: "break-word", whiteSpace: "pre-wrap", lineHeight: 1.2, maxWidth: "100%", marginTop: "auto", marginBottom: "auto" }}
     />
   );
 

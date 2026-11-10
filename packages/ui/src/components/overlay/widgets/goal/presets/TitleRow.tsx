@@ -26,12 +26,18 @@ export function TitleRow({
   return (
     <div style={{ display: "flex", alignItems: "center", gap: Math.round(cfg.fontSize * 0.4), minWidth: 0, ...style }}>
       {cfg.showIcon && <GoalIcon kind={view.icon} url={cfg.iconUrl} size={iconSize} color={cfg.fillColor} />}
-      <span style={{ flex: "1 1 auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-        {showTitle ? view.title : ""}
-      </span>
-      {/* The title gives way first (ellipsis); numbers shrink only if they alone don't fit. */}
+      {showTitle && (
+        <span style={{ flex: "1 1 auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {view.title}
+        </span>
+      )}
+      {/* The title gives way first (ellipsis); numbers shrink only if they alone don't fit.
+          Without a title the numbers may shrink too, so the icon and gap never push them out. */}
       {stats && (
-        <FitText align="right" style={{ flexShrink: 0, maxWidth: statsMaxWidth(showTitle) }}>
+        <FitText
+          align="right"
+          style={{ marginLeft: "auto", flexShrink: showTitle ? 0 : 1, maxWidth: statsMaxWidth(showTitle) }}
+        >
           {stats}
         </FitText>
       )}

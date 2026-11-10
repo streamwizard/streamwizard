@@ -8,6 +8,7 @@ import { IRL_FIELD_WIDGET_TYPES } from "../../types/base";
 import { DEFAULT_IRL_FIELD_WIDGET_ITEM_CONFIG } from "../../types/widgets";
 import { useIrlGeoData } from "./use-irl-geo-data";
 import { useIrlGeoContext } from "../../hooks/use-irl-geo-context";
+import { FitText } from "../goal/presets/shared";
 
 export interface IrlFieldWidgetRendererProps {
   item: OverlayItem;
@@ -106,6 +107,7 @@ export function IrlFieldWidgetRenderer({ item, scene, isEditor }: IrlFieldWidget
       cfg.align === "center" ? "center" : cfg.align === "right" ? "flex-end" : "flex-start",
     padding: "0 8px",
     boxSizing: "border-box",
+    overflow: "hidden",
     color: cfg.color,
     fontFamily: cfg.fontFamily === "monospace" ? "monospace" : `"${cfg.fontFamily}", sans-serif`,
     fontSize,
@@ -141,12 +143,15 @@ export function IrlFieldWidgetRenderer({ item, scene, isEditor }: IrlFieldWidget
 
   return (
     <div style={containerStyle}>
-      {mock && (
-        <span style={{ fontSize: fontSize * 0.5, opacity: 0.4, marginRight: "4px" }}>
-          MOCK·
-        </span>
-      )}
-      {value}
+      {/* One line that shrinks to fit, instead of wrapping out of a short box. */}
+      <FitText align={cfg.align}>
+        {mock && (
+          <span style={{ fontSize: fontSize * 0.5, opacity: 0.4, marginRight: "4px" }}>
+            MOCK·
+          </span>
+        )}
+        {value}
+      </FitText>
     </div>
   );
 }
