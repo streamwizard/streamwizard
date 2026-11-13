@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Check, PartyPopper } from "lucide-react";
 import { FaDiscord } from "react-icons/fa";
+import { useRouterRefresh } from "@/hooks/use-router-refresh";
 import { discordInviteLink } from "@/lib/constant";
+import type { DiscordStatus } from "@/server/discord/status";
 
 // Shows what joining is for. The button that opens the invite ("Join the
 // server") is in the wizard's footer, next to Back and Skip. `inviteOpened`
@@ -14,16 +14,10 @@ export function DiscordJoinStep({
   status,
   inviteOpened,
 }: {
-  status: "verified" | "not_member";
+  status: Exclude<DiscordStatus, "not_linked">;
   inviteOpened: boolean;
 }) {
-  const router = useRouter();
-  const [checking, setChecking] = useState(false);
-
-  const handleCheckAgain = () => {
-    setChecking(true);
-    router.refresh();
-  };
+  const { refresh: handleCheckAgain, pending: checking } = useRouterRefresh();
 
   if (status === "verified") {
     return (

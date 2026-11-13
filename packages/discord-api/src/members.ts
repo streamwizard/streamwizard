@@ -115,6 +115,7 @@ export class DiscordMembersClient {
   async getRoleIds(discordUserId: string): Promise<string[] | null> {
     const response = await fetch(`https://discord.com/api/v10/guilds/${this.config.guildId}/members/${discordUserId}`, {
       headers: { Authorization: `Bot ${this.config.botToken}` },
+      signal: AbortSignal.timeout(10_000),
     });
 
     if (response.status === 404) return null;

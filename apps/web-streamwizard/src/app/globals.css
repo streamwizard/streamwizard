@@ -124,6 +124,8 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  /* Headings on the Minecraft SMP page only. Loaded by app/(public)/smp/layout.tsx. */
+  --font-pixel: var(--font-pixelify), ui-monospace, monospace;
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
 
@@ -386,4 +388,215 @@
   details[name="faq"][open]::details-content {
     block-size: auto;
   }
+}
+
+/*
+ * The Minecraft SMP page (/smp) looks like the modpack's title screen, not like
+ * the rest of the site: pixel art, a purple night, gold accents. See "SMP page"
+ * in docs/branding.md. Colours come from the mod's menu generator
+ * (tools/main_menu_assets.py in the mod repo); keep the two in step.
+ *
+ * Rules these utilities hold to: art is drawn at whole multiples of its own
+ * pixels, edges are hard (no radius, no blur, no soft shadow), and one "unit"
+ * (--smp-px) stands for one pixel of the menu's buttons.
+ */
+@utility smp-theme {
+  --smp-px: 2px;
+  --smp-night: #06030e;
+  --smp-ground: #080312;
+  --smp-ink: #05020c;
+  --smp-lavender: #b89cff;
+  --smp-gold: #ffe08a;
+  --smp-purple: #9146ff;
+  background-color: var(--smp-ground);
+
+  @media (min-width: 48rem) {
+    --smp-px: 3px;
+  }
+}
+
+@utility pixel-art {
+  image-rendering: pixelated;
+}
+
+/* The title-screen scene behind the hero. The art is 480x270; --scene-scale is
+   a whole number that makes it at least as wide as the viewport, and the
+   section is as tall as the art so the tower stays in view. Wider than 3840px
+   the sky and ground colours fill the sides. */
+@utility smp-scene {
+  --scene-scale: 2;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: calc(270px * var(--scene-scale));
+  background: linear-gradient(var(--smp-night) 0 60%, var(--smp-ground) 60%);
+
+  @media (min-width: 791px) {
+    --scene-scale: 3;
+  }
+  @media (min-width: 1441px) {
+    --scene-scale: 4;
+  }
+  @media (min-width: 1921px) {
+    --scene-scale: 5;
+  }
+  @media (min-width: 2401px) {
+    --scene-scale: 6;
+  }
+  @media (min-width: 2881px) {
+    --scene-scale: 7;
+  }
+  @media (min-width: 3361px) {
+    --scene-scale: 8;
+  }
+}
+
+/* Anchored to the bottom, so a hero that is taller than the art gets more sky.
+   On a phone the art is wider than the screen and the text covers most of it:
+   it is pulled 85 art pixels past the right edge there, which leaves the tower
+   at the side of the screen and moves the bright moon out from behind the
+   headline. From 791px up the art is centred. */
+@utility smp-scene-art {
+  position: absolute;
+  z-index: -1;
+  bottom: 0;
+  right: calc(-85px * var(--scene-scale));
+  width: calc(480px * var(--scene-scale));
+  height: calc(270px * var(--scene-scale));
+  max-width: none;
+  image-rendering: pixelated;
+
+  @media (min-width: 791px) {
+    right: auto;
+    left: calc(50% - 240px * var(--scene-scale));
+  }
+}
+
+/* A menu button, drawn the way the generator draws button_normal.png: outline,
+   a light edge top and left, a dark edge bottom and right, one unit cut off
+   each corner. The focus ring is the gold outline of the menu's hover state,
+   because clip-path would cut a ring drawn outside the box. */
+@utility pixel-btn {
+  --btn-top: #1c0f38;
+  --btn-bottom: #120a26;
+  --btn-outline: #05020c;
+  --btn-light: #3a2272;
+  --btn-dark: #0a0516;
+  --btn-label: var(--smp-lavender);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: calc(var(--smp-px) * 20);
+  padding: calc(var(--smp-px) * 3) calc(var(--smp-px) * 8);
+  border: var(--smp-px) solid var(--btn-outline);
+  border-radius: 0;
+  background: linear-gradient(var(--btn-top), var(--btn-bottom));
+  box-shadow:
+    inset var(--smp-px) var(--smp-px) 0 var(--btn-light),
+    inset calc(var(--smp-px) * -1) calc(var(--smp-px) * -1) 0 var(--btn-dark);
+  clip-path: polygon(
+    var(--smp-px) 0,
+    calc(100% - var(--smp-px)) 0,
+    100% var(--smp-px),
+    100% calc(100% - var(--smp-px)),
+    calc(100% - var(--smp-px)) 100%,
+    var(--smp-px) 100%,
+    0 calc(100% - var(--smp-px)),
+    0 var(--smp-px)
+  );
+  color: var(--btn-label);
+  /* The font variable itself: --font-pixel is an inline theme value and does not exist at runtime. */
+  font-family: var(--font-pixelify), ui-monospace, monospace;
+  font-size: 1.125rem;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+  /* Two pixels, about one pixel of the font at this size. A full unit doubles the letters. */
+  text-shadow: 2px 2px 0 var(--smp-ink);
+  cursor: pointer;
+
+  &:hover {
+    --btn-top: #33186e;
+    --btn-bottom: #231050;
+    --btn-outline: #c9aeff;
+    --btn-light: #6a42d6;
+    --btn-dark: #170a36;
+    --btn-label: var(--smp-gold);
+  }
+
+  &:focus-visible {
+    --btn-outline: var(--smp-gold);
+    --btn-light: var(--smp-gold);
+    --btn-dark: var(--smp-gold);
+    --btn-label: var(--smp-gold);
+    outline: none;
+  }
+
+  &:disabled,
+  &[aria-disabled="true"] {
+    --btn-top: #120b1e;
+    --btn-bottom: #0c0714;
+    --btn-outline: #05020c;
+    --btn-light: #241a36;
+    --btn-dark: #07040c;
+    --btn-label: #8f85a6;
+    cursor: not-allowed;
+  }
+}
+
+/* button_primary.png: the "Join StreamWizard" button. The label stays white on
+   hover (gold on this purple is too faint to read); the outline turns gold. */
+@utility pixel-btn-primary {
+  &:not(:disabled, [aria-disabled="true"]) {
+    --btn-top: #8a4dff;
+    --btn-bottom: #6326d6;
+    --btn-outline: #05020c;
+    --btn-light: #b897ff;
+    --btn-dark: #461a9e;
+    --btn-label: #ffffff;
+
+    &:hover {
+      --btn-top: #9f6aff;
+      --btn-bottom: #7432e0;
+      --btn-outline: var(--smp-gold);
+      --btn-light: #d6c2ff;
+      --btn-dark: #5420b8;
+    }
+
+    &:focus-visible {
+      --btn-outline: var(--smp-gold);
+      --btn-light: var(--smp-gold);
+      --btn-dark: var(--smp-gold);
+    }
+  }
+}
+
+/* A menu panel: the dark tint tile behind the game's menus, with the same
+   edges as a button. */
+@utility pixel-panel {
+  border: var(--smp-px) solid var(--smp-ink);
+  border-radius: 0;
+  background-color: #120826;
+  background-image: url("/img/smp/menu-background.png");
+  background-size: calc(32px * 2);
+  image-rendering: pixelated;
+  box-shadow:
+    inset var(--smp-px) var(--smp-px) 0 #3a2272,
+    inset calc(var(--smp-px) * -1) calc(var(--smp-px) * -1) 0 #0a0516;
+  clip-path: polygon(
+    var(--smp-px) 0,
+    calc(100% - var(--smp-px)) 0,
+    100% var(--smp-px),
+    100% calc(100% - var(--smp-px)),
+    calc(100% - var(--smp-px)) 100%,
+    var(--smp-px) 100%,
+    0 calc(100% - var(--smp-px)),
+    0 var(--smp-px)
+  );
+}
+
+/* The hard one-unit drop shadow of the menu's labels. */
+@utility pixel-shadow {
+  text-shadow: var(--smp-px) var(--smp-px) 0 var(--smp-ink);
 }

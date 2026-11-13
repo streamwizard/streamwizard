@@ -161,7 +161,7 @@ export async function GET(request: Request) {
         await track(
           "login_completed",
           {
-            destination: next.includes("onboarding") ? "onboarding" : "dashboard",
+            destination: next.includes("onboarding") ? "onboarding" : next.startsWith("/smp") ? "smp" : "dashboard",
             is_new_user: Number.isFinite(createdAt) && Date.now() - createdAt < 60_000,
           },
           data.session.user,

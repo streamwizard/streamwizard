@@ -110,6 +110,13 @@ export const LLMS_SECTIONS: LlmsSection[] = [
     heading: "Community",
     entries: [
       {
+        title: "Minecraft SMP",
+        href: "/smp",
+        description:
+          "A survival Minecraft server for Twitch streamers (Minecraft Java 26.3 on Fabric) where viewers trigger " +
+          "jumpscares, events and disasters through Twitch redeems. Applications are open; no launch date yet.",
+      },
+      {
         title: "GitHub",
         href: githubLink,
         description: "Full source code, MIT licensed. Issues and pull requests welcome.",

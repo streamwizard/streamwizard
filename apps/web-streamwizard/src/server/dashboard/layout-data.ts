@@ -1,21 +1,18 @@
 import type { User } from "@supabase/supabase-js";
 import type { Database } from "@repo/supabase";
 
+import { getDiscordStatus, type DiscordStatus, type DiscordStatusDeps } from "@/server/discord/status";
+
 type ClipFolder = Database["public"]["Tables"]["clip_folders"]["Row"];
 
-export type DiscordStatus = "verified" | "not_member" | "not_linked";
-
 /** What the dashboard layout reads. Passed in, so the loader runs without a DB in tests. */
-interface DashboardLayoutDeps {
+interface DashboardLayoutDeps extends DiscordStatusDeps {
   getUser: () => Promise<User>;
   getPreferences: () => Promise<{ onboarding_completed: boolean | null } | null>;
   hasCloudObsAccess: () => Promise<boolean>;
   getFolders: (userId: string) => Promise<ClipFolder[] | null>;
   getFolderClipCounts: (userId: string) => Promise<Record<string, number>>;
   countClips: (userId: string) => Promise<number>;
-  getDiscordUserId: (userId: string) => Promise<string | null>;
-  getVerifiedRoleId: () => Promise<string | null>;
-  getMemberRoleIds: (discordUserId: string) => Promise<string[] | null>;
 }
 
 export interface DashboardLayoutData {
@@ -64,14 +61,4 @@ export async function loadDashboardLayoutData(deps: DashboardLayoutDeps): Promis
     discordStatus,
     hasCloudObsAccess,
   };
-}
-
-async function getDiscordStatus(deps: DashboardLayoutDeps, userId: string): Promise<DiscordStatus> {
-  const discordUserId = await deps.getDiscordUserId(userId);
-  if (!discordUserId) return "not_linked";
-  const [verifiedRoleId, roleIds] = await Promise.all([
-    deps.getVerifiedRoleId(),
-    deps.getMemberRoleIds(discordUserId),
-  ]);
-  return roleIds && verifiedRoleId && roleIds.includes(verifiedRoleId) ? "verified" : "not_member";
 }

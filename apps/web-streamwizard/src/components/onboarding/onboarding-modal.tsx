@@ -8,6 +8,7 @@ import { useSessionStore } from "@/stores/session-store";
 import { linkDiscord } from "@/actions/auth/link-discord";
 import { completeOnboarding, saveOnboardingProgress } from "@/actions/user/settings";
 import { discordInviteLink } from "@/lib/constant";
+import type { DiscordStatus } from "@/server/discord/status";
 import { SyncBroadcasterClips } from "@/actions/clips/sync";
 import { SyncNowStep, type SyncState } from "./steps/sync-now-step";
 import { DiscordLinkStep } from "./steps/discord-link-step";
@@ -44,7 +45,7 @@ function OnboardingStartedTracker() {
 
 interface OnboardingProps {
   clipCount: number;
-  discordStatus: "verified" | "not_member" | "not_linked";
+  discordStatus: DiscordStatus;
   // Server-fetched truth. The client store's onboarding_completed defaults to
   // false and only hydrates in a later effect, so on its own it would mount
   // the wizard, for a moment, for every user already past onboarding.

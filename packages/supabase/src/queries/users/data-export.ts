@@ -48,6 +48,7 @@ const EXPORT_TABLES: ExportSpec[] = [
   { key: "irl_geo_track", table: "irl_geo_track", ownedBy: "user_id" },
   { key: "feedback", table: "feedback", ownedBy: "user_id" },
   { key: "testimonials", table: "testimonials", ownedBy: "user_id" },
+  { key: "smp_waitlist_entry", table: "smp_waitlist_entries", ownedBy: "user_id" },
 ];
 
 /**

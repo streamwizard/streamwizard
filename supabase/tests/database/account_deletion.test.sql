@@ -5,7 +5,7 @@
 -- Run: supabase test db --local
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
-SELECT plan(21);
+SELECT plan(22);
 
 -- A is deleted; B keeps a clip of A's in B's own folder.
 INSERT INTO auth.users (id, email, raw_app_meta_data, raw_user_meta_data) VALUES
@@ -31,6 +31,9 @@ INSERT INTO public.overlay_scenes (user_id, name, slug) VALUES
 INSERT INTO public.user_states (user_id, key, value) VALUES
   ('50900000-0000-4000-8000-000000000aa1', 'deaths', '1'),
   ('50900000-0000-4000-8000-000000000bb1', 'deaths', '2');
+INSERT INTO public.smp_waitlist_entries
+  (user_id, minecraft_username, minecraft_uuid, average_viewers, stream_language, stream_frequency) VALUES
+  ('50900000-0000-4000-8000-000000000aa1', 'sw509_del_a', '50900000-0000-4000-8000-000000000aa7', 5, 'en', 'weekly');
 INSERT INTO auth.sessions (id, user_id) VALUES
   ('50900000-0000-4000-8000-000000000aa9', '50900000-0000-4000-8000-000000000aa1'),
   ('50900000-0000-4000-8000-000000000aa8', '50900000-0000-4000-8000-000000000aa1'),
@@ -72,6 +75,7 @@ SELECT results_eq($$SELECT user_id FROM public.clip_folder_junction WHERE clip_i
   ARRAY['50900000-0000-4000-8000-000000000bb1'::uuid], 'the other user''s folder entry stays');
 SELECT is_empty($$SELECT 1 FROM public.overlay_scenes WHERE user_id = '50900000-0000-4000-8000-000000000aa1'$$, 'overlay scenes are gone');
 SELECT is_empty($$SELECT 1 FROM public.user_states WHERE user_id = '50900000-0000-4000-8000-000000000aa1'$$, 'user state is gone');
+SELECT is_empty($$SELECT 1 FROM public.smp_waitlist_entries WHERE user_id = '50900000-0000-4000-8000-000000000aa1'$$, 'the SMP waitlist entry is gone');
 SELECT results_eq(
   $$SELECT (SELECT count(*) FROM public.overlay_scenes WHERE user_id = '50900000-0000-4000-8000-000000000bb1')::int
          + (SELECT count(*) FROM public.user_states WHERE user_id = '50900000-0000-4000-8000-000000000bb1')::int

@@ -235,6 +235,7 @@ Card background is `#0a0a0a`, not `--background`. Cards render outside the theme
 | Geist Mono | `--font-geist-mono` | `next/font/local`, `src/app/fonts/GeistMonoVF.woff2` | `code, pre, kbd, samp` |
 | Geist static cuts | none | `Geist-Regular.ttf`, `Geist-SemiBold.ttf` | Social cards only |
 | Inter | per widget | Google Fonts, at render time in the overlay | Overlay widget default |
+| Pixelify Sans | `--font-pixelify`, used as `font-pixel` | `next/font/local`, `src/app/fonts/PixelifySans-latin-VF.woff2` (variable, 400 to 700, Latin). SIL Open Font License, text in `PixelifySans-OFL.txt` next to it | Headings and buttons on `/smp` only. See [The SMP page](#the-smp-page) |
 
 **Do not delete the static TTFs.** `Geist-Regular.ttf` and `Geist-SemiBold.ttf` exist only because Satori cannot parse a variable font and crashes on it when generating social cards. They look redundant next to `GeistVF.woff2`. They are not. This is written down here so nobody tidies the fonts directory and breaks every OG image.
 
@@ -312,6 +313,35 @@ Rules:
 - Animate `transform` and `opacity` only. Anything else costs a layout pass.
 - `prefers-reduced-motion` is honored throughout and is not optional. View transitions are killed outright in a media query in globals.css. Decorative motion uses `motion-reduce:hidden` or `motion-reduce:animate-none`.
 - Motion that repeats forever must be subtle enough to sit behind reading. If it pulls the eye on the second loop, it is too strong.
+
+### The SMP page
+
+`/smp`, the sign-up page for the StreamWizard Minecraft SMP, is the one page that does not follow this book. It looks like the modpack's title screen: pixel art, a purple night, gold accents. Someone who installs the modpack sees the same scene and the same buttons in the game, and that match is the point. It is an exception for this page, not a second style to borrow from.
+
+What is different there:
+
+- **Art.** The hero is the title screen's night scene and pixel logo, and the feature panels use 16x16 item and block textures from the mod. This is the only place the logo is a raster image instead of `StreamWizardLogo`, and the only illustration on the site.
+- **Type.** Headings, buttons and step labels are set in Pixelify Sans. Body text, form fields and the FAQ stay in Geist, because they are for reading.
+- **Edges.** No radius, no blur, no soft shadow on the themed elements. Buttons and panels have a one-unit outline, a light edge top and left, a dark edge bottom and right, and one unit cut off each corner, the way the menu's buttons are drawn.
+- **Color.** The page is always dark, whatever theme the visitor picked, and its purples and gold are fills, which the rest of the site does not allow.
+
+| Color | Hex | Used for |
+|---|---|---|
+| Night | `#06030E` | Sky above the scene |
+| Ground | `#080312` | Page background |
+| Ink | `#05020C` | Outlines and the hard text shadow |
+| Lavender | `#B89CFF` | Button labels, eyebrows |
+| Gold | `#FFE08A` | Hover and focus, done steps, panel titles |
+| Button | `#1C0F38` to `#120A26` | Normal button and panel fill |
+| Primary button | `#8A4DFF` to `#6326D6` | The sign-up call to action |
+
+Rules for anything added to that page:
+
+- Pixel art is drawn at a whole multiple of its own size with `image-rendering: pixelated` (the `pixel-art` utility), and served as it is (`unoptimized`). A fractional scale or the image optimizer blurs it.
+- The values come from the mod's menu generator (`tools/main_menu_assets.py` in the mod repo). The utilities that apply them (`smp-theme`, `smp-scene`, `pixel-btn`, `pixel-panel`, `pixel-shadow`) are at the end of `globals.css`. If the menu changes, change both.
+- The art in `apps/web-streamwizard/public/img/smp/` is copied from the mod. Do not edit the copies; regenerate them from the mod's files.
+- The social card for `/smp` is the normal one. Social cards never fork the layout, and this page is no exception to that.
+- Focus stays visible (the gold outline) and text keeps its contrast: the primary button's label stays white on hover, because gold on that purple is too faint.
 
 ---
 
@@ -425,6 +455,8 @@ Defaults must stay legible over arbitrary footage. That is what the IRL widget d
 ## 9. Third-party and community use
 
 MIT covers the code. It does not cover the name or the mark. Nothing in the repo says this today, which is why it is written here.
+
+The same goes for the pixel art in `apps/web-streamwizard/public/img/smp/`. It comes from the StreamWizard Minecraft mod, which is not MIT licensed, and it is in this repo only so the SMP page can show it.
 
 ### Allowed
 

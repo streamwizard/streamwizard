@@ -93,7 +93,7 @@ export async function GET(request: Request) {
     "discord_linked",
     {
       role_status: roleStatus,
-      source: next.includes("onboarding") ? "onboarding" : "settings",
+      source: next.includes("onboarding") ? "onboarding" : next.startsWith("/smp") ? "smp" : "settings",
     },
     data.session.user,
   );

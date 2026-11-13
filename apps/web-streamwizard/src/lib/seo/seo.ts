@@ -31,6 +31,7 @@ export const PUBLIC_ROUTES: PublicRoute[] = [
   { path: "/vods", lastModified: "2026-09-07" },
   { path: "/analytics", lastModified: "2026-09-07" },
   { path: "/pricing", lastModified: "2026-09-07" },
+  { path: "/smp", lastModified: "2026-11-13" },
   { path: "/about", lastModified: "2026-09-07" },
   { path: "/contact", lastModified: "2026-09-07" },
   { path: "/privacy-policy", lastModified: "2026-05-26" },

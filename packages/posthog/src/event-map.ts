@@ -43,7 +43,7 @@ export interface EventMap {
   // answered before the banner could ask.
   consent_declined: { via: "button" | "gpc" };
   login_clicked: { source?: string };
-  login_completed: { destination: "onboarding" | "dashboard"; is_new_user: boolean };
+  login_completed: { destination: "onboarding" | "dashboard" | "smp"; is_new_user: boolean };
   // Not a login: a signed-in user granting extra Twitch rights for a feature.
   twitch_scope_granted: { feature: string };
   onboarding_started: NoProps;
@@ -135,8 +135,16 @@ export interface EventMap {
   data_export_requested: NoProps;
   discord_unlinked: NoProps;
   account_deleted: { account_age_days: number | null };
-  discord_linked: { role_status: string; source: "onboarding" | "settings" };
+  discord_linked: { role_status: string; source: "onboarding" | "settings" | "smp" };
   discord_guild_joined: { linked: boolean };
+  // The Minecraft SMP sign-up on /smp. Never the Minecraft name or UUID, and
+  // no raw channel numbers: only the coarse answers a funnel needs.
+  smp_waitlist_joined: {
+    broadcaster_type: "none" | "affiliate" | "partner" | "unknown";
+    stream_language: string;
+    stream_frequency: string;
+  };
+  smp_minecraft_name_updated: NoProps;
   // Sent by the rendered overlay itself, so they describe real use on stream
   // rather than what someone configured. Keyed on the overlay's owner.
   overlay_loaded: {

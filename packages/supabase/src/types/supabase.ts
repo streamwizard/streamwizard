@@ -4146,6 +4146,50 @@ export type Database = {
         }
         Relationships: []
       }
+      // Hand-added with 20261113120000_smp_waitlist_entries.sql; a regen from
+      // the local DB produces the same shape.
+      smp_waitlist_entries: {
+        Row: {
+          average_viewers: number
+          created_at: string
+          minecraft_username: string
+          minecraft_uuid: string
+          status: string
+          stream_frequency: string
+          stream_language: string
+          twitch_broadcaster_type: string | null
+          twitch_follower_count: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          average_viewers: number
+          created_at?: string
+          minecraft_username: string
+          minecraft_uuid: string
+          status?: string
+          stream_frequency: string
+          stream_language: string
+          twitch_broadcaster_type?: string | null
+          twitch_follower_count?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          average_viewers?: number
+          created_at?: string
+          minecraft_username?: string
+          minecraft_uuid?: string
+          status?: string
+          stream_frequency?: string
+          stream_language?: string
+          twitch_broadcaster_type?: string | null
+          twitch_follower_count?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       stream_events: {
         Row: {
           broadcaster_id: string
