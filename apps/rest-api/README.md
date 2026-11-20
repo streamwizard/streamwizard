@@ -14,6 +14,8 @@ The API gateway. Twitch EventSub webhooks, clip sync, and analytics endpoints �
 - `POST /webhooks/twitch/eventsub` — entry point for all Twitch events.
 - `POST /api/clips/sync` — manually trigger a clip sync.
 - `GET /api/clips/sync-status` — current sync status.
+- `POST /api/live/sessions`, `POST /api/live/sessions/:session_id/end` — StreamWizard Live sessions for the signed-in phone app (`modules/live-sessions/`).
+- `GET /api/ingest-nodes/live-sessions/:session_id` — an ingest node looks up a live session's secret by wire id (node API key).
 
 EventSub notifications go through `src/modules/eventsub/registry.ts`, which dispatches to typed handlers in `src/modules/eventsub/handlers/`. All database access goes through `@repo/supabase/queries/*`; every Helix call goes through `@repo/twitch-api`.
 
@@ -40,7 +42,8 @@ src/
       storage-credentials.ts  MinIO STS policies and credential cache
       node/       node-level domain code (claim, me, reconcile, plan limits, users, shared storage)
       instances/  domain code for one of the node's instances (CRUD, secrets, events, storage, stream key), create token, plan sweep
-    ingest-nodes/ routes.ts, schemas.ts, domain code (claim, me, sessions, session-stats, ws-token)
+    ingest-nodes/ routes.ts, schemas.ts, domain code (claim, me, sessions, session-stats, ws-token, live-sessions lookup)
+    live-sessions/ routes.ts, schemas.ts, StreamWizard Live session create/end and the wire id / secret helpers
     streams/      routes.ts (clip sync mount), clip sync, viewer-count poller, stream video lookup
 ```
 
@@ -61,3 +64,5 @@ bun dev --filter=@repo/rest-api
 ```
 
 Listens on port `8080` (override with `PORT`).
+
+`LIVE_INGEST_ENDPOINTS` (optional) lists the ingest addresses `POST /api/live/sessions` hands the phone app, as a JSON array of `{"host", "port"}`. Unset or `[]` makes that route answer 503.
