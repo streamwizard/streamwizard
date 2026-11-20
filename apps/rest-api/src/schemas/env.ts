@@ -2,6 +2,15 @@ import { z } from "zod";
 import { isServiceSigningJwk, SERVICE_SIGNING_JWK_ERROR } from "@repo/service-token/signing-jwk";
 import { parseNodeTokenJwks } from "@/lib/node-token-jwks";
 
+/** One ingest address the phone app sends its bonded stream to (LIVE_INGEST_ENDPOINTS). */
+const liveIngestEndpointSchema = z.object({
+  // A hostname or an IP literal.
+  host: z.string().trim().min(1).max(253),
+  port: z.number().int().min(1).max(65535),
+});
+const liveIngestEndpointsSchema = z.array(liveIngestEndpointSchema).max(32);
+export type LiveIngestEndpoint = z.infer<typeof liveIngestEndpointSchema>;
+
 export const envSchema = z.object({
   NODE_ENV: z.enum(["development", "staging", "production"]).default("development"),
   // Read by @repo/sentry (and @repo/posthog/server) as the environment name,
@@ -126,6 +135,28 @@ export const envSchema = z.object({
   // site catches up within the hour.
   CMS_SITE_URL: z.string().url().optional(),
   CMS_REVALIDATE_SECRET: z.string().min(32).optional(),
+
+  // StreamWizard Live: the ingest addresses POST /api/live/sessions hands the
+  // phone app, as a JSON array of {"host","port"}. Not a secret. Optional:
+  // unset or [] makes that route answer 503; a malformed value stops boot.
+  LIVE_INGEST_ENDPOINTS: z
+    .string()
+    .optional()
+    .transform((raw, ctx) => {
+      if (!raw?.trim()) return [];
+      let json: unknown;
+      try {
+        json = JSON.parse(raw);
+      } catch {
+        json = undefined;
+      }
+      const parsed = liveIngestEndpointsSchema.safeParse(json);
+      if (!parsed.success) {
+        ctx.addIssue({ code: "custom", message: 'must be a JSON array of {"host": string, "port": 1-65535}' });
+        return z.NEVER;
+      }
+      return parsed.data;
+    }),
 
   // Public half of the node-token key pair (@repo/node-token) as a JWKS,
   // {"keys":[...]}. Sent to OBS nodes in GET /api/obs-nodes/me so they can verify

@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { parseUuid } from "@/lib/node-schemas";
 import { ingestNodeAuth } from "@/middleware/ingest-node-auth";
 import { claimIngestNode, type ClaimFailure } from "@/modules/ingest-nodes/claim";
+import { lookupLiveSession } from "@/modules/ingest-nodes/live-sessions";
 import { updateIngestNodeMe } from "@/modules/ingest-nodes/me";
 import {
   claimIngestNodeSchema,
@@ -13,6 +14,7 @@ import {
 import { storeSessionStats } from "@/modules/ingest-nodes/session-stats";
 import { endSession, openSession } from "@/modules/ingest-nodes/sessions";
 import { issueWsToken } from "@/modules/ingest-nodes/ws-token";
+import { parseWireId } from "@/modules/live-sessions/credentials";
 
 // /api/ingest-nodes: called by ingest-server. /claim is open (one-time token
 // in the body); every other route authenticates with the node API key, which
@@ -96,4 +98,22 @@ ingestNodeRoutes.post("/session-stats", ingestNodeAuth(), async (c) => {
   const inserted = await storeSessionStats(c.var.ingestNodeId, parsed.data.rows);
   if (inserted === null) return c.json({ error: "Could not store the stats" }, 500);
   return c.json({ ok: true, inserted }, 202);
+});
+
+// A StreamWizard Live session, by the wire id in the phone's first packet:
+// the secret both ends derive their keys from, the owner and the output
+// keys. The response carries a secret: never cached, never logged.
+ingestNodeRoutes.get("/live-sessions/:session_id", ingestNodeAuth(), async (c) => {
+  c.header("Cache-Control", "no-store");
+  const result = await lookupLiveSession(c.var.ingestNodeId, parseWireId(c.req.param("session_id")));
+  if (result.ok) return c.json(result.session);
+  switch (result.reason) {
+    case "rate_limited":
+      c.header("Retry-After", String(result.retryAfterSeconds));
+      return c.json({ error: "Too many unknown sessions" }, 429);
+    case "not_found":
+      return c.json({ error: "Session not found" }, 404);
+    case "failed":
+      return c.json({ error: "Could not look up the session" }, 500);
+  }
 });

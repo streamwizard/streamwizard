@@ -1,0 +1,480 @@
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, mock, setSystemTime, spyOn } from "bun:test";
+import { createHash, randomBytes } from "crypto";
+import { Hono } from "hono";
+
+// POST /api/live/sessions and /end, against in-memory stand-ins for the
+// live_sessions table, the stream keys and the plans. The real crypto runs,
+// so the stored row and the ingest lookup are checked end to end.
+
+process.env.TOKEN_ENCRYPTION_KEY ??= randomBytes(32).toString("hex");
+
+const ENDPOINTS = [{ host: "192.168.1.20", port: 7000 }];
+const NODE_KEY = `live-test-node-${randomBytes(8).toString("hex")}`;
+const NODE_ID = "aaaaaaaa-0000-4000-8000-0000000000f1";
+const hash = (t: string) => createHash("sha256").update(t).digest("hex");
+
+/** Bearer `user-<n>` signs in as a user with this id. */
+const userId = (n: number) => `0e0e0000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+const USER_A = userId(1);
+const USER_B = userId(2);
+
+type Key = { id: string; user_id: string; stream_key: string; is_active: boolean };
+type Session = {
+  wire_id: string;
+  user_id: string;
+  key_id: string;
+  stream_key_at_create: string;
+  secret_ciphertext: string;
+  secret_iv: string;
+  secret_tag: string;
+  protocol_version: number;
+  created_ip: string | null;
+  expires_at: string;
+  ended_at: string | null;
+  revoked_at: string | null;
+};
+let keys: Map<string, Key>;
+let sessions: Map<string, Session>;
+let planHolders: Set<string>;
+let ownerLookups: number;
+let createError: string | null;
+let takenWireIds: number;
+/** Runs right after a successful key lookup, e.g. to rotate the key before the insert. */
+let afterOwnerLookup: (() => void) | null;
+
+const keyByValue = (value: string) => [...keys.values()].find((k) => k.stream_key === value);
+
+mock.module("@repo/supabase", () => ({ supabase: {} }));
+mock.module("@/env", () => ({
+  env: { NODE_TOKEN_PUBLIC_JWKS: undefined, WS_SERVER_URL: undefined, LIVE_INGEST_ENDPOINTS: ENDPOINTS },
+}));
+// Spread the real exports: bun shares module mocks across test files.
+const realNodeQueries = await import("@repo/supabase/queries/ingest/nodes");
+mock.module("@repo/supabase/queries/ingest/nodes", () => ({
+  ...realNodeQueries,
+  lookupIngestNodeByApiKeyHash: async (_c: unknown, keyHash: string) => (keyHash === hash(NODE_KEY) ? NODE_ID : null),
+}));
+const realIngest = await import("@repo/supabase/queries/ingest/ingest");
+mock.module("@repo/supabase/queries/ingest/ingest", () => ({
+  ...realIngest,
+  getStreamKeyOwner: async (_c: unknown, value: string, product: string) => {
+    ownerLookups++;
+    const key = keyByValue(value);
+    if (!key || !key.is_active || product !== "cloud_obs" || !planHolders.has(key.user_id)) return null;
+    afterOwnerLookup?.();
+    return { user_id: key.user_id, key_id: key.id, label: "Phone" };
+  },
+  getOutputKeysForKey: async () => ({ data: [{ output_key: "out-1" }], error: null }),
+}));
+const realSubscriptions = await import("@repo/supabase/queries/subscriptions/subscriptions");
+mock.module("@repo/supabase/queries/subscriptions/subscriptions", () => ({
+  ...realSubscriptions,
+  getUserActiveSubscriptionId: async (_c: unknown, user: string) => (planHolders.has(user) ? `sub-${user}` : null),
+}));
+const realLive = await import("@repo/supabase/queries/ingest/live-sessions");
+mock.module("@repo/supabase/queries/ingest/live-sessions", () => ({
+  ...realLive,
+  // What create_live_session does: refuse a changed key, revoke the key's
+  // open sessions, insert.
+  createLiveSession: async (_c: unknown, row: Omit<Session, "expires_at" | "ended_at" | "revoked_at" | "stream_key_at_create"> & { stream_key: string }) => {
+    if (createError) return { data: null, error: { code: createError } };
+    if (takenWireIds > 0) {
+      takenWireIds--;
+      return { data: null, error: { code: "23505" } };
+    }
+    const key = keys.get(row.key_id);
+    if (!key || key.user_id !== row.user_id || key.stream_key !== row.stream_key || !key.is_active) {
+      return { data: null, error: null };
+    }
+    for (const s of sessions.values()) {
+      if (s.key_id === row.key_id && !s.revoked_at && !s.ended_at) s.revoked_at = new Date().toISOString();
+    }
+    const { stream_key, ...rest } = row;
+    const expires_at = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().replace("Z", "+00:00");
+    sessions.set(row.wire_id, { ...rest, stream_key_at_create: stream_key, expires_at, ended_at: null, revoked_at: null });
+    return { data: { wire_id: row.wire_id, expires_at }, error: null };
+  },
+  endLiveSessionForUser: async (_c: unknown, wireId: string, user: string) => {
+    const s = sessions.get(wireId);
+    if (!s || s.user_id !== user) return null;
+    if (s.ended_at) return { endedNow: false };
+    s.ended_at = new Date().toISOString();
+    return { endedNow: true };
+  },
+  getLiveSessionByWireId: async (_c: unknown, wireId: string) => {
+    const s = sessions.get(wireId);
+    if (!s) return null;
+    return { ...s, key_is_active: keys.get(s.key_id)?.is_active ?? false };
+  },
+}));
+
+let app: Hono;
+let resetLiveSessionLimits: () => void;
+let resetLiveSessionMisses: () => void;
+let logged: string[] = [];
+const consoleSpies: ReturnType<typeof spyOn>[] = [];
+
+beforeAll(async () => {
+  const { liveSessionRoutes } = await import("@/modules/live-sessions/routes");
+  const { ingestNodeRoutes } = await import("@/modules/ingest-nodes/routes");
+  ({ resetLiveSessionLimits } = await import("./sessions"));
+  ({ resetLiveSessionMisses } = await import("@/modules/ingest-nodes/live-sessions"));
+  app = new Hono();
+  // Stands in for supabaseMiddleware(): a request client whose getUser()
+  // knows the `user-<n>` tokens.
+  app.use("/api/live/*", async (c, next) => {
+    const token = c.req.header("Authorization")?.replace(/^Bearer /, "");
+    const n = token?.match(/^user-(\d+)$/)?.[1];
+    c.set("supabase", {
+      auth: {
+        getUser: async () =>
+          n
+            ? { data: { user: { id: userId(Number(n)) } }, error: null }
+            : { data: { user: null }, error: { status: 401, code: "bad_jwt" } },
+      },
+    } as never);
+    await next();
+  });
+  app.route("/api/live", liveSessionRoutes);
+  app.route("/api/ingest-nodes", ingestNodeRoutes);
+
+  // Everything the code under test writes to the console, for the
+  // "no secret in the logs" checks.
+  for (const level of ["log", "info", "warn", "error", "debug"] as const) {
+    consoleSpies.push(
+      spyOn(console, level).mockImplementation((...args: unknown[]) => {
+        logged.push(args.map((a) => (a instanceof Error ? `${a.message} ${a.stack}` : JSON.stringify(a) ?? String(a))).join(" "));
+      }),
+    );
+  }
+});
+
+afterAll(() => {
+  for (const spy of consoleSpies) spy.mockRestore();
+});
+
+beforeEach(async () => {
+  keys = new Map([
+    ["4e440000-0000-4000-8000-0000000000a1", { id: "4e440000-0000-4000-8000-0000000000a1", user_id: USER_A, stream_key: "sk-a-Zq81", is_active: true }],
+    ["4e440000-0000-4000-8000-0000000000a2", { id: "4e440000-0000-4000-8000-0000000000a2", user_id: USER_A, stream_key: "sk-a2-Zq81", is_active: true }],
+    ["4e440000-0000-4000-8000-0000000000b1", { id: "4e440000-0000-4000-8000-0000000000b1", user_id: USER_B, stream_key: "sk-b-Zq81", is_active: true }],
+    ["4e440000-0000-4000-8000-0000000000a9", { id: "4e440000-0000-4000-8000-0000000000a9", user_id: USER_A, stream_key: "sk-off-Zq81", is_active: false }],
+  ]);
+  sessions = new Map();
+  planHolders = new Set([USER_A, USER_B]);
+  ownerLookups = 0;
+  createError = null;
+  takenWireIds = 0;
+  afterOwnerLookup = null;
+  logged = [];
+  resetLiveSessionLimits();
+  resetLiveSessionMisses();
+  const { env } = await import("@/env");
+  (env as Record<string, unknown>).LIVE_INGEST_ENDPOINTS = ENDPOINTS;
+});
+
+afterEach(() => {
+  setSystemTime();
+});
+
+let ipCounter = 0;
+/** A fresh client IP per call unless one is given, so per-IP limits stay out of the way. */
+const nextIp = () => `198.51.100.${(ipCounter++ % 250) + 1}`;
+
+function create(body: unknown, opts: { user?: number | null; ip?: string } = {}) {
+  const user = opts.user === undefined ? 1 : opts.user;
+  return app.request("/api/live/sessions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "cf-connecting-ip": opts.ip ?? nextIp(),
+      ...(user !== null ? { Authorization: `Bearer user-${user}` } : {}),
+    },
+    body: typeof body === "string" ? body : JSON.stringify(body),
+  });
+}
+const end = (sessionId: string, user: number | null = 1) =>
+  app.request(`/api/live/sessions/${sessionId}/end`, {
+    method: "POST",
+    headers: user !== null ? { Authorization: `Bearer user-${user}` } : {},
+  });
+const lookup = (sessionId: string) =>
+  app.request(`/api/ingest-nodes/live-sessions/${sessionId}`, { headers: { Authorization: `Bearer ${NODE_KEY}` } });
+
+type Created = { session_id: string; session_secret: string; protocol_version: number; ingest: unknown; expires_at: string };
+const createOk = async (streamKey = "sk-a-Zq81", user = 1) => {
+  const res = await create({ stream_key: streamKey }, { user });
+  expect(res.status).toBe(201);
+  return (await res.json()) as Created;
+};
+
+describe("POST /api/live/sessions", () => {
+  it("opens a session: wire id, 32-byte secret, protocol version, ingest addresses, expiry", async () => {
+    setSystemTime(new Date("2026-11-20T11:00:00.000Z"));
+    const res = await create({ stream_key: "sk-a-Zq81" }, { ip: "203.0.113.7" });
+    expect(res.status).toBe(201);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    const body = (await res.json()) as Created;
+    expect(Object.keys(body).sort()).toEqual(["expires_at", "ingest", "protocol_version", "session_id", "session_secret"]);
+    expect(body.session_id).toMatch(/^[0-9a-f]{16}$/);
+    expect(body.session_id).not.toBe("0000000000000000");
+    expect(body.session_secret).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(Buffer.from(body.session_secret, "base64url")).toHaveLength(32);
+    expect(body.protocol_version).toBe(1);
+    expect(body.ingest).toEqual(ENDPOINTS);
+    expect(body.expires_at).toBe("2026-11-21T11:00:00.000Z");
+
+    const row = sessions.get(body.session_id)!;
+    expect(row).toMatchObject({ user_id: USER_A, key_id: "4e440000-0000-4000-8000-0000000000a1", protocol_version: 1, created_ip: "203.0.113.7" });
+    // Stored encrypted, never as plaintext.
+    expect(JSON.stringify(row)).not.toContain(body.session_secret);
+    const { decryptToken } = await import("@repo/supabase/crypto");
+    expect(decryptToken(row.secret_ciphertext, row.secret_iv, row.secret_tag)).toBe(body.session_secret);
+  });
+
+  it("gives every session its own id and secret", async () => {
+    const first = await createOk("sk-a-Zq81");
+    const second = await createOk("sk-a2-Zq81");
+    expect(first.session_id).not.toBe(second.session_id);
+    expect(first.session_secret).not.toBe(second.session_secret);
+  });
+
+  it("the ingest node gets the same secret back", async () => {
+    const created = await createOk();
+    const res = await lookup(created.session_id);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    expect(await res.json()).toEqual({
+      session_id: created.session_id,
+      session_secret: created.session_secret,
+      protocol_version: 1,
+      user_id: USER_A,
+      stream_key_id: "4e440000-0000-4000-8000-0000000000a1",
+      output_keys: ["out-1"],
+      expires_at: created.expires_at,
+    });
+  });
+
+  it("revokes the key's previous session, not the user's other keys' sessions", async () => {
+    const other = await createOk("sk-a2-Zq81");
+    const first = await createOk("sk-a-Zq81");
+    const second = await createOk("sk-a-Zq81");
+    expect(sessions.get(first.session_id)!.revoked_at).not.toBeNull();
+    expect((await lookup(first.session_id)).status).toBe(404);
+    expect((await lookup(second.session_id)).status).toBe(200);
+    expect((await lookup(other.session_id)).status).toBe(200);
+  });
+
+  it("needs a signed-in user", async () => {
+    expect((await create({ stream_key: "sk-a-Zq81" }, { user: null })).status).toBe(401);
+    const res = await app.request("/api/live/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer not-a-token" },
+      body: JSON.stringify({ stream_key: "sk-a-Zq81" }),
+    });
+    expect(res.status).toBe(401);
+    expect(ownerLookups).toBe(0);
+  });
+
+  it("refuses a bad body before looking anything up", async () => {
+    expect((await create({})).status).toBe(400);
+    expect((await create({ stream_key: "" })).status).toBe(400);
+    expect((await create({ stream_key: "x".repeat(257) })).status).toBe(400);
+    expect((await create({ stream_key: 42 })).status).toBe(400);
+    expect((await create("{not json")).status).toBe(400);
+    expect(ownerLookups).toBe(0);
+  });
+
+  it("gives one answer for an unknown, inactive, plan-less or someone else's key", async () => {
+    const answers = [];
+    for (const [streamKey, user] of [
+      ["nope", 1],
+      ["sk-off-Zq81", 1],
+      ["sk-b-Zq81", 1], // user B's key, user A asking
+    ] as const) {
+      const res = await create({ stream_key: streamKey }, { user });
+      answers.push([res.status, await res.json()]);
+    }
+    planHolders.delete(USER_B);
+    const res = await create({ stream_key: "sk-b-Zq81" }, { user: 2 });
+    answers.push([res.status, await res.json()]);
+    for (const answer of answers) expect(answer).toEqual([403, { error: "Invalid stream key" }]);
+    expect(sessions.size).toBe(0);
+  });
+
+  it("403 when the key is rotated between the check and the insert", async () => {
+    afterOwnerLookup = () => {
+      keys.get("4e440000-0000-4000-8000-0000000000a1")!.stream_key = "rotated";
+    };
+    const res = await create({ stream_key: "sk-a-Zq81" });
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: "Invalid stream key" });
+    expect(sessions.size).toBe(0);
+  });
+
+  it("503 when no ingest endpoint is configured", async () => {
+    const { env } = await import("@/env");
+    (env as Record<string, unknown>).LIVE_INGEST_ENDPOINTS = [];
+    const res = await create({ stream_key: "sk-a-Zq81" });
+    expect(res.status).toBe(503);
+    expect(ownerLookups).toBe(0);
+    expect(sessions.size).toBe(0);
+  });
+
+  it("retries a taken wire id", async () => {
+    takenWireIds = 2;
+    await createOk();
+    expect(sessions.size).toBe(1);
+  });
+
+  it("500 with a generic message when the database fails", async () => {
+    createError = "XX000";
+    const res = await create({ stream_key: "sk-a-Zq81" });
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "Could not start the session" });
+  });
+});
+
+describe("rate limits", () => {
+  const expect429 = async (res: Response) => {
+    expect(res.status).toBe(429);
+    const retryAfter = Number(res.headers.get("retry-after"));
+    expect(retryAfter).toBeGreaterThan(0);
+    return retryAfter;
+  };
+
+  // Spaced 7 s apart, so the per-minute create limit stays out of the way and
+  // only the 10-minute invalid-key limit counts.
+  const T0 = new Date("2026-11-20T12:00:00.000Z").getTime();
+  let clock = T0;
+  const tick = () => {
+    clock += 7000;
+    setSystemTime(new Date(clock));
+  };
+  const spacedCreate = (body: unknown, opts?: { user?: number | null; ip?: string }) => {
+    tick();
+    return create(body, opts);
+  };
+
+  it("a user who keeps trying invalid keys is blocked, also for valid ones, until the window ends", async () => {
+    clock = T0 - 7000;
+    for (let i = 0; i < 10; i++) expect((await spacedCreate({ stream_key: `guess-${i}` })).status).toBe(403);
+    // First guess at T0, this attempt 70 s later.
+    const retryAfter = await expect429(await spacedCreate({ stream_key: "sk-a-Zq81" }));
+    expect(retryAfter).toBe(600 - 70);
+    // Another user is not affected.
+    expect((await create({ stream_key: "sk-b-Zq81" }, { user: 2 })).status).toBe(201);
+    setSystemTime(new Date(T0 + 10 * 60 * 1000 + 1000));
+    expect((await create({ stream_key: "sk-a-Zq81" })).status).toBe(201);
+  });
+
+  it("invalid keys from one IP are limited across users", async () => {
+    for (let i = 0; i < 20; i++) {
+      expect((await create({ stream_key: `guess-${i}` }, { user: 100 + i, ip: "203.0.113.50" })).status).toBe(403);
+    }
+    await expect429(await create({ stream_key: "sk-b-Zq81" }, { user: 2, ip: "203.0.113.50" }));
+    expect((await create({ stream_key: "sk-b-Zq81" }, { user: 2, ip: "203.0.113.51" })).status).toBe(201);
+  });
+
+  it("valid keys give their invalid-key attempt back", async () => {
+    clock = T0 - 7000;
+    for (let i = 0; i < 9; i++) expect((await spacedCreate({ stream_key: `guess-${i}` })).status).toBe(403);
+    expect((await spacedCreate({ stream_key: "sk-a-Zq81" })).status).toBe(201);
+    expect((await spacedCreate({ stream_key: "guess-last" })).status).toBe(403);
+    await expect429(await spacedCreate({ stream_key: "guess-over" }));
+  });
+
+  it("parallel guesses can't slip past the limit", async () => {
+    const results = await Promise.all(
+      Array.from({ length: 25 }, (_, i) => create({ stream_key: `guess-${i}` }, { user: 200 + i, ip: "203.0.113.70" })),
+    );
+    expect(results.filter((r) => r.status === 403)).toHaveLength(20);
+    expect(results.filter((r) => r.status === 429)).toHaveLength(5);
+    expect(ownerLookups).toBe(20);
+  });
+
+  it("limits creates per stream key", async () => {
+    for (let i = 0; i < 5; i++) await createOk("sk-a-Zq81");
+    await expect429(await create({ stream_key: "sk-a-Zq81" }));
+    await createOk("sk-a2-Zq81");
+  });
+
+  it("limits creates per user, and lets them through again a minute later", async () => {
+    setSystemTime(new Date("2026-11-20T13:00:00.000Z"));
+    for (let i = 0; i < 5; i++) await createOk("sk-a-Zq81");
+    for (let i = 0; i < 5; i++) await createOk("sk-a2-Zq81");
+    const retryAfter = await expect429(await create({ stream_key: "sk-a2-Zq81" }));
+    expect(retryAfter).toBe(60);
+    expect((await create({ stream_key: "sk-b-Zq81" }, { user: 2 })).status).toBe(201);
+    setSystemTime(new Date("2026-11-20T13:01:01.000Z"));
+    await createOk("sk-a2-Zq81");
+  });
+
+  it("limits creates per IP across users", async () => {
+    for (let i = 0; i < 30; i++) {
+      const id = `4e440000-0000-4000-8000-${String(500 + i).padStart(12, "0")}`;
+      keys.set(id, { id, user_id: userId(500 + i), stream_key: `key-${500 + i}`, is_active: true });
+      planHolders.add(userId(500 + i));
+      expect((await create({ stream_key: `key-${500 + i}` }, { user: 500 + i, ip: "203.0.113.60" })).status).toBe(201);
+    }
+    await expect429(await create({ stream_key: "sk-a-Zq81" }, { ip: "203.0.113.60" }));
+    expect((await create({ stream_key: "sk-a-Zq81" }, { ip: "203.0.113.61" })).status).toBe(201);
+  });
+});
+
+describe("POST /api/live/sessions/:session_id/end", () => {
+  it("ends the owner's session; the ingest node stops getting it", async () => {
+    const { session_id } = await createOk();
+    const res = await end(session_id);
+    expect(res.status).toBe(204);
+    expect(sessions.get(session_id)!.ended_at).not.toBeNull();
+    expect((await lookup(session_id)).status).toBe(404);
+  });
+
+  it("is idempotent, also for a revoked session", async () => {
+    const first = await createOk();
+    await createOk(); // revokes the first
+    expect((await end(first.session_id)).status).toBe(204);
+    expect((await end(first.session_id)).status).toBe(204);
+  });
+
+  it("another user's session gets the same 404 as a missing or malformed one", async () => {
+    const { session_id } = await createOk();
+    for (const res of [await end(session_id, 2), await end("00000000000000ff"), await end("not-a-wire-id"), await end("0000000000000000")]) {
+      expect(res.status).toBe(404);
+      expect(await res.json()).toEqual({ error: "Session not found" });
+    }
+    expect(sessions.get(session_id)!.ended_at).toBeNull();
+  });
+
+  it("needs a signed-in user", async () => {
+    const { session_id } = await createOk();
+    expect((await end(session_id, null)).status).toBe(401);
+    expect(sessions.get(session_id)!.ended_at).toBeNull();
+  });
+});
+
+describe("secrets stay out of logs and errors", () => {
+  it("no session secret or stream key in console output or error responses", async () => {
+    const streamKeys = [...keys.values()].map((k) => k.stream_key);
+    const created = await createOk("sk-a-Zq81");
+    await lookup(created.session_id);
+
+    // Failure paths that log: a database error on create, an undecryptable
+    // secret on lookup, a rejected sign-in.
+    createError = "XX000";
+    const failed = await create({ stream_key: "sk-a2-Zq81" });
+    createError = null;
+    const second = await createOk("sk-a2-Zq81");
+    sessions.get(second.session_id)!.secret_tag = Buffer.alloc(16).toString("base64");
+    const broken = await lookup(second.session_id);
+    expect(broken.status).toBe(500);
+    await create({ stream_key: "sk-a-Zq81" }, { user: null });
+
+    const output = logged.join("\n") + (await failed.text()) + (await broken.text());
+    expect(logged.length).toBeGreaterThan(0);
+    for (const secret of [created.session_secret, second.session_secret, ...streamKeys]) {
+      expect(output).not.toContain(secret);
+    }
+  });
+});
