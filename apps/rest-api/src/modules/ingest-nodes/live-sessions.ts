@@ -5,6 +5,7 @@ import { getOutputKeysForKey } from "@repo/supabase/queries/ingest/ingest";
 import { getLiveSessionByWireId } from "@repo/supabase/queries/ingest/live-sessions";
 import { getUserActiveSubscriptionId } from "@repo/supabase/queries/subscriptions/subscriptions";
 import { AttemptLimiter } from "@/lib/attempt-limiter";
+import { sessionLatencyMs } from "@/modules/live-sessions/latency";
 
 // An ingest node looks up a StreamWizard Live session by the wire id in the
 // phone's first packet and gets the session secret, the owner and the OBS
@@ -39,6 +40,12 @@ export interface LiveSessionForNode {
    */
   created_at: string;
   expires_at: string;
+  /**
+   * The session's latency budget in ms: the value the phone got when it
+   * created the session, unless a restart changed LIVE_LATENCY_MS since
+   * (latency.ts). The node uses it for this session.
+   */
+  latency_ms: number;
 }
 
 export type LookupLiveSessionResult =
@@ -98,6 +105,7 @@ export async function lookupLiveSession(
       output_keys: (outputs.data ?? []).map((o) => o.output_key),
       created_at: new Date(row.created_at).toISOString(),
       expires_at: new Date(row.expires_at).toISOString(),
+      latency_ms: sessionLatencyMs(),
     },
   };
 }

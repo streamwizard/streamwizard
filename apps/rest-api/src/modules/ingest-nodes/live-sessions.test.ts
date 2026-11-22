@@ -43,7 +43,7 @@ let lookups: number;
 
 mock.module("@repo/supabase", () => ({ supabase: {} }));
 mock.module("@/env", () => ({
-  env: { NODE_TOKEN_PUBLIC_JWKS: undefined, WS_SERVER_URL: undefined, LIVE_INGEST_ENDPOINTS: [] },
+  env: { NODE_TOKEN_PUBLIC_JWKS: undefined, WS_SERVER_URL: undefined, LIVE_INGEST_ENDPOINTS: [], LIVE_LATENCY_MS: 2000 },
 }));
 // Spread the real exports: bun shares module mocks across test files.
 const realNodeQueries = await import("@repo/supabase/queries/ingest/nodes");
@@ -87,7 +87,10 @@ beforeAll(async () => {
   app.route("/api/ingest-nodes", ingestNodeRoutes);
 });
 
-beforeEach(() => {
+beforeEach(async () => {
+  // bun shares module mocks across test files: set what this file needs.
+  const { env } = await import("@/env");
+  (env as Record<string, unknown>).LIVE_LATENCY_MS = 2000;
   setSystemTime(NOW);
   const enc = encryptToken(SECRET);
   rows = new Map([
@@ -144,7 +147,16 @@ describe("GET /live-sessions/:session_id", () => {
       output_keys: ["out-1", "out-2"],
       created_at: "2026-11-20T09:59:58.123Z",
       expires_at: "2026-11-21T10:00:00.000Z",
+      latency_ms: 2000,
     });
+  });
+
+  it("states the latency budget from LIVE_LATENCY_MS", async () => {
+    const { env } = await import("@/env");
+    (env as Record<string, unknown>).LIVE_LATENCY_MS = 4000;
+    const res = await lookup(WIRE_ID);
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { latency_ms: number }).latency_ms).toBe(4000);
   });
 
   it("404 for an unknown session", async () => {

@@ -29,6 +29,7 @@ type Session = {
   secret_tag: string;
   protocol_version: number;
   created_ip: string | null;
+  created_at: string;
   expires_at: string;
   ended_at: string | null;
   revoked_at: string | null;
@@ -46,7 +47,7 @@ const keyByValue = (value: string) => [...keys.values()].find((k) => k.stream_ke
 
 mock.module("@repo/supabase", () => ({ supabase: {} }));
 mock.module("@/env", () => ({
-  env: { NODE_TOKEN_PUBLIC_JWKS: undefined, WS_SERVER_URL: undefined, LIVE_INGEST_ENDPOINTS: ENDPOINTS },
+  env: { NODE_TOKEN_PUBLIC_JWKS: undefined, WS_SERVER_URL: undefined, LIVE_INGEST_ENDPOINTS: ENDPOINTS, LIVE_LATENCY_MS: 2000 },
 }));
 // Spread the real exports: bun shares module mocks across test files.
 const realNodeQueries = await import("@repo/supabase/queries/ingest/nodes");
@@ -76,7 +77,7 @@ mock.module("@repo/supabase/queries/ingest/live-sessions", () => ({
   ...realLive,
   // What create_live_session does: refuse a changed key, revoke the key's
   // open sessions, insert.
-  createLiveSession: async (_c: unknown, row: Omit<Session, "expires_at" | "ended_at" | "revoked_at" | "stream_key_at_create"> & { stream_key: string }) => {
+  createLiveSession: async (_c: unknown, row: Omit<Session, "created_at" | "expires_at" | "ended_at" | "revoked_at" | "stream_key_at_create"> & { stream_key: string }) => {
     if (createError) return { data: null, error: { code: createError } };
     if (takenWireIds > 0) {
       takenWireIds--;
@@ -90,8 +91,9 @@ mock.module("@repo/supabase/queries/ingest/live-sessions", () => ({
       if (s.key_id === row.key_id && !s.revoked_at && !s.ended_at) s.revoked_at = new Date().toISOString();
     }
     const { stream_key, ...rest } = row;
+    const created_at = new Date().toISOString().replace("Z", "+00:00");
     const expires_at = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().replace("Z", "+00:00");
-    sessions.set(row.wire_id, { ...rest, stream_key_at_create: stream_key, expires_at, ended_at: null, revoked_at: null });
+    sessions.set(row.wire_id, { ...rest, stream_key_at_create: stream_key, created_at, expires_at, ended_at: null, revoked_at: null });
     return { data: { wire_id: row.wire_id, expires_at }, error: null };
   },
   endLiveSessionForUser: async (_c: unknown, wireId: string, user: string) => {
@@ -171,6 +173,7 @@ beforeEach(async () => {
   resetLiveSessionMisses();
   const { env } = await import("@/env");
   (env as Record<string, unknown>).LIVE_INGEST_ENDPOINTS = ENDPOINTS;
+  (env as Record<string, unknown>).LIVE_LATENCY_MS = 2000;
 });
 
 afterEach(() => {
@@ -201,7 +204,7 @@ const end = (sessionId: string, user: number | null = 1) =>
 const lookup = (sessionId: string) =>
   app.request(`/api/ingest-nodes/live-sessions/${sessionId}`, { headers: { Authorization: `Bearer ${NODE_KEY}` } });
 
-type Created = { session_id: string; session_secret: string; protocol_version: number; ingest: unknown; expires_at: string };
+type Created = { session_id: string; session_secret: string; protocol_version: number; ingest: unknown; expires_at: string; latency_ms: number };
 const createOk = async (streamKey = "sk-a-Zq81", user = 1) => {
   const res = await create({ stream_key: streamKey }, { user });
   expect(res.status).toBe(201);
@@ -215,7 +218,7 @@ describe("POST /api/live/sessions", () => {
     expect(res.status).toBe(201);
     expect(res.headers.get("cache-control")).toBe("no-store");
     const body = (await res.json()) as Created;
-    expect(Object.keys(body).sort()).toEqual(["expires_at", "ingest", "protocol_version", "session_id", "session_secret"]);
+    expect(Object.keys(body).sort()).toEqual(["expires_at", "ingest", "latency_ms", "protocol_version", "session_id", "session_secret"]);
     expect(body.session_id).toMatch(/^[0-9a-f]{16}$/);
     expect(body.session_id).not.toBe("0000000000000000");
     expect(body.session_secret).toMatch(/^[A-Za-z0-9_-]{43}$/);
@@ -223,6 +226,7 @@ describe("POST /api/live/sessions", () => {
     expect(body.protocol_version).toBe(1);
     expect(body.ingest).toEqual(ENDPOINTS);
     expect(body.expires_at).toBe("2026-11-21T11:00:00.000Z");
+    expect(body.latency_ms).toBe(2000);
 
     const row = sessions.get(body.session_id)!;
     expect(row).toMatchObject({ user_id: USER_A, key_id: "4e440000-0000-4000-8000-0000000000a1", protocol_version: 1, created_ip: "203.0.113.7" });
@@ -239,7 +243,8 @@ describe("POST /api/live/sessions", () => {
     expect(first.session_secret).not.toBe(second.session_secret);
   });
 
-  it("the ingest node gets the same secret back", async () => {
+  it("the ingest node gets the same secret and latency budget back", async () => {
+    setSystemTime(new Date("2026-11-20T11:00:00.000Z"));
     const created = await createOk();
     const res = await lookup(created.session_id);
     expect(res.status).toBe(200);
@@ -251,8 +256,19 @@ describe("POST /api/live/sessions", () => {
       user_id: USER_A,
       stream_key_id: "4e440000-0000-4000-8000-0000000000a1",
       output_keys: ["out-1"],
+      created_at: "2026-11-20T11:00:00.000Z",
       expires_at: created.expires_at,
+      latency_ms: created.latency_ms,
     });
+  });
+
+  it("both ends get LIVE_LATENCY_MS as the session's latency_ms", async () => {
+    const { env } = await import("@/env");
+    (env as Record<string, unknown>).LIVE_LATENCY_MS = 4000;
+    const created = await createOk();
+    expect(created.latency_ms).toBe(4000);
+    const looked = (await (await lookup(created.session_id)).json()) as { latency_ms: number };
+    expect(looked.latency_ms).toBe(4000);
   });
 
   it("revokes the key's previous session, not the user's other keys' sessions", async () => {

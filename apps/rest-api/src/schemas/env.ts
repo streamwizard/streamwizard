@@ -11,6 +11,15 @@ const liveIngestEndpointSchema = z.object({
 const liveIngestEndpointsSchema = z.array(liveIngestEndpointSchema).max(32);
 export type LiveIngestEndpoint = z.infer<typeof liveIngestEndpointSchema>;
 
+/**
+ * StreamWizard Live latency budget range and default in milliseconds
+ * (LIVE_LATENCY_MS), the protocol's: an ingest node and the phone refuse a
+ * session outside it.
+ */
+export const LIVE_LATENCY_MS_MIN = 800;
+export const LIVE_LATENCY_MS_MAX = 5000;
+export const LIVE_LATENCY_MS_DEFAULT = 2000;
+
 export const envSchema = z.object({
   NODE_ENV: z.enum(["development", "staging", "production"]).default("development"),
   // Read by @repo/sentry (and @repo/posthog/server) as the environment name,
@@ -156,6 +165,29 @@ export const envSchema = z.object({
         return z.NEVER;
       }
       return parsed.data;
+    }),
+
+  // StreamWizard Live: the latency budget every new session states, in ms
+  // (latency_ms in POST /api/live/sessions and the node lookup), so the
+  // phone and the ingest node use the same one. Not a secret. Unset or
+  // empty: 2000. Must be a whole number in 800..5000, else boot stops. Read
+  // per response, so it changes only with a restart (a session created
+  // before a restart and looked up after it can get another value).
+  LIVE_LATENCY_MS: z
+    .string()
+    .optional()
+    .transform((raw, ctx) => {
+      const value = raw?.trim();
+      if (!value) return LIVE_LATENCY_MS_DEFAULT;
+      const ms = /^\d{1,5}$/.test(value) ? Number(value) : NaN;
+      if (!(ms >= LIVE_LATENCY_MS_MIN && ms <= LIVE_LATENCY_MS_MAX)) {
+        ctx.addIssue({
+          code: "custom",
+          message: `must be a whole number of milliseconds, ${LIVE_LATENCY_MS_MIN}-${LIVE_LATENCY_MS_MAX}`,
+        });
+        return z.NEVER;
+      }
+      return ms;
     }),
 
   // Public half of the node-token key pair (@repo/node-token) as a JWKS,

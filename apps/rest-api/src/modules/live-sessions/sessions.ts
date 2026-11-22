@@ -7,6 +7,7 @@ import { env } from "@/env";
 import { AttemptLimiter } from "@/lib/attempt-limiter";
 import { ipAddress } from "@/lib/node-schemas";
 import { newSessionSecret, newWireId } from "@/modules/live-sessions/credentials";
+import { sessionLatencyMs } from "@/modules/live-sessions/latency";
 import type { LiveIngestEndpoint } from "@/schemas/env";
 
 // The phone app opens a live session with one of the signed-in user's stream
@@ -59,6 +60,8 @@ export interface CreatedLiveSession {
   protocol_version: number;
   ingest: LiveIngestEndpoint[];
   expires_at: string;
+  /** The session's latency budget in ms; the node lookup states the same (latency.ts). */
+  latency_ms: number;
 }
 
 export type CreateLiveSessionResult =
@@ -130,6 +133,7 @@ export async function createLiveSession({ userId, streamKey, ip }: CreateLiveSes
         protocol_version: LIVE_PROTOCOL_VERSION,
         ingest,
         expires_at: new Date(data.expires_at).toISOString(),
+        latency_ms: sessionLatencyMs(),
       },
     };
   }

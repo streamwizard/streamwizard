@@ -34,24 +34,25 @@ describe("createLiveSessionSchema", () => {
   });
 });
 
+const base = {
+  SUPABASE_URL: "http://127.0.0.1:54321",
+  SUPABASE_PUBLIC_KEY: "public",
+  SUPABASE_SECRET_KEY: "secret",
+  TOKEN_ENCRYPTION_KEY: "key",
+  TWITCH_CLIENT_ID: "id",
+  TWITCH_CLIENT_SECRET: "secret",
+  TWITCH_WEBHOOK_SECRET: "secret",
+  STREAMWIZARD_API_URL: "http://localhost:8080",
+  OBS_S3_ACCESS_KEY: "a",
+  OBS_S3_BUCKET: "b",
+  OBS_S3_ENDPOINT: "http://localhost:9000",
+  OBS_S3_REGION: "r",
+  OBS_S3_SECRET_KEY: "s",
+  TAILSCALE_OAUTH_CLIENT_ID: "c",
+  TAILSCALE_OAUTH_CLIENT_SECRET: "s",
+};
+
 describe("LIVE_INGEST_ENDPOINTS", () => {
-  const base = {
-    SUPABASE_URL: "http://127.0.0.1:54321",
-    SUPABASE_PUBLIC_KEY: "public",
-    SUPABASE_SECRET_KEY: "secret",
-    TOKEN_ENCRYPTION_KEY: "key",
-    TWITCH_CLIENT_ID: "id",
-    TWITCH_CLIENT_SECRET: "secret",
-    TWITCH_WEBHOOK_SECRET: "secret",
-    STREAMWIZARD_API_URL: "http://localhost:8080",
-    OBS_S3_ACCESS_KEY: "a",
-    OBS_S3_BUCKET: "b",
-    OBS_S3_ENDPOINT: "http://localhost:9000",
-    OBS_S3_REGION: "r",
-    OBS_S3_SECRET_KEY: "s",
-    TAILSCALE_OAUTH_CLIENT_ID: "c",
-    TAILSCALE_OAUTH_CLIENT_SECRET: "s",
-  };
   const parse = (value?: string) => envSchema.safeParse({ ...base, LIVE_INGEST_ENDPOINTS: value });
 
   it("unset or empty means no endpoints", () => {
@@ -69,6 +70,28 @@ describe("LIVE_INGEST_ENDPOINTS", () => {
 
   it("a malformed value stops boot", () => {
     for (const bad of ["not json", '{"host":"a","port":1}', '[{"host":"","port":7000}]', '[{"host":"a","port":0}]', '[{"host":"a","port":70000}]', '[{"host":"a","port":"7000"}]']) {
+      expect(parse(bad).success).toBe(false);
+    }
+  });
+});
+
+describe("LIVE_LATENCY_MS", () => {
+  const parse = (value?: string) => envSchema.safeParse({ ...base, LIVE_LATENCY_MS: value });
+
+  it("unset or empty means the 2000 ms default", () => {
+    expect(parse(undefined).data?.LIVE_LATENCY_MS).toBe(2000);
+    expect(parse("").data?.LIVE_LATENCY_MS).toBe(2000);
+    expect(parse("  ").data?.LIVE_LATENCY_MS).toBe(2000);
+  });
+
+  it("takes whole milliseconds from 800 to 5000", () => {
+    for (const [raw, ms] of [["800", 800], ["4000", 4000], ["5000", 5000], [" 1500 ", 1500]] as const) {
+      expect(parse(raw).data?.LIVE_LATENCY_MS).toBe(ms);
+    }
+  });
+
+  it("anything else stops boot, never clamped", () => {
+    for (const bad of ["799", "5001", "0", "-1", "2000.5", "2e3", "2s", "abc", "100000"]) {
       expect(parse(bad).success).toBe(false);
     }
   });
