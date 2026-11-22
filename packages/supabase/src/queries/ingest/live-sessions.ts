@@ -101,6 +101,7 @@ export type LiveSessionLookup = Pick<
   | "secret_iv"
   | "secret_tag"
   | "protocol_version"
+  | "created_at"
   | "expires_at"
   | "ended_at"
   | "revoked_at"
@@ -110,7 +111,7 @@ const selectLiveSessionByWireId = withMetrics("live_sessions", "select", async (
   client
     .from("live_sessions")
     .select(
-      "wire_id, user_id, key_id, secret_ciphertext, secret_iv, secret_tag, protocol_version, expires_at, ended_at, revoked_at, ingest_stream_keys!inner(is_active)",
+      "wire_id, user_id, key_id, secret_ciphertext, secret_iv, secret_tag, protocol_version, created_at, expires_at, ended_at, revoked_at, ingest_stream_keys!inner(is_active)",
     )
     .eq("wire_id", wireId)
     .maybeSingle(),

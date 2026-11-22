@@ -33,6 +33,11 @@ export interface LiveSessionForNode {
   user_id: string;
   stream_key_id: string;
   output_keys: string[];
+  /**
+   * When the session was created. A restarted node refuses sessions created
+   * before it started: an earlier process may have used their keys.
+   */
+  created_at: string;
   expires_at: string;
 }
 
@@ -91,6 +96,7 @@ export async function lookupLiveSession(
       user_id: row.user_id,
       stream_key_id: row.key_id,
       output_keys: (outputs.data ?? []).map((o) => o.output_key),
+      created_at: new Date(row.created_at).toISOString(),
       expires_at: new Date(row.expires_at).toISOString(),
     },
   };

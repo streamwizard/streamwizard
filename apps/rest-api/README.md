@@ -15,7 +15,7 @@ The API gateway. Twitch EventSub webhooks, clip sync, and analytics endpoints �
 - `POST /api/clips/sync` — manually trigger a clip sync.
 - `GET /api/clips/sync-status` — current sync status.
 - `POST /api/live/sessions`, `POST /api/live/sessions/:session_id/end` — StreamWizard Live sessions for the signed-in phone app (`modules/live-sessions/`).
-- `GET /api/ingest-nodes/live-sessions/:session_id` — an ingest node looks up a live session's secret by wire id (node API key).
+- `GET /api/ingest-nodes/live-sessions/:session_id` — an ingest node looks up a live session's secret by wire id (node API key). The response includes `created_at`: a restarted node refuses sessions created before it started.
 
 EventSub notifications go through `src/modules/eventsub/registry.ts`, which dispatches to typed handlers in `src/modules/eventsub/handlers/`. All database access goes through `@repo/supabase/queries/*`; every Helix call goes through `@repo/twitch-api`.
 

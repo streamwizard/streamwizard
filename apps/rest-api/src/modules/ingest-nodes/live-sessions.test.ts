@@ -31,6 +31,7 @@ type Row = {
   secret_iv: string;
   secret_tag: string;
   protocol_version: number;
+  created_at: string;
   expires_at: string;
   ended_at: string | null;
   revoked_at: string | null;
@@ -100,6 +101,8 @@ beforeEach(() => {
         secret_iv: enc.iv,
         secret_tag: enc.authTag,
         protocol_version: 1,
+        // Postgres timestamptz text, as PostgREST returns it.
+        created_at: "2026-11-20T09:59:58.123456+00:00",
         expires_at: "2026-11-21T10:00:00+00:00",
         ended_at: null,
         revoked_at: null,
@@ -139,6 +142,7 @@ describe("GET /live-sessions/:session_id", () => {
       user_id: USER,
       stream_key_id: KEY_ID,
       output_keys: ["out-1", "out-2"],
+      created_at: "2026-11-20T09:59:58.123Z",
       expires_at: "2026-11-21T10:00:00.000Z",
     });
   });
