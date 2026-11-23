@@ -40,6 +40,8 @@ let planHolders: Set<string>;
 let ownerLookups: number;
 let createError: string | null;
 let takenWireIds: number;
+/** The lifetime the last create_live_session call got. */
+let createLifetimes: number[];
 /** Runs right after a successful key lookup, e.g. to rotate the key before the insert. */
 let afterOwnerLookup: (() => void) | null;
 
@@ -47,7 +49,7 @@ const keyByValue = (value: string) => [...keys.values()].find((k) => k.stream_ke
 
 mock.module("@repo/supabase", () => ({ supabase: {} }));
 mock.module("@/env", () => ({
-  env: { NODE_TOKEN_PUBLIC_JWKS: undefined, WS_SERVER_URL: undefined, LIVE_INGEST_ENDPOINTS: ENDPOINTS, LIVE_LATENCY_MS: 2000 },
+  env: { NODE_TOKEN_PUBLIC_JWKS: undefined, WS_SERVER_URL: undefined, LIVE_INGEST_ENDPOINTS: ENDPOINTS, LIVE_LATENCY_MS: 2000, LIVE_SESSION_LIFETIME_S: 86400 },
 }));
 // Spread the real exports: bun shares module mocks across test files.
 const realNodeQueries = await import("@repo/supabase/queries/ingest/nodes");
@@ -77,7 +79,11 @@ mock.module("@repo/supabase/queries/ingest/live-sessions", () => ({
   ...realLive,
   // What create_live_session does: refuse a changed key, revoke the key's
   // open sessions, insert.
-  createLiveSession: async (_c: unknown, row: Omit<Session, "created_at" | "expires_at" | "ended_at" | "revoked_at" | "stream_key_at_create"> & { stream_key: string }) => {
+  createLiveSession: async (
+    _c: unknown,
+    row: Omit<Session, "created_at" | "expires_at" | "ended_at" | "revoked_at" | "stream_key_at_create"> & { stream_key: string; lifetime_s: number },
+  ) => {
+    createLifetimes.push(row.lifetime_s);
     if (createError) return { data: null, error: { code: createError } };
     if (takenWireIds > 0) {
       takenWireIds--;
@@ -90,9 +96,9 @@ mock.module("@repo/supabase/queries/ingest/live-sessions", () => ({
     for (const s of sessions.values()) {
       if (s.key_id === row.key_id && !s.revoked_at && !s.ended_at) s.revoked_at = new Date().toISOString();
     }
-    const { stream_key, ...rest } = row;
+    const { stream_key, lifetime_s, ...rest } = row;
     const created_at = new Date().toISOString().replace("Z", "+00:00");
-    const expires_at = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().replace("Z", "+00:00");
+    const expires_at = new Date(Date.now() + lifetime_s * 1000).toISOString().replace("Z", "+00:00");
     sessions.set(row.wire_id, { ...rest, stream_key_at_create: stream_key, created_at, expires_at, ended_at: null, revoked_at: null });
     return { data: { wire_id: row.wire_id, expires_at }, error: null };
   },
@@ -167,6 +173,7 @@ beforeEach(async () => {
   ownerLookups = 0;
   createError = null;
   takenWireIds = 0;
+  createLifetimes = [];
   afterOwnerLookup = null;
   logged = [];
   resetLiveSessionLimits();
@@ -174,6 +181,7 @@ beforeEach(async () => {
   const { env } = await import("@/env");
   (env as Record<string, unknown>).LIVE_INGEST_ENDPOINTS = ENDPOINTS;
   (env as Record<string, unknown>).LIVE_LATENCY_MS = 2000;
+  (env as Record<string, unknown>).LIVE_SESSION_LIFETIME_S = 86400;
 });
 
 afterEach(() => {
@@ -204,7 +212,15 @@ const end = (sessionId: string, user: number | null = 1) =>
 const lookup = (sessionId: string) =>
   app.request(`/api/ingest-nodes/live-sessions/${sessionId}`, { headers: { Authorization: `Bearer ${NODE_KEY}` } });
 
-type Created = { session_id: string; session_secret: string; protocol_version: number; ingest: unknown; expires_at: string; latency_ms: number };
+type Created = {
+  session_id: string;
+  session_secret: string;
+  protocol_version: number;
+  ingest: unknown;
+  expires_at: string;
+  expires_in: number;
+  latency_ms: number;
+};
 const createOk = async (streamKey = "sk-a-Zq81", user = 1) => {
   const res = await create({ stream_key: streamKey }, { user });
   expect(res.status).toBe(201);
@@ -218,7 +234,7 @@ describe("POST /api/live/sessions", () => {
     expect(res.status).toBe(201);
     expect(res.headers.get("cache-control")).toBe("no-store");
     const body = (await res.json()) as Created;
-    expect(Object.keys(body).sort()).toEqual(["expires_at", "ingest", "latency_ms", "protocol_version", "session_id", "session_secret"]);
+    expect(Object.keys(body).sort()).toEqual(["expires_at", "expires_in", "ingest", "latency_ms", "protocol_version", "session_id", "session_secret"]);
     expect(body.session_id).toMatch(/^[0-9a-f]{16}$/);
     expect(body.session_id).not.toBe("0000000000000000");
     expect(body.session_secret).toMatch(/^[A-Za-z0-9_-]{43}$/);
@@ -226,7 +242,9 @@ describe("POST /api/live/sessions", () => {
     expect(body.protocol_version).toBe(1);
     expect(body.ingest).toEqual(ENDPOINTS);
     expect(body.expires_at).toBe("2026-11-21T11:00:00.000Z");
+    expect(body.expires_in).toBe(86400);
     expect(body.latency_ms).toBe(2000);
+    expect(createLifetimes).toEqual([86400]);
 
     const row = sessions.get(body.session_id)!;
     expect(row).toMatchObject({ user_id: USER_A, key_id: "4e440000-0000-4000-8000-0000000000a1", protocol_version: 1, created_ip: "203.0.113.7" });
@@ -234,6 +252,16 @@ describe("POST /api/live/sessions", () => {
     expect(JSON.stringify(row)).not.toContain(body.session_secret);
     const { decryptToken } = await import("@repo/supabase/crypto");
     expect(decryptToken(row.secret_ciphertext, row.secret_iv, row.secret_tag)).toBe(body.session_secret);
+  });
+
+  it("passes LIVE_SESSION_LIFETIME_S to the database and states expires_in", async () => {
+    setSystemTime(new Date("2026-11-20T11:00:00.000Z"));
+    const { env } = await import("@/env");
+    (env as Record<string, unknown>).LIVE_SESSION_LIFETIME_S = 600;
+    const body = await createOk();
+    expect(createLifetimes).toEqual([600]);
+    expect(body.expires_at).toBe("2026-11-20T11:10:00.000Z");
+    expect(body.expires_in).toBe(600);
   });
 
   it("gives every session its own id and secret", async () => {

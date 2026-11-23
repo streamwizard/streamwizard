@@ -96,3 +96,25 @@ describe("LIVE_LATENCY_MS", () => {
     }
   });
 });
+
+describe("LIVE_SESSION_LIFETIME_S", () => {
+  const parse = (value?: string) => envSchema.safeParse({ ...base, LIVE_SESSION_LIFETIME_S: value });
+
+  it("unset or empty means the 86400 s (24 h) default", () => {
+    expect(parse(undefined).data?.LIVE_SESSION_LIFETIME_S).toBe(86400);
+    expect(parse("").data?.LIVE_SESSION_LIFETIME_S).toBe(86400);
+    expect(parse("  ").data?.LIVE_SESSION_LIFETIME_S).toBe(86400);
+  });
+
+  it("takes whole seconds from 60 to 86400", () => {
+    for (const [raw, seconds] of [["60", 60], ["3600", 3600], ["86400", 86400], [" 600 ", 600], ["00060", 60]] as const) {
+      expect(parse(raw).data?.LIVE_SESSION_LIFETIME_S).toBe(seconds);
+    }
+  });
+
+  it("anything else stops boot, never clamped", () => {
+    for (const bad of ["59", "86401", "0", "-60", "600.5", "6e2", "10m", "abc", "100000", "999999"]) {
+      expect(parse(bad).success).toBe(false);
+    }
+  });
+});

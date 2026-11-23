@@ -16,6 +16,8 @@ import type { LiveIngestEndpoint } from "@/schemas/env";
 // every refusal is the same "invalid_key", so a caller can't tell an unknown
 // key from someone else's. A new session revokes the key's open ones.
 //
+// A session lasts LIVE_SESSION_LIFETIME_S (at most 24 h).
+//
 // The session secret and the stream key never reach a log, an error report
 // or a URL.
 
@@ -60,8 +62,26 @@ export interface CreatedLiveSession {
   protocol_version: number;
   ingest: LiveIngestEndpoint[];
   expires_at: string;
+  /** Whole seconds from now until expires_at, never negative. */
+  expires_in: number;
   /** The session's latency budget in ms; the node lookup states the same (latency.ts). */
   latency_ms: number;
+}
+
+/** A session's expiry as the create and renew answers state it. */
+export interface LiveSessionExpiry {
+  /** ISO 8601, UTC, milliseconds. */
+  expires_at: string;
+  expires_in: number;
+}
+
+/**
+ * expires_at as ISO 8601 UTC and the whole seconds until then (rounded
+ * down, so a phone never waits past it; 0 once it has passed).
+ */
+function sessionExpiry(expiresAt: string, now: number): LiveSessionExpiry {
+  const at = new Date(expiresAt);
+  return { expires_at: at.toISOString(), expires_in: Math.max(0, Math.floor((at.getTime() - now) / 1000)) };
 }
 
 export type CreateLiveSessionResult =
@@ -116,6 +136,7 @@ export async function createLiveSession({ userId, streamKey, ip }: CreateLiveSes
       secret_tag: encrypted.authTag,
       protocol_version: LIVE_PROTOCOL_VERSION,
       created_ip: createdIp,
+      lifetime_s: env.LIVE_SESSION_LIFETIME_S,
     });
     if (error?.code === UNIQUE_VIOLATION) continue;
     if (error) {
@@ -132,7 +153,7 @@ export async function createLiveSession({ userId, streamKey, ip }: CreateLiveSes
         session_secret: secret,
         protocol_version: LIVE_PROTOCOL_VERSION,
         ingest,
-        expires_at: new Date(data.expires_at).toISOString(),
+        ...sessionExpiry(data.expires_at, Date.now()),
         latency_ms: sessionLatencyMs(),
       },
     };

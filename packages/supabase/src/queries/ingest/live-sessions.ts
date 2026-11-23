@@ -21,6 +21,8 @@ export interface LiveSessionInsert {
   secret_tag: string;
   protocol_version: number;
   created_ip: string | null;
+  /** Seconds until the session expires, 60..86400 (the function refuses others). */
+  lifetime_s: number;
 }
 
 const callCreateLiveSession = withMetrics("live_sessions", "insert", async (client: DBClient, row: LiveSessionInsert) =>
@@ -34,6 +36,7 @@ const callCreateLiveSession = withMetrics("live_sessions", "insert", async (clie
     p_secret_tag: row.secret_tag,
     p_protocol_version: row.protocol_version,
     p_created_ip: row.created_ip,
+    p_lifetime_s: row.lifetime_s,
   }),
 );
 
