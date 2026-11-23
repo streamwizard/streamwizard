@@ -2,7 +2,12 @@ import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
 import { encryptToken } from "@repo/supabase/crypto";
 import { getStreamKeyOwner } from "@repo/supabase/queries/ingest/ingest";
-import { createLiveSession as insertLiveSession, endLiveSessionForUser } from "@repo/supabase/queries/ingest/live-sessions";
+import {
+  createLiveSession as insertLiveSession,
+  endLiveSessionForUser,
+  renewLiveSessionForUser,
+} from "@repo/supabase/queries/ingest/live-sessions";
+import { getUserActiveSubscriptionId } from "@repo/supabase/queries/subscriptions/subscriptions";
 import { env } from "@/env";
 import { AttemptLimiter } from "@/lib/attempt-limiter";
 import { ipAddress } from "@/lib/node-schemas";
@@ -16,7 +21,9 @@ import type { LiveIngestEndpoint } from "@/schemas/env";
 // every refusal is the same "invalid_key", so a caller can't tell an unknown
 // key from someone else's. A new session revokes the key's open ones.
 //
-// A session lasts LIVE_SESSION_LIFETIME_S (at most 24 h).
+// A session lasts LIVE_SESSION_LIFETIME_S (at most 24 h). The phone renews it
+// before it runs out; a renewal moves expires_at to now plus the lifetime,
+// in place, and the ingest node picks that up at its next lookup.
 //
 // The session secret and the stream key never reach a log, an error report
 // or a URL.
@@ -34,6 +41,9 @@ export const LIVE_PROTOCOL_VERSION = 1;
  * minutes per user, 20 per 10 minutes per IP. Every attempt is counted
  * before the key lookup, so parallel requests can't slip past; a valid key
  * gives its invalid-key attempt back.
+ *
+ * Renewals: 10 a minute per user. A phone renews well before expiry, so
+ * this only bites on a loop.
  */
 const CREATE_WINDOW_MS = 60 * 1000;
 const CREATES_PER_USER = 10;
@@ -42,14 +52,18 @@ const CREATES_PER_IP = 30;
 const INVALID_KEY_WINDOW_MS = 10 * 60 * 1000;
 const INVALID_KEYS_PER_USER = 10;
 const INVALID_KEYS_PER_IP = 20;
+const RENEW_WINDOW_MS = 60 * 1000;
+const RENEWALS_PER_USER = 10;
 
 const creates = new AttemptLimiter({ windowMs: CREATE_WINDOW_MS });
 const invalidKeys = new AttemptLimiter({ windowMs: INVALID_KEY_WINDOW_MS });
+const renewals = new AttemptLimiter({ windowMs: RENEW_WINDOW_MS });
 
 /** Tests only. */
 export function resetLiveSessionLimits(): void {
   creates.clear();
   invalidKeys.clear();
+  renewals.clear();
 }
 
 /** A wire id collision is a 1-in-2^64 event; a few retries are plenty. */
@@ -169,4 +183,38 @@ export async function createLiveSession({ userId, streamKey, ip }: CreateLiveSes
  */
 export async function endLiveSession(userId: string, wireId: string): Promise<boolean> {
   return (await endLiveSessionForUser(supabase, wireId, userId)) !== null;
+}
+
+export interface RenewedLiveSession extends LiveSessionExpiry {
+  session_id: string;
+}
+
+export type RenewLiveSessionResult =
+  | { ok: true; session: RenewedLiveSession }
+  | { ok: false; reason: "not_found" | "failed" }
+  | { ok: false; reason: "rate_limited"; retryAfterSeconds: number };
+
+/**
+ * POST /api/live/sessions/:session_id/renew. Extends one of the user's
+ * sessions to now plus LIVE_SESSION_LIFETIME_S. "not_found" for every
+ * session that may not be renewed: unknown, someone else's, ended, revoked,
+ * expired, key turned off, or the owner without a Cloud OBS plan (the node
+ * lookup's rules), so a caller learns nothing from the refusal.
+ */
+export async function renewLiveSession(userId: string, wireId: string): Promise<RenewLiveSessionResult> {
+  const wait = renewals.take([{ key: `user:${userId}`, limit: RENEWALS_PER_USER }]);
+  if (wait !== null) return { ok: false, reason: "rate_limited", retryAfterSeconds: wait };
+
+  // The plan, as in the node lookup: losing it turns the keys off, but that
+  // sweep runs later than the plan ends.
+  if (!(await getUserActiveSubscriptionId(supabase, userId, "cloud_obs"))) return { ok: false, reason: "not_found" };
+
+  const { data, error } = await renewLiveSessionForUser(supabase, wireId, userId, env.LIVE_SESSION_LIFETIME_S);
+  if (error) {
+    // Only the code, as in create.
+    reportError(new Error(`renew_live_session failed (${error.code})`), "live-sessions.renew", { user_id: userId });
+    return { ok: false, reason: "failed" };
+  }
+  if (!data) return { ok: false, reason: "not_found" };
+  return { ok: true, session: { session_id: data.wire_id, ...sessionExpiry(data.expires_at, Date.now()) } };
 }

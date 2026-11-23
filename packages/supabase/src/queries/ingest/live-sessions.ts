@@ -55,6 +55,31 @@ export async function createLiveSession(
   return { data: data?.[0] ?? null, error: null };
 }
 
+const callRenewLiveSession = withMetrics(
+  "live_sessions",
+  "update",
+  async (client: DBClient, wireId: string, userId: string, lifetimeS: number) =>
+    client.rpc("renew_live_session", { p_wire_id: wireId, p_user_id: userId, p_lifetime_s: lifetimeS }),
+);
+
+/**
+ * Renews one of the user's live sessions in place (`renew_live_session`):
+ * expires_at becomes now plus `lifetimeS` (60..86400). `data` is null when
+ * the user has no session with this wire id, or it has ended, was revoked,
+ * has expired or its key is off; the same answer for all of them. The plan
+ * check is the caller's. `error` is the PostgREST error, by code only.
+ */
+export async function renewLiveSessionForUser(
+  client: DBClient,
+  wireId: string,
+  userId: string,
+  lifetimeS: number,
+): Promise<{ data: { wire_id: string; expires_at: string } | null; error: { code: string } | null }> {
+  const { data, error } = await callRenewLiveSession(client, wireId, userId, lifetimeS);
+  if (error) return { data: null, error: { code: error.code } };
+  return { data: data?.[0] ?? null, error: null };
+}
+
 const closeLiveSessionForUser = withMetrics(
   "live_sessions",
   "update",

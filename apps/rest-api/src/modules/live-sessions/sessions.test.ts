@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, mock,
 import { createHash, randomBytes } from "crypto";
 import { Hono } from "hono";
 
-// POST /api/live/sessions and /end, against in-memory stand-ins for the
+// POST /api/live/sessions, /renew and /end, against in-memory stand-ins for the
 // live_sessions table, the stream keys and the plans. The real crypto runs,
 // so the stored row and the ingest lookup are checked end to end.
 
@@ -40,6 +40,8 @@ let planHolders: Set<string>;
 let ownerLookups: number;
 let createError: string | null;
 let takenWireIds: number;
+let renewError: string | null;
+let renewCalls: number;
 /** The lifetime the last create_live_session call got. */
 let createLifetimes: number[];
 /** Runs right after a successful key lookup, e.g. to rotate the key before the insert. */
@@ -101,6 +103,19 @@ mock.module("@repo/supabase/queries/ingest/live-sessions", () => ({
     const expires_at = new Date(Date.now() + lifetime_s * 1000).toISOString().replace("Z", "+00:00");
     sessions.set(row.wire_id, { ...rest, stream_key_at_create: stream_key, created_at, expires_at, ended_at: null, revoked_at: null });
     return { data: { wire_id: row.wire_id, expires_at }, error: null };
+  },
+  // What renew_live_session does: the user's own open, unexpired session
+  // with an active key gets now + lifetime.
+  renewLiveSessionForUser: async (_c: unknown, wireId: string, user: string, lifetimeS: number) => {
+    renewCalls++;
+    if (renewError) return { data: null, error: { code: renewError } };
+    const s = sessions.get(wireId);
+    const key = s && keys.get(s.key_id);
+    if (!s || !key || s.user_id !== user || key.user_id !== user || s.ended_at || s.revoked_at || !key.is_active || Date.parse(s.expires_at) <= Date.now()) {
+      return { data: null, error: null };
+    }
+    s.expires_at = new Date(Date.now() + lifetimeS * 1000).toISOString().replace("Z", "+00:00");
+    return { data: { wire_id: s.wire_id, expires_at: s.expires_at }, error: null };
   },
   endLiveSessionForUser: async (_c: unknown, wireId: string, user: string) => {
     const s = sessions.get(wireId);
@@ -173,6 +188,8 @@ beforeEach(async () => {
   ownerLookups = 0;
   createError = null;
   takenWireIds = 0;
+  renewError = null;
+  renewCalls = 0;
   createLifetimes = [];
   afterOwnerLookup = null;
   logged = [];
@@ -206,6 +223,11 @@ function create(body: unknown, opts: { user?: number | null; ip?: string } = {})
 }
 const end = (sessionId: string, user: number | null = 1) =>
   app.request(`/api/live/sessions/${sessionId}/end`, {
+    method: "POST",
+    headers: user !== null ? { Authorization: `Bearer user-${user}` } : {},
+  });
+const renew = (sessionId: string, user: number | null = 1) =>
+  app.request(`/api/live/sessions/${sessionId}/renew`, {
     method: "POST",
     headers: user !== null ? { Authorization: `Bearer user-${user}` } : {},
   });
@@ -466,6 +488,120 @@ describe("rate limits", () => {
   });
 });
 
+describe("POST /api/live/sessions/:session_id/renew", () => {
+  type Renewed = { session_id: string; expires_at: string; expires_in: number };
+  const T0 = new Date("2026-11-20T11:00:00.000Z").getTime();
+
+  it("moves the expiry to now plus the lifetime; the ingest node sees it, with the same secret", async () => {
+    setSystemTime(new Date(T0));
+    const created = await createOk();
+    expect(created.expires_at).toBe("2026-11-21T11:00:00.000Z");
+
+    setSystemTime(new Date(T0 + 20 * 60 * 60 * 1000));
+    const res = await renew(created.session_id);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    const body = (await res.json()) as Renewed;
+    expect(body).toEqual({ session_id: created.session_id, expires_at: "2026-11-22T07:00:00.000Z", expires_in: 86400 });
+
+    // Past the original 24 hours the node still serves it.
+    setSystemTime(new Date(T0 + 30 * 60 * 60 * 1000));
+    const looked = await lookup(created.session_id);
+    expect(looked.status).toBe(200);
+    const node = (await looked.json()) as { session_secret: string; expires_at: string };
+    expect(node.session_secret).toBe(created.session_secret);
+    expect(node.expires_at).toBe(body.expires_at);
+  });
+
+  it("slides: never more than one lifetime ahead, also after many renewals", async () => {
+    setSystemTime(new Date(T0));
+    const { session_id } = await createOk();
+    for (let i = 0; i < 3; i++) expect((await renew(session_id)).status).toBe(200);
+    const body = (await (await renew(session_id)).json()) as Renewed;
+    expect(body.expires_at).toBe("2026-11-21T11:00:00.000Z");
+    expect(body.expires_in).toBe(86400);
+  });
+
+  it("uses LIVE_SESSION_LIFETIME_S", async () => {
+    setSystemTime(new Date(T0));
+    const { env } = await import("@/env");
+    (env as Record<string, unknown>).LIVE_SESSION_LIFETIME_S = 3600;
+    const { session_id } = await createOk();
+    setSystemTime(new Date(T0 + 30 * 60 * 1000));
+    const body = (await (await renew(session_id)).json()) as Renewed;
+    expect(body).toEqual({ session_id, expires_at: "2026-11-20T12:30:00.000Z", expires_in: 3600 });
+  });
+
+  it("one 404 for unknown, malformed, someone else's, ended, revoked, expired, key off and plan-less", async () => {
+    setSystemTime(new Date(T0));
+    const own = await createOk("sk-a-Zq81");
+    const ended = await createOk("sk-a2-Zq81");
+    await end(ended.session_id);
+    const revoked = await createOk("sk-b-Zq81", 2);
+    const current = await createOk("sk-b-Zq81", 2); // revokes the previous one
+    const keyOff = await createOk("sk-a2-Zq81"); // a new session for the ended one's key
+    keys.get("4e440000-0000-4000-8000-0000000000a2")!.is_active = false;
+    const answers: [number, unknown][] = [];
+    const record = async (res: Response) => answers.push([res.status, await res.json()]);
+
+    await record(await renew("00000000000000ff"));
+    await record(await renew("not-a-wire-id"));
+    await record(await renew("0000000000000000"));
+    await record(await renew("9F3C2A71E04B5D18"));
+    await record(await renew(own.session_id, 2)); // user B asking for A's session
+    await record(await renew(ended.session_id));
+    await record(await renew(revoked.session_id, 2));
+    await record(await renew(keyOff.session_id));
+    planHolders.delete(USER_B);
+    await record(await renew(current.session_id, 2));
+    planHolders.add(USER_B);
+    setSystemTime(new Date(T0 + 24 * 60 * 60 * 1000));
+    await record(await renew(own.session_id));
+
+    expect(answers).toHaveLength(10);
+    for (const answer of answers) expect(answer).toEqual([404, { error: "Session not found" }]);
+    // Nothing moved.
+    expect(sessions.get(own.session_id)!.expires_at).toBe("2026-11-21T11:00:00.000+00:00");
+    expect(sessions.get(current.session_id)!.expires_at).toBe("2026-11-21T11:00:00.000+00:00");
+  });
+
+  it("needs a signed-in user", async () => {
+    const { session_id, expires_at } = await createOk();
+    expect((await renew(session_id, null)).status).toBe(401);
+    const res = await app.request(`/api/live/sessions/${session_id}/renew`, { method: "POST", headers: { Authorization: "Bearer not-a-token" } });
+    expect(res.status).toBe(401);
+    expect(renewCalls).toBe(0);
+    expect(new Date(sessions.get(session_id)!.expires_at).toISOString()).toBe(expires_at);
+  });
+
+  it("limits renewals to 10 a minute per user", async () => {
+    setSystemTime(new Date(T0));
+    const { session_id } = await createOk();
+    for (let i = 0; i < 10; i++) expect((await renew(session_id)).status).toBe(200);
+    setSystemTime(new Date(T0 + 15 * 1000));
+    const res = await renew(session_id);
+    expect(res.status).toBe(429);
+    expect(res.headers.get("retry-after")).toBe("45");
+    expect(await res.json()).toEqual({ error: "Too many attempts. Try again later." });
+    expect(renewCalls).toBe(10);
+    // Misses count too.
+    expect((await renew("00000000000000ff")).status).toBe(429);
+    // Another user is not affected.
+    const other = await createOk("sk-b-Zq81", 2);
+    expect((await renew(other.session_id, 2)).status).toBe(200);
+    setSystemTime(new Date(T0 + 61 * 1000));
+    expect((await renew(session_id)).status).toBe(200);
+  });
+
+  it("500 with a generic message when the database fails", async () => {
+    const { session_id } = await createOk();
+    renewError = "XX000";
+    const res = await renew(session_id);
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "Could not renew the session" });
+  });
+});
+
 describe("POST /api/live/sessions/:session_id/end", () => {
   it("ends the owner's session; the ingest node stops getting it", async () => {
     const { session_id } = await createOk();
@@ -514,8 +650,13 @@ describe("secrets stay out of logs and errors", () => {
     const broken = await lookup(second.session_id);
     expect(broken.status).toBe(500);
     await create({ stream_key: "sk-a-Zq81" }, { user: null });
+    const renewed = await renew(created.session_id);
+    renewError = "XX000";
+    const failedRenew = await renew(created.session_id);
+    renewError = null;
 
-    const output = logged.join("\n") + (await failed.text()) + (await broken.text());
+    const output =
+      logged.join("\n") + (await failed.text()) + (await broken.text()) + (await renewed.text()) + (await failedRenew.text());
     expect(logged.length).toBeGreaterThan(0);
     for (const secret of [created.session_secret, second.session_secret, ...streamKeys]) {
       expect(output).not.toContain(secret);

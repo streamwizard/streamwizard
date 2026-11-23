@@ -3,7 +3,7 @@ import { supabaseAuth } from "@/middleware/auth";
 import { clientIp } from "@/middleware/security/client-ip";
 import { parseWireId } from "@/modules/live-sessions/credentials";
 import { createLiveSessionSchema } from "@/modules/live-sessions/schemas";
-import { createLiveSession, endLiveSession } from "@/modules/live-sessions/sessions";
+import { createLiveSession, endLiveSession, renewLiveSession } from "@/modules/live-sessions/sessions";
 
 // /api/live: the StreamWizard Live phone app, signed in with a Supabase
 // access token (Authorization: Bearer). Mounted after the "/api/*" CORS and
@@ -44,4 +44,26 @@ liveSessionRoutes.post("/sessions/:session_id/end", supabaseAuth(), async (c) =>
   if (!wireId) return c.json(SESSION_NOT_FOUND, 404);
   if (!(await endLiveSession(user.id, wireId))) return c.json(SESSION_NOT_FOUND, 404);
   return c.body(null, 204);
+});
+
+// Extends the session in place (same id and secret) to now plus the
+// lifetime. Every session that can't be renewed gets the same 404.
+liveSessionRoutes.post("/sessions/:session_id/renew", supabaseAuth(), async (c) => {
+  c.header("Cache-Control", "no-store");
+  const user = c.var.user;
+  if (!user) return c.json(UNAUTHORIZED, 401);
+  const wireId = parseWireId(c.req.param("session_id"));
+  if (!wireId) return c.json(SESSION_NOT_FOUND, 404);
+
+  const result = await renewLiveSession(user.id, wireId);
+  if (result.ok) return c.json(result.session);
+  switch (result.reason) {
+    case "rate_limited":
+      c.header("Retry-After", String(result.retryAfterSeconds));
+      return c.json({ error: "Too many attempts. Try again later." }, 429);
+    case "not_found":
+      return c.json(SESSION_NOT_FOUND, 404);
+    case "failed":
+      return c.json({ error: "Could not renew the session" }, 500);
+  }
 });
