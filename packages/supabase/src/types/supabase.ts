@@ -4969,11 +4969,12 @@ export type Database = {
         Returns: undefined
       }
       admin_revoke_user_sessions: { Args: { p_user_id: string }; Returns: number }
-      // Copied from `bun run gen-types` output (20261120120000_live_sessions); a full regen would pull in unrelated drift.
+      // Copied from `bun run gen-types` output (20261120120000_live_sessions, 20261123120000_live_session_renewal); a full regen would pull in unrelated drift.
       create_live_session: {
         Args: {
           p_created_ip?: unknown
           p_key_id: string
+          p_lifetime_s?: number
           p_protocol_version: number
           p_secret_ciphertext: string
           p_secret_iv: string
@@ -4982,6 +4983,14 @@ export type Database = {
           p_user_id: string
           p_wire_id: string
         }
+        Returns: {
+          expires_at: string
+          wire_id: string
+        }[]
+      }
+      // Hand-written in the gen-types shape (20261123120000_live_session_renewal).
+      renew_live_session: {
+        Args: { p_lifetime_s: number; p_user_id: string; p_wire_id: string }
         Returns: {
           expires_at: string
           wire_id: string
