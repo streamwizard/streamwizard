@@ -3154,6 +3154,63 @@ export type Database = {
           },
         ]
       }
+      // Copied from `bun run gen-types` output (20261120120000_live_sessions); a full regen would pull in unrelated drift.
+      live_sessions: {
+        Row: {
+          created_at: string
+          created_ip: unknown
+          ended_at: string | null
+          expires_at: string
+          id: string
+          key_id: string
+          protocol_version: number
+          revoked_at: string | null
+          secret_ciphertext: string
+          secret_iv: string
+          secret_tag: string
+          user_id: string
+          wire_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_ip?: unknown
+          ended_at?: string | null
+          expires_at?: string
+          id?: string
+          key_id: string
+          protocol_version: number
+          revoked_at?: string | null
+          secret_ciphertext: string
+          secret_iv: string
+          secret_tag: string
+          user_id: string
+          wire_id: string
+        }
+        Update: {
+          created_at?: string
+          created_ip?: unknown
+          ended_at?: string | null
+          expires_at?: string
+          id?: string
+          key_id?: string
+          protocol_version?: number
+          revoked_at?: string | null
+          secret_ciphertext?: string
+          secret_iv?: string
+          secret_tag?: string
+          user_id?: string
+          wire_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_sessions_key_id_fkey"
+            columns: ["key_id"]
+            isOneToOne: false
+            referencedRelation: "ingest_stream_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       obs_auto_switcher_configs: {
         Row: {
           advanced_thresholds: Json | null
@@ -4912,6 +4969,33 @@ export type Database = {
         Returns: undefined
       }
       admin_revoke_user_sessions: { Args: { p_user_id: string }; Returns: number }
+      // Copied from `bun run gen-types` output (20261120120000_live_sessions, 20261123120000_live_session_renewal); a full regen would pull in unrelated drift.
+      create_live_session: {
+        Args: {
+          p_created_ip?: unknown
+          p_key_id: string
+          p_lifetime_s?: number
+          p_protocol_version: number
+          p_secret_ciphertext: string
+          p_secret_iv: string
+          p_secret_tag: string
+          p_stream_key: string
+          p_user_id: string
+          p_wire_id: string
+        }
+        Returns: {
+          expires_at: string
+          wire_id: string
+        }[]
+      }
+      // Hand-written in the gen-types shape (20261123120000_live_session_renewal).
+      renew_live_session: {
+        Args: { p_lifetime_s: number; p_user_id: string; p_wire_id: string }
+        Returns: {
+          expires_at: string
+          wire_id: string
+        }[]
+      }
       delete_user_data: {
         Args: { p_actor_user_id?: string; p_reason?: string; p_twitch_user_id: string }
         Returns: string

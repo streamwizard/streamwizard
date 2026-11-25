@@ -2,6 +2,54 @@ import { z } from "zod";
 import { isServiceSigningJwk, SERVICE_SIGNING_JWK_ERROR } from "@repo/service-token/signing-jwk";
 import { parseNodeTokenJwks } from "@/lib/node-token-jwks";
 
+/** One ingest address the phone app sends its bonded stream to (LIVE_INGEST_ENDPOINTS). */
+const liveIngestEndpointSchema = z.object({
+  // A hostname or an IP literal.
+  host: z.string().trim().min(1).max(253),
+  port: z.number().int().min(1).max(65535),
+});
+const liveIngestEndpointsSchema = z.array(liveIngestEndpointSchema).max(32);
+export type LiveIngestEndpoint = z.infer<typeof liveIngestEndpointSchema>;
+
+/**
+ * StreamWizard Live latency budget range and default in milliseconds
+ * (LIVE_LATENCY_MS), the protocol's: an ingest node and the phone refuse a
+ * session outside it.
+ */
+export const LIVE_LATENCY_MS_MIN = 800;
+export const LIVE_LATENCY_MS_MAX = 5000;
+export const LIVE_LATENCY_MS_DEFAULT = 2000;
+
+/**
+ * StreamWizard Live session lifetime range and default in seconds
+ * (LIVE_SESSION_LIFETIME_S). 86400 is the protocol's upper bound: an ingest
+ * node clamps an expiry further ahead and forgets spent session ids after
+ * 24 hours.
+ */
+export const LIVE_SESSION_LIFETIME_S_MIN = 60;
+export const LIVE_SESSION_LIFETIME_S_MAX = 86400;
+export const LIVE_SESSION_LIFETIME_S_DEFAULT = 86400;
+
+/**
+ * An optional whole number in min..max (at most 5 digits): unset or blank
+ * gives the default, anything else stops boot. Never clamped.
+ */
+function wholeNumberInRange(min: number, max: number, fallback: number, unit: string) {
+  return z
+    .string()
+    .optional()
+    .transform((raw, ctx) => {
+      const value = raw?.trim();
+      if (!value) return fallback;
+      const n = /^\d{1,5}$/.test(value) ? Number(value) : NaN;
+      if (!(n >= min && n <= max)) {
+        ctx.addIssue({ code: "custom", message: `must be a whole number of ${unit}, ${min}-${max}` });
+        return z.NEVER;
+      }
+      return n;
+    });
+}
+
 export const envSchema = z.object({
   NODE_ENV: z.enum(["development", "staging", "production"]).default("development"),
   // Read by @repo/sentry (and @repo/posthog/server) as the environment name,
@@ -126,6 +174,47 @@ export const envSchema = z.object({
   // site catches up within the hour.
   CMS_SITE_URL: z.string().url().optional(),
   CMS_REVALIDATE_SECRET: z.string().min(32).optional(),
+
+  // StreamWizard Live: the ingest addresses POST /api/live/sessions hands the
+  // phone app, as a JSON array of {"host","port"}. Not a secret. Optional:
+  // unset or [] makes that route answer 503; a malformed value stops boot.
+  LIVE_INGEST_ENDPOINTS: z
+    .string()
+    .optional()
+    .transform((raw, ctx) => {
+      if (!raw?.trim()) return [];
+      let json: unknown;
+      try {
+        json = JSON.parse(raw);
+      } catch {
+        json = undefined;
+      }
+      const parsed = liveIngestEndpointsSchema.safeParse(json);
+      if (!parsed.success) {
+        ctx.addIssue({ code: "custom", message: 'must be a JSON array of {"host": string, "port": 1-65535}' });
+        return z.NEVER;
+      }
+      return parsed.data;
+    }),
+
+  // StreamWizard Live: the latency budget every new session states, in ms
+  // (latency_ms in POST /api/live/sessions and the node lookup), so the
+  // phone and the ingest node use the same one. Not a secret. Unset or
+  // empty: 2000. Must be a whole number in 800..5000, else boot stops. Read
+  // per response, so it changes only with a restart (a session created
+  // before a restart and looked up after it can get another value).
+  LIVE_LATENCY_MS: wholeNumberInRange(LIVE_LATENCY_MS_MIN, LIVE_LATENCY_MS_MAX, LIVE_LATENCY_MS_DEFAULT, "milliseconds"),
+
+  // StreamWizard Live: how long a session lasts after it is created or
+  // renewed, in seconds (expires_at and expires_in in POST /api/live/sessions
+  // and .../renew). Not a secret. Unset or empty: 86400. Must be a whole
+  // number in 60..86400, else boot stops.
+  LIVE_SESSION_LIFETIME_S: wholeNumberInRange(
+    LIVE_SESSION_LIFETIME_S_MIN,
+    LIVE_SESSION_LIFETIME_S_MAX,
+    LIVE_SESSION_LIFETIME_S_DEFAULT,
+    "seconds",
+  ),
 
   // Public half of the node-token key pair (@repo/node-token) as a JWKS,
   // {"keys":[...]}. Sent to OBS nodes in GET /api/obs-nodes/me so they can verify

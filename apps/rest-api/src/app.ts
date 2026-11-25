@@ -12,6 +12,7 @@ import { obsNodeAuthCacheStats } from "@/middleware/obs-node-auth";
 import { ingestNodeAuthCacheStats } from "@/middleware/ingest-node-auth";
 import { eventsubRoutes } from "@/modules/eventsub/routes";
 import { ingestNodeRoutes } from "@/modules/ingest-nodes/routes";
+import { liveSessionRoutes } from "@/modules/live-sessions/routes";
 import { obsNodeRoutes } from "@/modules/obs-nodes/routes";
 import { clipSyncRoutes } from "@/modules/streams/routes";
 import { internalBackups, proxmoxWebhook } from "@/routes/backups";
@@ -119,6 +120,10 @@ export function createApp(): Hono {
 
   // Clip sync for the signed-in user, behind the CORS and Supabase middleware above.
   app.route("/api/clips", clipSyncRoutes);
+
+  // StreamWizard Live sessions for the signed-in phone app (Bearer access
+  // token), behind the same middleware.
+  app.route("/api/live", liveSessionRoutes);
 
   return app;
 }

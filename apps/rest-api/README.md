@@ -14,6 +14,8 @@ The API gateway. Twitch EventSub webhooks, clip sync, and analytics endpoints �
 - `POST /webhooks/twitch/eventsub` — entry point for all Twitch events.
 - `POST /api/clips/sync` — manually trigger a clip sync.
 - `GET /api/clips/sync-status` — current sync status.
+- `POST /api/live/sessions`, `POST /api/live/sessions/:session_id/renew`, `POST /api/live/sessions/:session_id/end` — StreamWizard Live sessions for the signed-in phone app (`modules/live-sessions/`). The create response includes `latency_ms`, the session's latency budget, and `expires_in`, the whole seconds until `expires_at`. Renew extends one of the user's open sessions in place (same id and secret) to now plus `LIVE_SESSION_LIFETIME_S` and answers `{ session_id, expires_at, expires_in }`; the ingest node picks the new `expires_at` up at its next lookup. Every session that can't be renewed (unknown, someone else's, ended, revoked, expired, key turned off, no Cloud OBS plan) gets the same 404. Renewals are limited to 10 a minute per user (429 with `Retry-After`).
+- `GET /api/ingest-nodes/live-sessions/:session_id` — an ingest node looks up a live session's secret by wire id (node API key). The response includes `created_at` (a restarted node refuses sessions created before it started) and the same `latency_ms` the phone got, so both ends use one budget.
 
 EventSub notifications go through `src/modules/eventsub/registry.ts`, which dispatches to typed handlers in `src/modules/eventsub/handlers/`. All database access goes through `@repo/supabase/queries/*`; every Helix call goes through `@repo/twitch-api`.
 
@@ -40,7 +42,8 @@ src/
       storage-credentials.ts  MinIO STS policies and credential cache
       node/       node-level domain code (claim, me, reconcile, plan limits, users, shared storage)
       instances/  domain code for one of the node's instances (CRUD, secrets, events, storage, stream key), create token, plan sweep
-    ingest-nodes/ routes.ts, schemas.ts, domain code (claim, me, sessions, session-stats, ws-token)
+    ingest-nodes/ routes.ts, schemas.ts, domain code (claim, me, sessions, session-stats, ws-token, live-sessions lookup)
+    live-sessions/ routes.ts, schemas.ts, StreamWizard Live session create/end and the wire id / secret helpers
     streams/      routes.ts (clip sync mount), clip sync, viewer-count poller, stream video lookup
 ```
 
@@ -61,3 +64,9 @@ bun dev --filter=@repo/rest-api
 ```
 
 Listens on port `8080` (override with `PORT`).
+
+`LIVE_INGEST_ENDPOINTS` (optional) lists the ingest addresses `POST /api/live/sessions` hands the phone app, as a JSON array of `{"host", "port"}`. Unset or `[]` makes that route answer 503.
+
+`LIVE_LATENCY_MS` (optional, default `2000`, whole milliseconds `800`–`5000`, anything else stops boot) is the latency budget every StreamWizard Live session states as `latency_ms`, in the create response and in the node lookup (`modules/live-sessions/latency.ts`). It is not stored per session: both answers read the current value, which changes only with a restart, so a session created before a restart that changed it would be looked up with the new value while its phone keeps the old one.
+
+`LIVE_SESSION_LIFETIME_S` (optional, default `86400`, whole seconds `60`–`86400`, anything else stops boot) is how long a StreamWizard Live session lasts after it is created or renewed. 86400 is the protocol's upper bound: the ingest node clamps an expiry further ahead and forgets spent session ids after 24 hours.
