@@ -133,7 +133,7 @@ mock.module("@repo/supabase/queries/ingest/live-sessions", () => ({
 
 let app: Hono;
 let resetLiveSessionLimits: () => void;
-let resetLiveSessionMisses: () => void;
+let resetLiveSessionLookupLimits: () => void;
 let logged: string[] = [];
 const consoleSpies: ReturnType<typeof spyOn>[] = [];
 
@@ -141,7 +141,7 @@ beforeAll(async () => {
   const { liveSessionRoutes } = await import("@/modules/live-sessions/routes");
   const { ingestNodeRoutes } = await import("@/modules/ingest-nodes/routes");
   ({ resetLiveSessionLimits } = await import("./sessions"));
-  ({ resetLiveSessionMisses } = await import("@/modules/ingest-nodes/live-sessions"));
+  ({ resetLiveSessionLookupLimits } = await import("@/modules/ingest-nodes/live-sessions"));
   app = new Hono();
   // Stands in for supabaseMiddleware(): a request client whose getUser()
   // knows the `user-<n>` tokens.
@@ -194,7 +194,7 @@ beforeEach(async () => {
   afterOwnerLookup = null;
   logged = [];
   resetLiveSessionLimits();
-  resetLiveSessionMisses();
+  resetLiveSessionLookupLimits();
   const { env } = await import("@/env");
   (env as Record<string, unknown>).LIVE_INGEST_ENDPOINTS = ENDPOINTS;
   (env as Record<string, unknown>).LIVE_LATENCY_MS = 2000;

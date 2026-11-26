@@ -102,13 +102,18 @@ ingestNodeRoutes.post("/session-stats", ingestNodeAuth(), async (c) => {
 
 // A StreamWizard Live session, by the wire id in the phone's first packet:
 // the secret both ends derive their keys from, the owner and the output
-// keys. The response carries a secret: never cached, never logged.
+// keys. The response carries a secret: never cached, never logged. Two 429s,
+// told apart by their body: over the node's request rate, and a miss over the
+// node's miss limit (live-sessions.ts). The node reads status and Retry-After.
 ingestNodeRoutes.get("/live-sessions/:session_id", ingestNodeAuth(), async (c) => {
   c.header("Cache-Control", "no-store");
   const result = await lookupLiveSession(c.var.ingestNodeId, parseWireId(c.req.param("session_id")));
   if (result.ok) return c.json(result.session);
   switch (result.reason) {
-    case "rate_limited":
+    case "too_many_requests":
+      c.header("Retry-After", String(result.retryAfterSeconds));
+      return c.json({ error: "Too many requests" }, 429);
+    case "too_many_misses":
       c.header("Retry-After", String(result.retryAfterSeconds));
       return c.json({ error: "Too many unknown sessions" }, 429);
     case "not_found":
