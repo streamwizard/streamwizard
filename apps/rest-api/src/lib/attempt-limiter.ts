@@ -19,7 +19,9 @@ export interface AttemptLimit {
  * the caller limits on ("user:<id>", "ip:<addr>"). `take` counts an attempt
  * before the work it guards, synchronously, so parallel requests each see the
  * ones before them and can't slip past a limit. `refund` gives an attempt
- * back, for limits that only count failures (a lookup that turned out valid).
+ * back, for limits that count failures before knowing the outcome (a lookup
+ * that turned out valid). A caller that knows the outcome first can instead
+ * call `take` only for failures, right after deciding, with no await between.
  *
  * In-memory and per process, like the other limiters on TtlCache: N replicas
  * allow N times the limit.
@@ -55,6 +57,15 @@ export class AttemptLimiter {
       else this.counts.set(key, { count: 1, resetAt: now + this.windowMs }, { expiresAt: now + this.windowMs });
     }
     return null;
+  }
+
+  /**
+   * When `key`'s current window ends (ms since epoch), or null when it has no
+   * open window. Read only: counts nothing. Lets a caller tell one window
+   * from the next, e.g. to report a refusal once per window.
+   */
+  windowEndsAt(key: string): number | null {
+    return this.counts.get(key)?.resetAt ?? null;
   }
 
   /** Gives back one attempt per key, counted earlier by `take`. */
